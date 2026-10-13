@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+{% block title %}My Profile – FOODIE HUNTER{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:linear-gradient(135deg,#FFF7ED,#FFEDD5);padding:2.5rem 0;border-bottom:1px solid var(--border)">
+  <div class="container d-flex align-center justify-between flex-wrap gap-3">
+    <div class="d-flex align-center gap-3">
+      {% if user.profile_pic %}
+      <img src="{{ user.profile_pic }}" alt="{{ user.name }}"
+           style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:var(--shadow-md)">
+      {% else %}
+      <div style="width:80px;height:80px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;font-weight:800;border:3px solid #fff;box-shadow:var(--shadow-primary)">
+        {{ user.name[0]|upper }}
+      </div>
+      {% endif %}
+      <div>
+        <div class="d-flex align-center gap-2">
+          <h1 style="font-size:1.8rem;font-weight:800;color:var(--text-dark);margin:0">{{ user.name }}</h1>
+          <span class="badge" style="background:#DEF7EC;color:#03543F;font-size:.78rem;font-weight:700">
+            <i class="fas fa-check-circle"></i> {{ (user.status or 'active')|upper }}
+          </span>
+        </div>
+        <p style="color:var(--text-muted);font-size:.9rem;margin:.25rem 0 0">
+          <i class="fas fa-envelope"></i> {{ user.email }} &bull; <i class="fas fa-phone"></i> {{ user.phone or 'Not provided' }}
+        </p>
+      </div>
+    </div>
+    <div>
+      <span style="font-size:.82rem;color:var(--text-muted)">
+        Member Since: <strong>{{ (user.created_at|string)[:10] if user.created_at else '2026' }}</strong>
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div style="display:grid;grid-template-columns:250px 1fr;gap:2rem;align-items:start">
+    
+    <!-- Profile Sidebar Navigation -->
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.25rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <ul style="display:flex;flex-direction:column;gap:.35rem">
+        <li>
+          <a href="/customer/profile" class="btn w-100" style="justify-content:flex-start;background:var(--primary);color:#fff;border-radius:var(--radius-md)">
+            <i class="fas fa-id-card"></i> Profile Overview
+          </a>
+        </li>
+        <li>
+          <a href="/customer/orders" class="btn w-100 btn-outline" style="justify-content:flex-start;border:none;border-radius:var(--radius-md)">
+            <i class="fas fa-receipt"></i> My Orders
+          </a>
+        </li>
+        <li>
+          <a href="/customer/favorites" class="btn w-100 btn-outline" style="justify-content:flex-start;border:none;border-radius:var(--radius-md)">
+            <i class="fas fa-heart" style="color:#EF4444"></i> Saved Favorites
+          </a>
+        </li>
+        <li>
+          <a href="/customer/notifications" class="btn w-100 btn-outline" style="justify-content:flex-start;border:none;border-radius:var(--radius-md)">
+            <i class="fas fa-bell"></i> Notifications
+          </a>
+        </li>
+        <li>
+          <a href="/customer/cart" class="btn w-100 btn-outline" style="justify-content:flex-start;border:none;border-radius:var(--radius-md)">
+            <i class="fas fa-shopping-cart"></i> Shopping Cart
+          </a>
+        </li>
+        <li style="border-top:1px solid var(--border-light);margin-top:.5rem;padding-top:.5rem">
+          <a href="/auth/logout" class="btn w-100 btn-outline" style="justify-content:flex-start;border:none;color:#EF4444;border-radius:var(--radius-md)">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Main Content Area -->
+    <div style="display:flex;flex-direction:column;gap:2rem">
+      
+      <!-- Edit Profile Card (Mandatory Data Dictionary Fields) -->
+      <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+        <div class="d-flex justify-between align-center mb-3">
+          <div>
+            <h2 style="font-size:1.3rem;font-weight:700;color:var(--text-dark);margin:0">Customer Profile Details</h2>
+            <p style="font-size:.85rem;color:var(--text-muted);margin-top:.2rem">
+              View and edit your personal information. Changes are safely saved to the database.
+            </p>
+          </div>
+          <span class="badge" style="background:#F3F4F6;color:var(--text-muted);font-size:.78rem">
+            Last Updated: {{ (user.updated_at|string)[:19] if user.updated_at else 'N/A' }}
+          </span>
+        </div>
+
+        <form method="POST" action="/customer/profile/update" enctype="multipart/form-data" id="customerProfileForm">
+          
+          <!-- Avatar Upload -->
+          <div style="display:flex;align-items:center;gap:1.5rem;padding:1rem;background:#F9FAFB;border-radius:10px;margin-bottom:1.5rem">
+            {% if user.profile_pic %}
+            <img src="{{ user.profile_pic }}" alt="Avatar" id="avatarPreview"
+                 style="width:65px;height:65px;border-radius:50%;object-fit:cover;border:2px solid var(--border)">
+            {% else %}
+            <div id="avatarPreviewPlaceholder" style="width:65px;height:65px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700">
+              {{ user.name[0]|upper }}
+            </div>
+            {% endif %}
+            <div>
+              <label class="form-label" style="font-weight:600;font-size:.85rem;margin-bottom:.2rem">Change Profile Photo</label>
+              <input type="file" name="profile_pic" class="form-control" accept="image/*" style="font-size:.82rem"
+                     onchange="previewProfilePic(event)">
+              <small style="color:var(--text-muted);font-size:.75rem">Allowed: JPG, PNG, WEBP (Max 5MB)</small>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;font-size:.85rem">Full Name *</label>
+              <input type="text" class="form-control" name="name" id="profileName" value="{{ user.name }}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;font-size:.85rem">Mobile Phone *</label>
+              <input type="tel" class="form-control" name="phone" id="profilePhone" value="{{ user.phone }}" maxlength="10" required>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;font-size:.85rem">Email (Account ID)</label>
+              <input type="email" class="form-control" value="{{ user.email }}" readonly style="background:#F3F4F6;cursor:not-allowed">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;font-size:.85rem">Gender</label>
+              <select class="form-control" name="gender">
+                <option value="">-- Select --</option>
+                <option value="male" {% if user.gender == 'male' %}selected{% endif %}>Male</option>
+                <option value="female" {% if user.gender == 'female' %}selected{% endif %}>Female</option>
+                <option value="other" {% if user.gender == 'other' %}selected{% endif %}>Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;font-size:.85rem">Date of Birth</label>
+              <input type="date" class="form-control" name="dob" value="{{ user.dob or '' }}">
+            </div>
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label" style="font-weight:600;font-size:.85rem">Primary Address</label>
+            <textarea class="form-control" name="address" rows="2" placeholder="Street, Flat/House No., Society">{{ user.address or '' }}</textarea>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.75rem">
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;font-size:.85rem">City</label>
+              <input type="text" class="form-control" name="city" value="{{ user.city or 'Mehsana' }}">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;font-size:.85rem">State</label>
+              <input type="text" class="form-control" name="state" value="{{ user.state or 'Gujarat' }}">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;font-size:.85rem">Pincode</label>
+              <input type="text" class="form-control" name="pincode" value="{{ user.pincode or '384002' }}" maxlength="6">
+            </div>
+          </div>
+
+          <!-- Action Buttons: Save & Cancel -->
+          <div style="display:flex;gap:1rem;align-items:center">
+            <button type="submit" class="btn btn-primary" id="saveProfileBtn" style="padding:.65rem 1.75rem">
+              <i class="fas fa-save"></i> Save Changes
+            </button>
+            <a href="/customer/profile" class="btn btn-outline" style="padding:.65rem 1.5rem">
+              <i class="fas fa-times"></i> Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Saved Addresses Card (Home, Work, Other with GPS Coordinates) -->
+      <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+        <div class="d-flex justify-between align-center mb-3">
+          <div>
+            <h2 style="font-size:1.3rem;font-weight:700;color:var(--text-dark);margin:0">Saved Delivery Addresses</h2>
+            <p style="font-size:.85rem;color:var(--text-muted);margin-top:.2rem">
+              Manage your delivery locations with GPS coordinates for accurate tracking.
+            </p>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="toggleAddAddressForm()">
+            <i class="fas fa-plus"></i> Add Address
+          </button>
+        </div>
+
+        <!-- Add Address Form (Hidden by default) -->
+        <div id="addAddressCollapse" style="display:none;background:#F9FAFB;border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem">
+          <h4 style="font-size:.95rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">
+            <i class="fas fa-map-pin" style="color:var(--primary)"></i> New Delivery Address
+          </h4>
+          <form method="POST" action="/customer/address/add">
+            <div style="display:grid;grid-template-columns:140px 1fr;gap:1rem;margin-bottom:1rem">
+              <div class="form-group">
+                <label class="form-label" style="font-size:.82rem;font-weight:600">Label</label>
+                <select class="form-control" name="label">
+                  <option value="Home">Home</option>
+                  <option value="Work">Work</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size:.82rem;font-weight:600">Full Address *</label>
+                <input type="text" class="form-control" name="address" required placeholder="Flat No, Society, Landmark">
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem">
+              <div class="form-group">
+                <label class="form-label" style="font-size:.82rem;font-weight:600">Area in Mehsana</label>
+                <select class="form-control" name="area">
+                  <option value="Radhanpur Road">Radhanpur Road</option>
+                  <option value="Modhera Road">Modhera Road</option>
+                  <option value="Mehsana Highway">Mehsana Highway</option>
+                  <option value="Nagalpur Area">Nagalpur Area</option>
+                  <option value="Somnath Road">Somnath Road</option>
+                  <option value="Dediyasan GIDC">Dediyasan GIDC</option>
+                  <option value="Para Tower">Para Tower</option>
+                  <option value="Pilaji Ganj">Pilaji Ganj</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size:.82rem;font-weight:600">City</label>
+                <input type="text" class="form-control" name="city" value="Mehsana" readonly style="background:#fff">
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size:.82rem;font-weight:600">Pincode</label>
+                <input type="text" class="form-control" name="pincode" value="384002">
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:end;margin-bottom:1rem">
+              <div class="form-group">
+                <label class="form-label" style="font-size:.82rem;font-weight:600">Latitude</label>
+                <input type="number" step="0.0000001" class="form-control" name="latitude" id="newAddrLat" value="23.5880000">
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size:.82rem;font-weight:600">Longitude</label>
+                <input type="number" step="0.0000001" class="form-control" name="longitude" id="newAddrLng" value="72.3693000">
+              </div>
+              <div>
+                <button type="button" class="btn btn-outline btn-sm w-100" onclick="detectCurrentLocation()" style="font-size:.8rem">
+                  <i class="fas fa-crosshairs"></i> Use My GPS Location
+                </button>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <label style="font-size:.85rem;display:flex;align-items:center;gap:.5rem;cursor:pointer">
+                <input type="checkbox" name="is_default" value="1"> Make this my default address
+              </label>
+              <div style="display:flex;gap:.5rem">
+                <button type="button" class="btn btn-outline btn-sm" onclick="toggleAddAddressForm()">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-sm">Save Address</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Addresses List -->
+        {% if addresses %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          {% for a in addresses %}
+          <div style="border:1px solid {% if a.is_default %}var(--primary){% else %}var(--border){% endif %};border-radius:10px;padding:1.25rem;background:{% if a.is_default %}#FFFBF7{% else %}#fff{% endif %};position:relative">
+            <div class="d-flex justify-between align-center mb-2">
+              <span class="badge" style="background:#E5E7EB;color:var(--text-dark);font-weight:700">
+                <i class="fas {% if a.label=='Home' %}fa-home{% elif a.label=='Work' %}fa-briefcase{% else %}fa-map-pin{% endif %}"></i>
+                {{ a.label }}
+              </span>
+              {% if a.is_default %}
+              <span class="badge badge-primary" style="font-size:.72rem">DEFAULT</span>
+              {% endif %}
+            </div>
+            <p style="font-size:.9rem;font-weight:600;color:var(--text-dark);margin:0 0 .3rem">{{ a.address }}</p>
+            <p style="font-size:.8rem;color:var(--text-muted);margin:0 0 .75rem">
+              {{ a.area }}, {{ a.city }} - {{ a.pincode }}
+            </p>
+            <div style="display:flex;gap:.5rem;border-top:1px solid var(--border-light);padding-top:.5rem">
+              {% if not a.is_default %}
+              <a href="/customer/address/set-default/{{ a.id }}" class="btn btn-outline btn-sm" style="font-size:.75rem;padding:.2rem .5rem">
+                Set as Default
+              </a>
+              {% endif %}
+              <a href="/customer/address/delete/{{ a.id }}" class="btn btn-outline btn-sm" style="font-size:.75rem;padding:.2rem .5rem;color:#EF4444"
+                 onclick="return confirm('Delete this address?')">
+                <i class="fas fa-trash"></i> Delete
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:2rem;color:var(--text-muted)">
+          <i class="fas fa-map-marker-alt" style="font-size:2rem;margin-bottom:.5rem;display:block"></i>
+          No saved addresses yet. Click "Add Address" above to save your Home or Work delivery address.
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Change Password Card -->
+      <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+        <h2 style="font-size:1.3rem;font-weight:700;margin-bottom:1.25rem;color:var(--text-dark)">Security & Password</h2>
+        <form method="POST" action="/customer/profile/change-password">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+            <div>
+              <label class="form-label" style="font-weight:600;font-size:.85rem">Current Password</label>
+              <input type="password" class="form-control" name="current_password" required>
+            </div>
+            <div>
+              <label class="form-label" style="font-weight:600;font-size:.85rem">New Password</label>
+              <input type="password" class="form-control" name="new_password" required placeholder="Min 6 chars">
+            </div>
+            <div>
+              <label class="form-label" style="font-weight:600;font-size:.85rem">Confirm New Password</label>
+              <input type="password" class="form-control" name="confirm_password" required>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-outline" style="padding:.6rem 1.5rem">
+            <i class="fas fa-key"></i> Update Password
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleAddAddressForm() {
+  const el = document.getElementById('addAddressCollapse');
+  el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+}
+
+function previewProfilePic(event) {
+  const input = event.target;
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      let preview = document.getElementById('avatarPreview');
+      if (!preview) {
+        const placeholder = document.getElementById('avatarPreviewPlaceholder');
+        if (placeholder) {
+          preview = document.createElement('img');
+          preview.id = 'avatarPreview';
+          preview.style.cssText = 'width:65px;height:65px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
+          placeholder.replaceWith(preview);
+        }
+      }
+      if (preview) {
+        preview.src = e.target.result;
+      }
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function detectCurrentLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.getElementById('newAddrLat').value = pos.coords.latitude.toFixed(7);
+        document.getElementById('newAddrLng').value = pos.coords.longitude.toFixed(7);
+        alert('GPS Coordinates successfully captured!');
+      },
+      (err) => {
+        alert('Geolocation error: ' + err.message + '. Default Mehsana coordinates kept.');
+      }
+    );
+  } else {
+    alert('Browser does not support Geolocation.');
+  }
+}
+</script>
+{% endblock %}

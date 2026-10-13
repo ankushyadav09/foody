@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Sales & Earnings – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#1E293B;color:#fff;padding:2.5rem 0;border-bottom:1px solid #334155">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Sales & Revenue Report</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Track completed orders, daily trends, and top menu revenue</p>
+    </div>
+    <a href="/restaurant/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#475569">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="container py-4">
+  <!-- Revenue Cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1.5rem;margin-bottom:2rem">
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <div style="font-size:.85rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Total Net Sales</div>
+      <div style="font-size:2.2rem;font-weight:900;color:#10B981;margin:.3rem 0">₹{{ "%.2f"|format(total_revenue or 0) }}</div>
+      <span style="font-size:.8rem;color:var(--text-muted)">All fulfilled orders</span>
+    </div>
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <div style="font-size:.85rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Top Selling Dish</div>
+      <div style="font-size:1.4rem;font-weight:800;color:var(--primary);margin:.3rem 0">
+        {{ top_items[0].name if top_items else 'N/A' }}
+      </div>
+      <span style="font-size:.8rem;color:var(--text-muted)">Highest volume item</span>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem">
+    <!-- Daily Breakdown -->
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Daily Sales Trend</h2>
+      {% if daily %}
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
+              <th style="padding:.75rem">Date</th>
+              <th style="padding:.75rem">Orders</th>
+              <th style="padding:.75rem">Revenue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in daily %}
+            <tr style="border-bottom:1px solid var(--border-light)">
+              <td style="padding:.75rem;font-weight:600">{{ d.day }}</td>
+              <td style="padding:.75rem">{{ d.orders }} orders</td>
+              <td style="padding:.75rem;font-weight:700;color:#10B981">₹{{ "%.2f"|format(d.revenue) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p style="color:var(--text-muted);padding:2rem 0;text-align:center">No daily sales logged yet.</p>
+      {% endif %}
+    </div>
+
+    <!-- Top Selling Dishes -->
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Top Dishes by Sales</h2>
+      {% if top_items %}
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
+              <th style="padding:.75rem">Dish</th>
+              <th style="padding:.75rem">Quantity Sold</th>
+              <th style="padding:.75rem">Total Revenue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in top_items %}
+            <tr style="border-bottom:1px solid var(--border-light)">
+              <td style="padding:.75rem;font-weight:600">{{ item.name }}</td>
+              <td style="padding:.75rem">{{ item.total_qty }} pcs</td>
+              <td style="padding:.75rem;font-weight:700;color:#10B981">₹{{ "%.2f"|format(item.total_revenue) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p style="color:var(--text-muted);padding:2rem 0;text-align:center">No dishes sold yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

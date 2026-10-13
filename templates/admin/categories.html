@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Food Categories – Foody Hunters Admin{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Cuisine & Food Categories</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Manage homepage food category badges and catalog taxonomy</p>
+    </div>
+    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:2rem;align-items:start">
+    
+    <!-- Categories List -->
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Existing Categories ({{ categories|length }})</h2>
+
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
+              <th style="padding:.75rem">Icon</th>
+              <th style="padding:.75rem">Category Name</th>
+              <th style="padding:.75rem">Menu Items Count</th>
+              <th style="padding:.75rem">Sort Order</th>
+              <th style="padding:.75rem;text-align:right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in categories %}
+            <tr style="border-bottom:1px solid var(--border-light)">
+              <td style="padding:.75rem;font-size:1.5rem">{{ c.icon }}</td>
+              <td style="padding:.75rem;font-weight:700;color:var(--text-dark)">{{ c.name }}</td>
+              <td style="padding:.75rem">
+                <span class="badge" style="background:var(--border-light);color:var(--text-dark)">{{ c.food_count }} items</span>
+              </td>
+              <td style="padding:.75rem">{{ c.sort_order }}</td>
+              <td style="padding:.75rem;text-align:right">
+                <form method="POST" action="/admin/categories/delete/{{ c.id }}" onsubmit="return confirm('Delete this category?')" style="display:inline">
+                  <button type="submit" class="btn btn-outline btn-sm" style="color:#EF4444;border-color:#EF4444;border-radius:var(--radius-pill)">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Add Category Form -->
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:1rem;color:var(--text-dark)">Add New Category</h3>
+      
+      <form method="POST" action="/admin/categories/add">
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Category Name *</label>
+          <input type="text" class="form-control" name="name" required placeholder="e.g. Mexican">
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Icon Emoji *</label>
+          <input type="text" class="form-control" name="icon" value="🌮" required>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Display Priority / Sort Order</label>
+          <input type="number" class="form-control" name="sort_order" value="11" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100" style="justify-content:center;border-radius:var(--radius-pill);font-weight:700">
+          Save Category
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

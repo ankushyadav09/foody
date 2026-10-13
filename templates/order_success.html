@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Order Placed Successfully! – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:680px">
+  <div style="background:#fff;border-radius:var(--radius-xl);padding:2.5rem 2rem;border:1px solid var(--border);box-shadow:var(--shadow-lg);text-align:center">
+    
+    <!-- Success Icon Animation -->
+    <div style="width:80px;height:80px;background:#D1FAE5;color:#10B981;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.5rem;margin:0 auto 1.5rem">
+      <i class="fas fa-check"></i>
+    </div>
+
+    <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700;font-size:.9rem;padding:.4rem .9rem;margin-bottom:1rem">
+      Payment & Order Confirmed
+    </span>
+
+    <h1 style="font-size:2.2rem;font-weight:900;color:var(--text-dark);margin-bottom:.5rem">
+      Order Placed Successfully!
+    </h1>
+    <p style="color:var(--text-muted);font-size:1rem;margin-bottom:2rem">
+      Your delicious food is being prepped. Get ready for quick doorstep delivery!
+    </p>
+
+    <!-- Order Metadata Card -->
+    <div style="background:#FAFAFA;border-radius:var(--radius-md);padding:1.5rem;border:1px solid var(--border-light);text-align:left;margin-bottom:2rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;border-bottom:1px solid var(--border-light);padding-bottom:1rem;margin-bottom:1rem">
+        <div>
+          <span style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Order ID</span>
+          <div style="font-size:1.1rem;font-weight:800;color:var(--primary)">{{ order.order_code }}</div>
+        </div>
+        <div>
+          <span style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Restaurant</span>
+          <div style="font-size:1.05rem;font-weight:700;color:var(--text-dark)">{{ order.restaurant_name }}</div>
+        </div>
+        <div>
+          <span style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Estimated Delivery</span>
+          <div style="font-size:1rem;font-weight:700;color:#10B981">⚡ 30 - 40 Mins</div>
+        </div>
+        <div>
+          <span style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Payment</span>
+          <div style="font-size:1rem;font-weight:700;color:var(--text-dark);text-transform:uppercase">
+            {{ order.payment_method }} ({{ order.payment_status }})
+          </div>
+        </div>
+      </div>
+
+      <!-- Items List -->
+      <div style="margin-bottom:1rem">
+        <span style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;margin-bottom:.5rem">Items Ordered</span>
+        {% for item in items %}
+        <div style="display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:.3rem">
+          <span>{{ item.name }} × {{ item.quantity }}</span>
+          <span style="font-weight:600">₹{{ "%.2f"|format(item.subtotal) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div style="border-top:1px solid var(--border-light);padding-top:.75rem;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:.85rem;color:var(--text-muted)">Delivery Address: <strong>{{ order.delivery_address or 'Customer Address' }}</strong></span>
+        <div style="font-size:1.3rem;font-weight:900;color:var(--text-dark)">₹{{ "%.2f"|format(order.total_amount) }}</div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+      <a href="/customer/order/track/{{ order.id }}" class="btn btn-primary btn-lg" style="border-radius:var(--radius-pill);font-weight:700">
+        <i class="fas fa-map-marked-alt"></i> Track Live Status
+      </a>
+      <a href="/customer/orders" class="btn btn-outline btn-lg" style="border-radius:var(--radius-pill)">
+        <i class="fas fa-receipt"></i> View Order History
+      </a>
+      <a href="/restaurants" class="btn btn-outline btn-lg" style="border-radius:var(--radius-pill)">
+        <i class="fas fa-utensils"></i> Order More Food
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

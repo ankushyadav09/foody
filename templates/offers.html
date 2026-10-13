@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Exclusive Offers & Discounts – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:linear-gradient(135deg,#FFF7ED,#FFEDD5);padding:3rem 0;border-bottom:1px solid var(--border)">
+  <div class="container text-center" style="max-width:700px">
+    <span class="badge badge-primary mb-2">🎁 Great Deals & Savings</span>
+    <h1 style="font-size:2.5rem;font-weight:900;color:var(--text-dark)">Offers & Promo Codes</h1>
+    <p style="color:var(--text-muted);font-size:1rem;margin-top:.5rem">
+      Apply these promo codes during checkout to enjoy massive savings on your favourite meals.
+    </p>
+  </div>
+</div>
+
+<div class="container py-5">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:1.5rem">
+    {% for cp in coupons %}
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.75rem;border:2px dashed var(--primary);box-shadow:var(--shadow-sm);position:relative;display:flex;flex-direction:column;justify-content:space-between">
+      <div>
+        <div class="d-flex justify-between align-center mb-2">
+          <span class="badge" style="background:#FFF7ED;color:var(--primary);font-size:.85rem;font-weight:800;border:1px solid #FFEDD5">
+            {{ cp.discount_type|upper }}
+          </span>
+          <span style="font-size:.8rem;color:var(--text-muted)">Valid till {{ cp.expiry_date }}</span>
+        </div>
+
+        <div style="font-size:1.8rem;font-weight:900;color:var(--primary);margin-bottom:.4rem">
+          {% if cp.discount_type == 'percentage' %}
+          {{ cp.discount_value|int }}% OFF
+          {% else %}
+          FLAT ₹{{ cp.discount_value|int }} OFF
+          {% endif %}
+        </div>
+
+        <p style="color:var(--text-dark);font-size:.95rem;font-weight:600;margin-bottom:.5rem">{{ cp.description }}</p>
+        <p style="color:var(--text-muted);font-size:.82rem;margin-bottom:1.5rem">
+          Min Order: <strong>₹{{ "%.0f"|format(cp.min_order_amount) }}</strong>
+          {% if cp.max_discount %} &bull; Max Discount: <strong>₹{{ "%.0f"|format(cp.max_discount) }}</strong>{% endif %}
+        </p>
+      </div>
+
+      <div style="background:#F9FAFB;border-radius:var(--radius-md);padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border-light)">
+        <code style="font-size:1.15rem;font-weight:800;color:var(--text-dark);letter-spacing:1px">{{ cp.code }}</code>
+        <button class="btn btn-primary btn-sm" onclick="copyCoupon('{{ cp.code }}')" style="border-radius:var(--radius-pill)">
+          Copy Code
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyCoupon(code) {
+  navigator.clipboard.writeText(code);
+  Toast.success('Coupon code ' + code + ' copied to clipboard!');
+}
+</script>
+{% endblock %}

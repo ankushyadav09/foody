@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}User Management – Foody Hunters Admin{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">User Account Management</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Manage registered customers, restaurant managers, riders, and administrators</p>
+    </div>
+    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    
+    <!-- Filter and Search Bar -->
+    <form method="GET" action="/admin/users" class="d-flex justify-between align-center flex-wrap gap-2 mb-3">
+      <div class="d-flex gap-1" style="flex-wrap:wrap">
+        <a href="/admin/users?role=all" class="btn btn-sm {% if role == 'all' or not role %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">All Roles</a>
+        <a href="/admin/users?role=customer" class="btn btn-sm {% if role == 'customer' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Customers</a>
+        <a href="/admin/users?role=restaurant" class="btn btn-sm {% if role == 'restaurant' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Restaurants</a>
+        <a href="/admin/users?role=delivery" class="btn btn-sm {% if role == 'delivery' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Delivery Riders</a>
+        <a href="/admin/users?role=admin" class="btn btn-sm {% if role == 'admin' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Admins</a>
+      </div>
+
+      <div class="d-flex gap-1">
+        <input type="text" class="form-control" name="q" value="{{ q or '' }}" placeholder="Search name, email..." style="width:220px">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
+      </div>
+    </form>
+
+    {% if users %}
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
+            <th style="padding:.75rem">Name</th>
+            <th style="padding:.75rem">Email</th>
+            <th style="padding:.75rem">Phone</th>
+            <th style="padding:.75rem">Role</th>
+            <th style="padding:.75rem">Status</th>
+            <th style="padding:.75rem">Joined</th>
+            <th style="padding:.75rem;text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:.75rem;font-weight:700;color:var(--text-dark)">{{ u.name }}</td>
+            <td style="padding:.75rem">{{ u.email }}</td>
+            <td style="padding:.75rem">{{ u.phone or '–' }}</td>
+            <td style="padding:.75rem">
+              <span class="badge" style="background:#E0E7FF;color:#4338CA;font-weight:700;text-transform:capitalize">{{ u.role }}</span>
+            </td>
+            <td style="padding:.75rem">
+              {% if u.status == 'active' %}
+              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">Active</span>
+              {% else %}
+              <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Inactive</span>
+              {% endif %}
+            </td>
+            <td style="padding:.75rem;color:var(--text-muted)">{{ u.created_at }}</td>
+            <td style="padding:.75rem;text-align:right">
+              <div style="display:inline-flex;gap:.5rem">
+                <form method="POST" action="/admin/users/toggle/{{ u.id }}" style="display:inline">
+                  <button type="submit" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)" title="Toggle Status">
+                    {% if u.status == 'active' %}Deactivate{% else %}Activate{% endif %}
+                  </button>
+                </form>
+                {% if u.role != 'admin' %}
+                <form method="POST" action="/admin/users/delete/{{ u.id }}" onsubmit="return confirm('Delete user {{ u.name }}?')" style="display:inline">
+                  <button type="submit" class="btn btn-outline btn-sm" style="color:#EF4444;border-color:#EF4444;border-radius:var(--radius-pill)" title="Delete">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted);text-align:center;padding:3rem">No users found.</p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

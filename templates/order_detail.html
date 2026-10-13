@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Order Details #{{ order.order_code }} – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#FFF7ED;padding:2.5rem 0;border-bottom:1px solid var(--border)">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:var(--text-dark)">Order #{{ order.order_code }}</h1>
+      <p style="color:var(--text-muted);font-size:.95rem;margin-top:.2rem">
+        Ordered on {{ order.created_at }} &bull; Status: <strong style="text-transform:uppercase;color:var(--primary)">{{ order.order_status }}</strong>
+      </p>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <a href="/customer/order/track/{{ order.id }}" class="btn btn-primary" style="border-radius:var(--radius-pill)">
+        <i class="fas fa-map-marked-alt"></i> Live Tracking
+      </a>
+      <a href="/customer/orders" class="btn btn-outline" style="border-radius:var(--radius-pill)">
+        <i class="fas fa-arrow-left"></i> Back to Orders
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4" style="max-width:800px">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    
+    <div class="d-flex justify-between align-center mb-3 pb-3" style="border-bottom:1px solid var(--border-light)">
+      <div>
+        <h2 style="font-size:1.3rem;font-weight:800;color:var(--text-dark)">{{ order.restaurant_name }}</h2>
+        <span style="font-size:.85rem;color:var(--text-muted)">Order Code: {{ order.order_code }}</span>
+      </div>
+      <div style="text-align:right">
+        <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700;font-size:.85rem">
+          {{ order.payment_status|capitalize }} ({{ order.payment_method|upper }})
+        </span>
+      </div>
+    </div>
+
+    <!-- Items Table -->
+    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:var(--text-dark)">Items Ordered</h3>
+    <div style="margin-bottom:1.5rem">
+      {% for item in items %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.75rem 0;border-bottom:1px solid var(--border-light)">
+        <div class="d-flex align-center gap-2">
+          {% if item.veg_type == 'veg' %}
+          <span style="display:inline-block;width:12px;height:12px;border:2px solid #10B981;border-radius:2px;padding:1px">
+            <span style="display:block;width:6px;height:6px;background:#10B981;border-radius:50%"></span>
+          </span>
+          {% else %}
+          <span style="display:inline-block;width:12px;height:12px;border:2px solid #EF4444;border-radius:2px;padding:1px">
+            <span style="display:block;width:6px;height:6px;background:#EF4444;border-radius:50%"></span>
+          </span>
+          {% endif %}
+          <strong style="color:var(--text-dark);font-size:.95rem">{{ item.name }}</strong>
+          <span style="color:var(--text-muted);font-size:.85rem">× {{ item.quantity }}</span>
+        </div>
+        <div style="font-weight:700;color:var(--text-dark)">
+          ₹{{ "%.2f"|format(item.subtotal) }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Financial Breakdown -->
+    <div style="background:#FAFAFA;border-radius:var(--radius-md);padding:1.25rem;border:1px solid var(--border-light);margin-bottom:1.5rem">
+      <div style="display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:.4rem">
+        <span style="color:var(--text-muted)">Delivery Fee</span>
+        <span style="font-weight:600">₹{{ "%.2f"|format(order.delivery_fee) }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:.4rem">
+        <span style="color:var(--text-muted)">Taxes (5% GST)</span>
+        <span style="font-weight:600">₹{{ "%.2f"|format(order.tax) }}</span>
+      </div>
+      {% if order.discount > 0 %}
+      <div style="display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:.4rem;color:#10B981">
+        <span>Coupon Discount</span>
+        <span style="font-weight:700">− ₹{{ "%.2f"|format(order.discount) }}</span>
+      </div>
+      {% endif %}
+      <div style="height:1px;background:var(--border);margin:.5rem 0"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong style="font-size:1.1rem;color:var(--text-dark)">Grand Total</strong>
+        <strong style="font-size:1.4rem;color:var(--primary)">₹{{ "%.2f"|format(order.total_amount) }}</strong>
+      </div>
+    </div>
+
+    <!-- Delivery Address & Delivery Partner -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;font-size:.9rem">
+      <div>
+        <h4 style="font-weight:700;color:var(--text-dark);margin-bottom:.3rem">Delivery Address</h4>
+        <p style="color:var(--text-muted);line-height:1.4;margin:0">{{ order.delivery_address or 'Customer Address' }}</p>
+      </div>
+      <div>
+        <h4 style="font-weight:700;color:var(--text-dark);margin-bottom:.3rem">Transaction Details</h4>
+        <p style="color:var(--text-muted);line-height:1.4;margin:0">
+          Method: <strong>{{ order.payment_method|upper }}</strong><br>
+          Status: <strong>{{ order.payment_status|upper }}</strong>
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

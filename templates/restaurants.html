@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Browse Restaurants – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:linear-gradient(135deg,#FFF7ED,#FFEDD5);padding:3rem 0;border-bottom:1px solid var(--border)">
+  <div class="container">
+    <div style="max-width:700px">
+      <span class="badge badge-primary mb-2"><i class="fas fa-utensils"></i> All Restaurants</span>
+      <h1 style="font-size:2.2rem;font-weight:800;color:var(--text-dark)">Restaurants in Your City</h1>
+      <p style="color:var(--text-muted);font-size:1rem;margin-top:.5rem">
+        Explore curated dining destinations, fast delivery hubs, and authentic cuisines delivered straight to you.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+  <!-- Filter & Sort Bar -->
+  <form method="GET" action="/restaurants" id="filterForm" class="filter-card mb-4" style="background:#fff;padding:1.5rem;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--border)">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;align-items:end">
+      
+      <!-- Search Input -->
+      <div>
+        <label class="form-label" style="font-size:.85rem;font-weight:600;margin-bottom:.4rem;display:block">Search</label>
+        <div class="input-group">
+          <i class="fas fa-search input-icon"></i>
+          <input type="text" class="form-control" name="q" value="{{ query_str }}" placeholder="Restaurant, cuisine...">
+        </div>
+      </div>
+
+      <!-- Cuisine Dropdown -->
+      <div>
+        <label class="form-label" style="font-size:.85rem;font-weight:600;margin-bottom:.4rem;display:block">Cuisine</label>
+        <select class="form-control" name="cuisine" onchange="document.getElementById('filterForm').submit()">
+          <option value="">All Cuisines</option>
+          {% for c in cuisines %}
+          <option value="{{ c.cuisine }}" {% if selected_cuisine == c.cuisine %}selected{% endif %}>{{ c.cuisine }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Min Rating -->
+      <div>
+        <label class="form-label" style="font-size:.85rem;font-weight:600;margin-bottom:.4rem;display:block">Rating</label>
+        <select class="form-control" name="rating" onchange="document.getElementById('filterForm').submit()">
+          <option value="">Any Rating</option>
+          <option value="4.5" {% if request.args.get('rating') == '4.5' %}selected{% endif %}>4.5+ ⭐ (Superb)</option>
+          <option value="4.0" {% if request.args.get('rating') == '4.0' %}selected{% endif %}>4.0+ ⭐ (Great)</option>
+          <option value="3.5" {% if request.args.get('rating') == '3.5' %}selected{% endif %}>3.5+ ⭐ (Good)</option>
+        </select>
+      </div>
+
+      <!-- Sort By -->
+      <div>
+        <label class="form-label" style="font-size:.85rem;font-weight:600;margin-bottom:.4rem;display:block">Sort By</label>
+        <select class="form-control" name="sort" onchange="document.getElementById('filterForm').submit()">
+          <option value="recommended" {% if sort == 'recommended' %}selected{% endif %}>Recommended</option>
+          <option value="rating" {% if sort == 'rating' %}selected{% endif %}>Highest Rated</option>
+          <option value="delivery" {% if sort == 'delivery' %}selected{% endif %}>Fastest Delivery</option>
+          <option value="price_low" {% if sort == 'price_low' %}selected{% endif %}>Delivery Fee: Low to High</option>
+          <option value="price_high" {% if sort == 'price_high' %}selected{% endif %}>Delivery Fee: High to Low</option>
+        </select>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:.5rem">
+        <button type="submit" class="btn btn-primary w-100" style="justify-content:center">
+          <i class="fas fa-filter"></i> Apply
+        </button>
+        <a href="/restaurants" class="btn btn-outline" title="Reset Filters">
+          <i class="fas fa-redo"></i>
+        </a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Results Count -->
+  <div class="d-flex justify-between align-center mb-3">
+    <div style="font-size:1.1rem;font-weight:700">
+      Showing <span class="text-primary">{{ restaurants|length }}</span> Restaurants
+      {% if query_str %}for "<span class="text-primary">{{ query_str }}</span>"{% endif %}
+    </div>
+    {% if query_str or selected_cuisine or request.args.get('rating') %}
+    <a href="/restaurants" style="font-size:.85rem;color:var(--primary);font-weight:600">Clear All Filters</a>
+    {% endif %}
+  </div>
+
+  <!-- Restaurant Grid -->
+  {% if restaurants %}
+  <div class="restaurant-grid">
+    {% for r in restaurants %}
+    <div class="restaurant-card" onclick="window.location='/restaurant/{{ r.id }}'" style="cursor:pointer;position:relative">
+      <div class="restaurant-img-wrap" style="position:relative;height:200px;overflow:hidden">
+        <img src="{{ r.image or 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80' }}"
+             alt="{{ r.name }}"
+             loading="lazy"
+             style="width:100%;height:100%;object-fit:cover;transition:var(--transition-slow)"
+             onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80'">
+        <span class="restaurant-badge" style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.72);backdrop-filter:blur(4px);color:#fff;padding:.3rem .6rem;border-radius:var(--radius-pill);font-size:.78rem;font-weight:600">
+          <i class="fas fa-clock text-primary"></i> {{ r.delivery_time or '25-35 min' }}
+        </span>
+        {% if r.is_open %}
+        <span class="badge" style="position:absolute;top:12px;right:12px;background:#10B981;color:#fff;padding:.3rem .65rem;border-radius:var(--radius-pill);font-size:.75rem;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.2)">
+          <i class="fas fa-circle" style="font-size:.5rem;margin-right:2px"></i> Open Now
+        </span>
+        {% else %}
+        <span class="badge" style="position:absolute;top:12px;right:12px;background:#EF4444;color:#fff;padding:.3rem .65rem;border-radius:var(--radius-pill);font-size:.75rem;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.2)">
+          <i class="fas fa-circle" style="font-size:.5rem;margin-right:2px"></i> Closed
+        </span>
+        {% endif %}
+        <span class="rating-badge" style="position:absolute;bottom:12px;right:12px;background:#10B981;color:#fff;padding:.3rem .65rem;border-radius:var(--radius-pill);font-size:.85rem;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.2)">
+          {{ r.rating }} <i class="fas fa-star" style="font-size:.75rem"></i>
+        </span>
+      </div>
+      <div class="restaurant-body" style="padding:1.25rem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
+          <h3 class="restaurant-title" style="font-size:1.15rem;font-weight:700;margin-bottom:.3rem;color:var(--text-dark);flex:1">{{ r.name }}</h3>
+          <button type="button" class="btn-fav" onclick="event.stopPropagation(); toggleFavoriteCard('restaurant', {{ r.id }}, this)" style="background:none;border:none;cursor:pointer;color:#94A3B8;font-size:1.1rem;padding:0" title="Favorite">
+            <i class="far fa-heart"></i>
+          </button>
+        </div>
+        <p class="restaurant-cuisine" style="font-size:.88rem;color:var(--text-muted);margin-bottom:.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.cuisine }}</p>
+        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;display:flex;align-items:center;gap:.35rem">
+          <i class="fas fa-map-marker-alt" style="color:var(--primary)"></i> {{ r.area or 'Mehsana City' }}, {{ r.city }}
+        </p>
+        <div class="restaurant-footer" style="display:flex;justify-content:space-between;align-items:center;padding-top:.8rem;border-top:1px solid var(--border-light)">
+          <div style="font-size:.82rem;color:var(--text-muted)">
+            Delivery: <strong style="color:var(--text-dark)">₹{{ "%.0f"|format(r.delivery_fee or 40.0) }}</strong>
+          </div>
+          <a href="/restaurant/{{ r.id }}" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
+            View Restaurant <i class="fas fa-arrow-right" style="font-size:.75rem"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:5rem 2rem;background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border)">
+    <div style="font-size:3.5rem;margin-bottom:1rem">🍽️</div>
+    <h3 style="font-size:1.4rem;font-weight:700;color:var(--text-dark);margin-bottom:.5rem">No Restaurants Found</h3>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">We couldn't find any restaurants matching your filters. Try clearing some options.</p>
+    <a href="/restaurants" class="btn btn-primary">
+      <i class="fas fa-sync"></i> View All Restaurants
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+async function toggleFavoriteCard(type, id, btn) {
+  try {
+    const res = await fetch('/customer/favorite/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_type: type, item_id: id })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const icon = btn.querySelector('i');
+      if (data.favorited) {
+        icon.className = 'fas fa-heart text-danger';
+        btn.style.color = '#EF4444';
+      } else {
+        icon.className = 'far fa-heart';
+        btn.style.color = '#94A3B8';
+      }
+    } else if (res.status === 401) {
+      window.location.href = '/login?next=/restaurants';
+    }
+  } catch (err) {
+    console.error('Favorite toggle error:', err);
+  }
+}
+</script>
+{% endblock %}
+{% endblock %}

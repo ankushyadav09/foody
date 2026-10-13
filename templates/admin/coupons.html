@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Promo Coupons – Foody Hunters Admin{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Coupons & Promotional Discounts</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Create marketing campaigns and percentage / flat discount codes</p>
+    </div>
+    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:2rem;align-items:start">
+    
+    <!-- Coupons List -->
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Existing Promo Codes ({{ coupons|length }})</h2>
+
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
+              <th style="padding:.75rem">Code</th>
+              <th style="padding:.75rem">Discount</th>
+              <th style="padding:.75rem">Min Order</th>
+              <th style="padding:.75rem">Max Discount</th>
+              <th style="padding:.75rem">Status</th>
+              <th style="padding:.75rem;text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cp in coupons %}
+            <tr style="border-bottom:1px solid var(--border-light)">
+              <td style="padding:.75rem">
+                <code style="font-size:1rem;font-weight:800;color:var(--primary)">{{ cp.code }}</code>
+                <small style="color:var(--text-muted);display:block">{{ cp.description }}</small>
+              </td>
+              <td style="padding:.75rem;font-weight:700">
+                {% if cp.discount_type == 'percentage' %}
+                {{ cp.discount_value|int }}%
+                {% else %}
+                ₹{{ cp.discount_value|int }} Flat
+                {% endif %}
+              </td>
+              <td style="padding:.75rem">₹{{ "%.0f"|format(cp.min_order_amount) }}</td>
+              <td style="padding:.75rem">
+                {% if cp.max_discount %}₹{{ "%.0f"|format(cp.max_discount) }}{% else %}No cap{% endif %}
+              </td>
+              <td style="padding:.75rem">
+                <form method="POST" action="/admin/coupons/toggle/{{ cp.id }}" style="display:inline">
+                  {% if cp.is_active == 1 %}
+                  <button type="submit" class="badge" style="background:#D1FAE5;color:#047857;border:none;cursor:pointer;font-weight:700">
+                    Active
+                  </button>
+                  {% else %}
+                  <button type="submit" class="badge" style="background:#FEE2E2;color:#B91C1C;border:none;cursor:pointer;font-weight:700">
+                    Disabled
+                  </button>
+                  {% endif %}
+                </form>
+              </td>
+              <td style="padding:.75rem;text-align:right">
+                <form method="POST" action="/admin/coupons/delete/{{ cp.id }}" onsubmit="return confirm('Delete coupon {{ cp.code }}?')" style="display:inline">
+                  <button type="submit" class="btn btn-outline btn-sm" style="color:#EF4444;border-color:#EF4444;border-radius:var(--radius-pill)">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Create Coupon Form -->
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:1rem;color:var(--text-dark)">Create New Coupon</h3>
+      
+      <form method="POST" action="/admin/coupons/add">
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Coupon Code *</label>
+          <input type="text" class="form-control" name="code" required placeholder="e.g. FESTIVE30" style="text-transform:uppercase">
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Description</label>
+          <input type="text" class="form-control" name="description" placeholder="e.g. 30% off for festival season">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:.85rem;display:block;margin-bottom:.3rem">Type</label>
+            <select class="form-control" name="discount_type">
+              <option value="percentage">Percentage (%)</option>
+              <option value="fixed">Fixed (₹)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:.85rem;display:block;margin-bottom:.3rem">Value *</label>
+            <input type="number" step="0.01" class="form-control" name="discount_value" required placeholder="30">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:.85rem;display:block;margin-bottom:.3rem">Min Order (₹)</label>
+            <input type="number" step="0.01" class="form-control" name="min_order_amount" value="199">
+          </div>
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:.85rem;display:block;margin-bottom:.3rem">Max Discount (₹)</label>
+            <input type="number" step="0.01" class="form-control" name="max_discount" value="100">
+          </div>
+        </div>
+
+        <div class="form-group mb-4">
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+            <input type="checkbox" name="is_active" value="1" checked> Active Immediately
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100" style="justify-content:center;border-radius:var(--radius-pill);font-weight:700">
+          Publish Coupon
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

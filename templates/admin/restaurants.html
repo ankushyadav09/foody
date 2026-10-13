@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Restaurant Approvals & Management – Foody Hunters Admin{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Restaurant Partners Management</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Approve dining applications, monitor active menus, and manage partners</p>
+    </div>
+    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    
+    <!-- Filter Pills -->
+    <div class="d-flex gap-1 mb-3" style="flex-wrap:wrap">
+      <a href="/admin/restaurants?status=all" class="btn btn-sm {% if status == 'all' or not status %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">All ({{ restaurants|length }})</a>
+      <a href="/admin/restaurants?status=approved" class="btn btn-sm {% if status == 'approved' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Approved</a>
+      <a href="/admin/restaurants?status=pending" class="btn btn-sm {% if status == 'pending' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Pending Approval</a>
+      <a href="/admin/restaurants?status=rejected" class="btn btn-sm {% if status == 'rejected' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Rejected</a>
+    </div>
+
+    {% if restaurants %}
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
+            <th style="padding:.75rem">Restaurant</th>
+            <th style="padding:.75rem">Cuisine</th>
+            <th style="padding:.75rem">Owner</th>
+            <th style="padding:.75rem">Rating</th>
+            <th style="padding:.75rem">Status</th>
+            <th style="padding:.75rem;text-align:right">Approval Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in restaurants %}
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:.75rem">
+              <div style="display:flex;align-items:center;gap:.75rem">
+                <img src="{{ r.image or 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100&q=80' }}"
+                     alt="{{ r.name }}" style="width:48px;height:48px;border-radius:var(--radius-sm);object-fit:cover"
+                     onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100&q=80'">
+                <div>
+                  <strong style="color:var(--text-dark);display:block">{{ r.name }}</strong>
+                  <small style="color:var(--text-muted)">{{ r.address[:40] }}...</small>
+                </div>
+              </div>
+            </td>
+            <td style="padding:.75rem">{{ r.cuisine }}</td>
+            <td style="padding:.75rem">{{ r.owner_name or 'System Demo' }}</td>
+            <td style="padding:.75rem;font-weight:700;color:#10B981">★ {{ r.rating }}</td>
+            <td style="padding:.75rem">
+              {% if r.verification_status == 'approved' or r.status == 'approved' %}
+              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">✓ Approved</span>
+              {% elif r.verification_status == 'pending' %}
+              <span class="badge" style="background:#FEF3C7;color:#B45309;font-weight:700">Pending Review</span>
+              {% else %}
+              <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Rejected</span>
+              {% endif %}
+            </td>
+            <td style="padding:.75rem;text-align:right">
+              <div style="display:inline-flex;gap:.5rem">
+                {% if r.verification_status != 'approved' and r.status != 'approved' %}
+                <form method="POST" action="/admin/restaurants/approve/{{ r.id }}" style="display:inline">
+                  <button type="submit" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
+                    Approve
+                  </button>
+                </form>
+                {% endif %}
+                {% if r.verification_status != 'rejected' %}
+                <form method="POST" action="/admin/restaurants/reject/{{ r.id }}" style="display:inline">
+                  <button type="submit" class="btn btn-outline btn-sm" style="color:#EF4444;border-color:#EF4444;border-radius:var(--radius-pill)">
+                    Reject
+                  </button>
+                </form>
+                {% endif %}
+                <a href="/restaurant/{{ r.id }}" target="_blank" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)" title="Preview Public Page">
+                  <i class="fas fa-external-link-alt"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted);text-align:center;padding:3rem">No restaurants found in this category.</p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

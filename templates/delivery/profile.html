@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Delivery Partner Profile – FOODIE HUNTER{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
+  <div class="container d-flex justify-between align-center flex-wrap gap-3">
+    <div class="d-flex align-center gap-3">
+      {% if user and user.profile_pic %}
+      <img src="{{ user.profile_pic }}" alt="{{ user.name }}"
+           style="width:75px;height:75px;border-radius:50%;object-fit:cover;border:3px solid #38BDF8">
+      {% else %}
+      <div style="width:75px;height:75px;background:#38BDF8;color:#0F172A;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800">
+        <i class="fas fa-motorcycle"></i>
+      </div>
+      {% endif %}
+      <div>
+        <div class="d-flex align-center gap-2">
+          <h1 style="font-size:1.8rem;font-weight:800;color:#fff;margin:0">{{ user.name }}</h1>
+          <span class="badge" style="background:{% if partner and partner.is_online %}#10B981{% else %}#64748B{% endif %};color:#fff;font-size:.78rem">
+            {% if partner and partner.is_online %}● ONLINE (ACTIVE){% else %}○ OFFLINE{% endif %}
+          </span>
+          <span class="badge" style="background:#0284C7;color:#fff;font-size:.78rem">
+            VERIFIED RIDER
+          </span>
+        </div>
+        <p style="color:#94A3B8;font-size:.88rem;margin-top:.25rem">
+          Vehicle: <strong>{{ partner.vehicle_type if partner else 'Motorcycle' }}</strong> ({{ partner.vehicle_number if partner else 'GJ-02' }}) &bull;
+          Lifetime Drops: <strong>{{ partner.total_deliveries if partner else 0 }}</strong> &bull;
+          Earnings: <strong>₹{{ "%.2f"|format(partner.total_earnings if partner else 0) }}</strong>
+        </p>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <form method="POST" action="/delivery/toggle-online" style="display:inline">
+        <button type="submit" class="btn btn-outline" style="color:#fff;border-color:#334155;font-size:.85rem">
+          <i class="fas fa-power-off"></i> Toggle Online / Offline
+        </button>
+      </form>
+      <a href="/delivery/dashboard" class="btn btn-primary" style="font-size:.85rem">
+        <i class="fas fa-motorcycle"></i> Rider Portal
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4" style="max-width:850px">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    
+    <div class="d-flex justify-between align-center mb-3">
+      <div>
+        <h2 style="font-size:1.3rem;font-weight:700;color:var(--text-dark);margin:0">Delivery Partner Profile Details</h2>
+        <p style="font-size:.85rem;color:var(--text-muted);margin-top:.2rem">
+          Personal identification, KYC credentials, vehicle registration, and dispatch status.
+        </p>
+      </div>
+      <span class="badge" style="background:#F1F5F9;color:var(--text-muted);font-size:.75rem">
+        Last Sync: {{ (user.updated_at|string)[:19] if user and user.updated_at else 'Live' }}
+      </span>
+    </div>
+
+    <!-- Read-Only View Panel -->
+    <div id="viewPanel">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+        <div>
+          <label style="font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;display:block">Full Name</label>
+          <div style="font-size:1rem;font-weight:600;color:var(--text-dark);margin-top:.2rem" id="viewName">{{ user.name }}</div>
+        </div>
+        <div>
+          <label style="font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;display:block">Email Address (System Login)</label>
+          <div style="font-size:1rem;color:var(--text-dark);margin-top:.2rem">{{ user.email }}</div>
+        </div>
+        <div>
+          <label style="font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;display:block">Mobile Phone Number</label>
+          <div style="font-size:1rem;color:var(--text-dark);margin-top:.2rem" id="viewPhone">{{ user.phone }}</div>
+        </div>
+        <div>
+          <label style="font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;display:block">Gender & Date of Birth</label>
+          <div style="font-size:1rem;color:var(--text-dark);margin-top:.2rem">
+            {{ user.gender|capitalize if user.gender else 'Not specified' }} &bull; {{ (user.dob|string)[:10] if user.dob else 'Not set' }}
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#F8FAFC;border-radius:var(--radius-md);padding:1.25rem;margin-bottom:1.5rem;border:1px solid #E2E8F0">
+        <h4 style="font-size:.9rem;font-weight:700;color:#0F172A;margin-bottom:.75rem;text-transform:uppercase">
+          <i class="fas fa-truck-loading" style="color:var(--primary)"></i> Assigned Logistics Credentials
+        </h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem">
+          <div>
+            <label style="font-size:.75rem;color:var(--text-muted);font-weight:700;display:block">Vehicle Type</label>
+            <div style="font-size:.95rem;font-weight:600;color:var(--text-dark);margin-top:.2rem">
+              {{ partner.vehicle_type if partner and partner.vehicle_type else 'Motorcycle' }}
+            </div>
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:var(--text-muted);font-weight:700;display:block">Plate / Registration No.</label>
+            <div style="font-size:.95rem;font-weight:600;color:var(--text-dark);margin-top:.2rem">
+              {{ partner.vehicle_number if partner and partner.vehicle_number else 'GJ-02-AB-1234' }}
+            </div>
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:var(--text-muted);font-weight:700;display:block">Driving License Reference</label>
+            <div style="font-size:.95rem;font-weight:600;color:var(--text-dark);margin-top:.2rem">
+              {{ partner.license_number if partner and partner.license_number else 'DL-GJ02-2022-00123' }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:1.5rem">
+        <label style="font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;display:block">Residential / Operating Address</label>
+        <div style="font-size:.95rem;color:var(--text-dark);margin-top:.2rem" id="viewAddress">
+          {{ user.address if user.address else 'Mehsana Hub, Gujarat' }}, {{ user.city }}, {{ user.state }} - {{ user.pincode }}
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary" id="btnEditProfile" onclick="toggleEditMode(true)" style="border-radius:var(--radius-pill)">
+          <i class="fas fa-edit"></i> Edit Profile
+        </button>
+        <a href="/delivery/history" class="btn btn-outline" style="border-radius:var(--radius-pill)">
+          <i class="fas fa-history"></i> Earnings & Delivery History
+        </a>
+      </div>
+    </div>
+
+    <!-- Edit Form Panel (Hidden by default) -->
+    <div id="editPanel" style="display:none">
+      <form method="POST" action="/delivery/profile/update" enctype="multipart/form-data">
+        
+        <h4 style="font-size:.95rem;font-weight:700;color:var(--primary);margin-bottom:1rem;border-bottom:1px solid var(--border-light);padding-bottom:.5rem">
+          <i class="fas fa-user-edit"></i> Personal Information
+        </h4>
+
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div class="form-group">
+            <label class="form-label">Full Name *</label>
+            <input type="text" name="name" class="form-control" value="{{ user.name }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mobile Number *</label>
+            <input type="text" name="phone" class="form-control" value="{{ user.phone }}" required>
+          </div>
+        </div>
+
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select name="gender" class="form-control">
+              <option value="">Select Gender</option>
+              <option value="male" {% if user.gender=='male' %}selected{% endif %}>Male</option>
+              <option value="female" {% if user.gender=='female' %}selected{% endif %}>Female</option>
+              <option value="other" {% if user.gender=='other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date of Birth</label>
+            <input type="date" name="dob" class="form-control" value="{{ (user.dob|string)[:10] if user.dob else '' }}">
+          </div>
+        </div>
+
+        <h4 style="font-size:.95rem;font-weight:700;color:var(--primary);margin:1.5rem 0 1rem;border-bottom:1px solid var(--border-light);padding-bottom:.5rem">
+          <i class="fas fa-motorcycle"></i> Logistics & Vehicle Details
+        </h4>
+
+        <div class="form-row" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem;margin-bottom:1rem">
+          <div class="form-group">
+            <label class="form-label">Vehicle Type</label>
+            <select name="vehicle_type" class="form-control">
+              <option value="Motorcycle" {% if partner and partner.vehicle_type=='Motorcycle' %}selected{% endif %}>Motorcycle</option>
+              <option value="Scooter" {% if partner and partner.vehicle_type=='Scooter' %}selected{% endif %}>Scooter (Activa / Jupiter)</option>
+              <option value="Electric Bike" {% if partner and partner.vehicle_type=='Electric Bike' %}selected{% endif %}>Electric Bike / EV</option>
+              <option value="Bicycle" {% if partner and partner.vehicle_type=='Bicycle' %}selected{% endif %}>Bicycle</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Vehicle Registration Number</label>
+            <input type="text" name="vehicle_number" class="form-control"
+                   value="{{ partner.vehicle_number if partner and partner.vehicle_number else 'GJ-02-AB-1234' }}"
+                   placeholder="e.g. GJ-02-AK-9821" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Driving License Number</label>
+            <input type="text" name="license_number" class="form-control"
+                   value="{{ partner.license_number if partner and partner.license_number else 'DL-GJ02-2022-00123' }}"
+                   placeholder="e.g. DL-GJ02-2022-00123">
+          </div>
+        </div>
+
+        <h4 style="font-size:.95rem;font-weight:700;color:var(--primary);margin:1.5rem 0 1rem;border-bottom:1px solid var(--border-light);padding-bottom:.5rem">
+          <i class="fas fa-map-marker-alt"></i> Address & Profile Photo
+        </h4>
+
+        <div class="form-group mb-3">
+          <label class="form-label">Residential Address</label>
+          <textarea name="address" class="form-control" rows="2" placeholder="Street / House No / Colony">{{ user.address or '' }}</textarea>
+        </div>
+
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" name="city" class="form-control" value="{{ user.city or 'Mehsana' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">State</label>
+            <input type="text" name="state" class="form-control" value="{{ user.state or 'Gujarat' }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pincode</label>
+            <input type="text" name="pincode" class="form-control" value="{{ user.pincode or '384001' }}">
+          </div>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label">Update Profile Photo</label>
+          <input type="file" name="profile_pic" class="form-control" accept="image/*">
+          <small style="color:var(--text-muted)">Formats: JPG, PNG, WEBP. Max 5MB.</small>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary" style="border-radius:var(--radius-pill)">
+            <i class="fas fa-save"></i> Save Changes
+          </button>
+          <button type="button" class="btn btn-outline" onclick="toggleEditMode(false)" style="border-radius:var(--radius-pill)">
+            <i class="fas fa-times"></i> Cancel
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function toggleEditMode(isEditing) {
+  const viewPanel = document.getElementById('viewPanel');
+  const editPanel = document.getElementById('editPanel');
+  if (isEditing) {
+    viewPanel.style.display = 'none';
+    editPanel.style.display = 'block';
+  } else {
+    viewPanel.style.display = 'block';
+    editPanel.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}

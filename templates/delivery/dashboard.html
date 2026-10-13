@@ -1,0 +1,218 @@
+{% extends "ops_base.html" %}
+{% block title %}Rider Portal – Foody Hunters Delivery Operations{% endblock %}
+
+{% block page_title %}Rider Operations Hub{% endblock %}
+{% block page_subtitle %}Live route tasks, delivery pickup, doorstep dropoffs, and earnings tracking{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <!-- Availability Toggle Form -->
+  <form method="POST" action="/delivery/toggle-online" style="display:inline">
+    <button type="submit" class="ops-btn ops-btn-sm {% if partner.is_online %}ops-btn-primary{% else %}ops-btn-outline{% endif %}" style="{% if partner.is_online %}background:var(--ops-emerald);border-color:var(--ops-emerald);color:#0B0F19;font-weight:700{% else %}color:var(--ops-rose);border-color:var(--ops-rose){% endif %}">
+      <i class="fas fa-power-off"></i> {% if partner.is_online %}ONLINE (ACCEPTING DISPATCHES){% else %}OFFLINE (DUTY PAUSED){% endif %}
+    </button>
+  </form>
+  <button class="ops-btn ops-btn-outline ops-btn-sm" onclick="window.location.reload()">
+    <i class="fas fa-sync-alt"></i> Refresh
+  </button>
+  <a href="/delivery/history" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-history"></i> Trip Log
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- ── RIDER KPI CARDS ─────────────────────────────────────────────── -->
+<div class="ops-stats-grid mb-4">
+  
+  <div class="ops-stat-card glow-cyan">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Active Drops</span>
+      <div class="ops-stat-icon cyan"><i class="fas fa-motorcycle"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ assigned|length }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-cyan)">Currently in dispatch</span>
+    </div>
+  </div>
+
+  <div class="ops-stat-card glow-emerald">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Today's Completed</span>
+      <div class="ops-stat-icon emerald"><i class="fas fa-check-circle"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.today_deliveries }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-emerald)">Delivered successfully today</span>
+    </div>
+  </div>
+
+  <div class="ops-stat-card glow-orange">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Lifetime Drops</span>
+      <div class="ops-stat-icon orange"><i class="fas fa-route"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.total_deliveries }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-muted)">Total completed dispatches</span>
+    </div>
+  </div>
+
+  <div class="ops-stat-card glow-purple">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Payouts Earned</span>
+      <div class="ops-stat-icon purple"><i class="fas fa-indian-rupee-sign"></i></div>
+    </div>
+    <div class="ops-stat-val">₹{{ "%.2f"|format(stats.earnings) }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-emerald)">Accumulated delivery fees</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── ASSIGNED DELIVERIES & VEHICLE PROFILE ─────────────────────── -->
+<div style="display:grid;grid-template-columns:2.3fr 1fr;gap:1.5rem;align-items:start">
+  
+  <!-- Active Task Stream -->
+  <div class="ops-card">
+    <div class="d-flex justify-between align-center mb-3">
+      <div>
+        <h3 style="margin:0;font-size:1.15rem;font-weight:700">Assigned Delivery Route Tasks</h3>
+        <p style="margin:0;font-size:0.8rem;color:var(--ops-muted)">Pickup orders from restaurant kitchen and deliver to customer destination</p>
+      </div>
+      <span class="ops-badge info">
+        <i class="fas fa-map-marker-alt"></i> {{ assigned|length }} Active Route{% if assigned|length != 1 %}s{% endif %}
+      </span>
+    </div>
+
+    {% if assigned %}
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      {% for a in assigned %}
+      <div style="background:var(--ops-surface-2);border:1px solid var(--ops-border);border-radius:var(--ops-radius-md);padding:1.25rem">
+        <div class="d-flex justify-between align-center flex-wrap gap-2 mb-2">
+          <div>
+            <span style="font-family:'Fira Code',monospace;font-weight:700;color:var(--ops-orange);font-size:1.1rem">
+              #{{ a.order_code }}
+            </span>
+            <span style="font-size:0.8rem;color:var(--ops-muted);margin-left:0.5rem">
+              Assigned: {{ a.assigned_at }}
+            </span>
+          </div>
+          <div>
+            {% if a.status == 'assigned' %}
+              <span class="ops-badge warning"><i class="fas fa-clock"></i> Pickup Pending</span>
+            {% elif a.status in ['picked_up', 'out_for_delivery'] %}
+              <span class="ops-badge cyan"><i class="fas fa-motorcycle"></i> Out for Delivery</span>
+            {% else %}
+              <span class="ops-badge info">{{ a.status|capitalize }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;font-size:0.88rem">
+          <!-- Pickup -->
+          <div style="background:rgba(15, 23, 42, 0.6);border:1px solid var(--ops-border);border-radius:var(--ops-radius-sm);padding:0.75rem">
+            <div style="font-size:0.72rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.25rem">
+              📍 1. PICKUP RESTAURANT
+            </div>
+            <div style="font-weight:700;color:#F8FAFC">{{ a.restaurant_name }}</div>
+            <div style="font-size:0.8rem;color:var(--ops-muted)">{{ a.restaurant_address }}</div>
+          </div>
+          <!-- Dropoff -->
+          <div style="background:rgba(15, 23, 42, 0.6);border:1px solid var(--ops-border);border-radius:var(--ops-radius-sm);padding:0.75rem">
+            <div style="font-size:0.72rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.25rem">
+              🏁 2. DELIVERY DESTINATION
+            </div>
+            <div style="font-weight:700;color:#F8FAFC">{{ a.customer_name }}</div>
+            {% if a.customer_phone %}
+            <div style="font-size:0.8rem;color:var(--ops-cyan)">📞 {{ a.customer_phone }}</div>
+            {% endif %}
+            <div style="font-size:0.8rem;color:var(--ops-muted)">{{ a.delivery_address or 'Customer home address on file' }}</div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-between align-center flex-wrap gap-2 pt-2" style="border-top:1px solid var(--ops-border)">
+          <div style="font-size:0.95rem;font-weight:700">
+            Order Total: <span style="color:var(--ops-emerald)">₹{{ "%.2f"|format(a.total_amount) }}</span>
+          </div>
+
+          <div class="d-flex align-center gap-2">
+            <a href="/delivery/order/{{ a.id }}" class="ops-btn ops-btn-outline ops-btn-sm">
+              <i class="fas fa-file-invoice"></i> Task Details
+            </a>
+
+            {% if a.status == 'assigned' %}
+              <form method="POST" action="/delivery/order/pickup/{{ a.id }}">
+                <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm" style="background:var(--ops-cyan);border-color:var(--ops-cyan);color:#0B0F19">
+                  <i class="fas fa-box-open"></i> Pick Up Food
+                </button>
+              </form>
+            {% elif a.status in ['picked_up', 'out_for_delivery'] %}
+              <form method="POST" action="/delivery/order/delivered/{{ a.id }}">
+                <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm" style="background:var(--ops-emerald);border-color:var(--ops-emerald);color:#0B0F19" onclick="return confirm('Confirm order delivered to customer?')">
+                  <i class="fas fa-check-double"></i> Mark Delivered
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:3rem 1rem;color:var(--ops-muted)">
+      <i class="fas fa-motorcycle fa-3x mb-3" style="color:var(--ops-border)"></i>
+      <p style="font-size:1.05rem;color:#E2E8F0">No active deliveries assigned at the moment.</p>
+      <p style="font-size:0.85rem">Keep your status <strong>ONLINE</strong> to automatically receive incoming orders from nearby kitchens.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Rider Fleet Profile Card -->
+  <div class="ops-card">
+    <h3 style="margin:0;font-size:1.15rem;font-weight:700;margin-bottom:0.25rem">Fleet Partner Dossier</h3>
+    <p style="margin:0;font-size:0.8rem;color:var(--ops-muted);margin-bottom:1rem">Rider credentials and vehicle data</p>
+
+    <div style="background:var(--ops-surface-2);border:1px solid var(--ops-border);border-radius:var(--ops-radius-md);padding:1rem;margin-bottom:1rem">
+      <div style="font-size:0.75rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700">// FLEET IDENTITY</div>
+      <div style="font-size:1.1rem;font-weight:700;margin-top:0.35rem">{{ session.get('user_name') or 'Fleet Partner' }}</div>
+      <div style="font-size:0.82rem;color:var(--ops-muted)">{{ session.get('user_email') }}</div>
+      
+      <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--ops-border);font-size:0.85rem">
+        <div class="d-flex justify-between py-1">
+          <span style="color:var(--ops-muted)">Vehicle Type:</span>
+          <span style="font-weight:600">{{ partner.vehicle_type or 'Motorcycle' }}</span>
+        </div>
+        <div class="d-flex justify-between py-1">
+          <span style="color:var(--ops-muted)">Vehicle Plate:</span>
+          <span style="font-family:'Fira Code',monospace;font-weight:600;color:var(--ops-orange)">{{ partner.vehicle_number or 'GJ-02-AB-1234' }}</span>
+        </div>
+        <div class="d-flex justify-between py-1">
+          <span style="color:var(--ops-muted)">Duty Status:</span>
+          <span style="font-weight:600;color:{% if partner.is_online %}var(--ops-emerald){% else %}var(--ops-rose){% endif %}">
+            {% if partner.is_online %}● ONLINE{% else %}○ OFFLINE{% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div style="margin-top:1rem">
+        <a href="/delivery/profile" class="ops-btn ops-btn-outline ops-btn-sm w-100">
+          <i class="fas fa-id-card"></i> Edit Rider Profile
+        </a>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:0.5rem">
+      <a href="/delivery/history" class="ops-btn ops-btn-outline ops-btn-sm" style="justify-content:flex-start">
+        <i class="fas fa-history"></i> Completed Trip History
+      </a>
+      <a href="/" target="_blank" class="ops-btn ops-btn-outline ops-btn-sm" style="justify-content:flex-start">
+        <i class="fas fa-external-link-alt"></i> Customer Storefront
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

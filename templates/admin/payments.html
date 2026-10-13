@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Payment Audits & Logs – Foody Hunters Admin{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Platform Payments & Transaction Logs</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Audit order transactions, payment methods, and gross volume</p>
+    </div>
+    <div style="background:#1E293B;padding:.75rem 1.5rem;border-radius:var(--radius-md);border:1px solid #334155;text-align:right">
+      <span style="font-size:.8rem;color:#94A3B8;text-transform:uppercase">Lifetime Revenue</span>
+      <div style="font-size:1.6rem;font-weight:900;color:#10B981">₹{{ "%.2f"|format(total_revenue) }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Transactions Log ({{ payments|length }})</h2>
+
+    {% if payments %}
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
+            <th style="padding:.75rem">Transaction ID</th>
+            <th style="padding:.75rem">Order</th>
+            <th style="padding:.75rem">Customer</th>
+            <th style="padding:.75rem">Restaurant</th>
+            <th style="padding:.75rem">Method</th>
+            <th style="padding:.75rem">Amount</th>
+            <th style="padding:.75rem">Status</th>
+            <th style="padding:.75rem">Date & Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in payments %}
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:.75rem"><code>{{ p.transaction_id }}</code></td>
+            <td style="padding:.75rem"><strong>#{{ p.order_code }}</strong></td>
+            <td style="padding:.75rem">{{ p.customer_name }}</td>
+            <td style="padding:.75rem">{{ p.restaurant_name }}</td>
+            <td style="padding:.75rem;text-transform:uppercase;font-weight:600">{{ p.payment_method }}</td>
+            <td style="padding:.75rem;font-weight:700;color:#10B981">₹{{ "%.2f"|format(p.amount) }}</td>
+            <td style="padding:.75rem">
+              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">{{ p.payment_status|capitalize }}</span>
+            </td>
+            <td style="padding:.75rem;color:var(--text-muted);font-size:.85rem">{{ p.payment_date }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted);text-align:center;padding:3rem">No payment records logged yet.</p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

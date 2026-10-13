@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Customer Reviews – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#1E293B;color:#fff;padding:2.5rem 0;border-bottom:1px solid #334155">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Customer Ratings & Reviews</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Customer feedback for your kitchen dishes and packaging</p>
+    </div>
+    <a href="/restaurant/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#475569">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="container py-4">
+  {% if reviews %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:1.25rem">
+    {% for rv in reviews %}
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <div class="d-flex justify-between align-center mb-2">
+        <strong style="color:var(--text-dark);font-size:1rem"><i class="fas fa-user-circle text-primary"></i> {{ rv.user_name }}</strong>
+        <span style="color:#F59E0B;font-weight:700">
+          {% for i in range(rv.rating) %}★{% endfor %}
+        </span>
+      </div>
+      <p style="color:var(--text-muted);font-size:.9rem;line-height:1.5;margin-bottom:1rem">"{{ rv.comment }}"</p>
+      <div style="font-size:.78rem;color:var(--text-muted);border-top:1px solid var(--border-light);padding-top:.5rem">
+        Reviewed on {{ rv.created_at }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:4rem 2rem;text-align:center;border:1px solid var(--border)">
+    <div style="font-size:3rem;margin-bottom:1rem">⭐</div>
+    <h3 style="font-size:1.3rem;font-weight:700;color:var(--text-dark);margin-bottom:.5rem">No Reviews Yet</h3>
+    <p style="color:var(--text-muted)">Once customers receive and review their orders, their ratings will appear here.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

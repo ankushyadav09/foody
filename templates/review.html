@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Rate & Review – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#FFF7ED;padding:2.5rem 0;border-bottom:1px solid var(--border)">
+  <div class="container text-center" style="max-width:600px">
+    <div style="font-size:2.5rem;margin-bottom:.5rem">⭐</div>
+    <h1 style="font-size:2rem;font-weight:800;color:var(--text-dark)">Rate Your Experience</h1>
+    <p style="color:var(--text-muted);font-size:.95rem">
+      Order #{{ order.order_code }} from <strong>{{ restaurant.name }}</strong>
+    </p>
+  </div>
+</div>
+
+<div class="container py-4" style="max-width:550px">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    <form method="POST" action="/customer/order/review/{{ order.id }}">
+      
+      <!-- Star Rating Selection -->
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <label class="form-label" style="font-weight:700;font-size:1.05rem;display:block;margin-bottom:.5rem">
+          How would you rate the food & delivery?
+        </label>
+        
+        <div style="display:flex;justify-content:center;gap:.75rem;font-size:2.2rem;cursor:pointer" id="starContainer">
+          <span onclick="setRating(1)" class="star-btn" data-val="1">⭐</span>
+          <span onclick="setRating(2)" class="star-btn" data-val="2">⭐</span>
+          <span onclick="setRating(3)" class="star-btn" data-val="3">⭐</span>
+          <span onclick="setRating(4)" class="star-btn" data-val="4">⭐</span>
+          <span onclick="setRating(5)" class="star-btn" data-val="5">⭐</span>
+        </div>
+        <input type="hidden" name="rating" id="ratingInput" value="5">
+        <div id="ratingText" style="font-size:.9rem;font-weight:700;color:var(--primary);margin-top:.4rem">
+          5 Stars - Exceptional!
+        </div>
+      </div>
+
+      <!-- Written Comment -->
+      <div class="form-group mb-4">
+        <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.4rem">
+          Write your detailed feedback
+        </label>
+        <textarea class="form-control" name="comment" rows="4" required
+                  placeholder="Tell us what you liked about the food flavor, packaging, and delivery speed..."></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg w-100" style="justify-content:center;border-radius:var(--radius-pill);font-weight:700">
+        Submit Review
+      </button>
+
+      <div style="text-align:center;margin-top:1rem">
+        <a href="/customer/orders" style="font-size:.85rem;color:var(--text-muted)">
+          Skip review and return to orders
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const labels = {
+  1: '1 Star - Needs Improvement',
+  2: '2 Stars - Average',
+  3: '3 Stars - Good Food',
+  4: '4 Stars - Very Tasty!',
+  5: '5 Stars - Exceptional!'
+};
+
+function setRating(val) {
+  document.getElementById('ratingInput').value = val;
+  document.getElementById('ratingText').textContent = labels[val] || (val + ' Stars');
+  const stars = document.querySelectorAll('.star-btn');
+  stars.forEach((s, idx) => {
+    s.style.opacity = (idx < val) ? '1' : '0.25';
+  });
+}
+</script>
+{% endblock %}

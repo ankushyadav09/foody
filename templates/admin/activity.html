@@ -1,0 +1,75 @@
+{% extends "ops_base.html" %}
+{% block title %}Operations Audit Logs – Foody Hunters Control Center{% endblock %}
+
+{% block page_title %}Operations Audit Trail{% endblock %}
+{% block page_subtitle %}Immutable chronological record of administrative actions and platform status transitions{% endblock %}
+
+{% block page_actions %}
+<button class="ops-btn ops-btn-outline ops-btn-sm" onclick="window.location.reload()">
+  <i class="fas fa-sync-alt"></i> Refresh Trail
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="ops-card mb-4">
+  <div class="d-flex justify-between align-center mb-3 flex-wrap gap-2">
+    <div>
+      <h3 style="margin:0;font-size:1.15rem;font-weight:700">Audit Stream</h3>
+      <p style="margin:0;font-size:0.8rem;color:var(--ops-muted)">Total recorded events: {{ total_logs }}</p>
+    </div>
+    <div class="ops-node-status">
+      <span class="pulse-dot"></span>
+      <span>LOG MONITORING ONLINE</span>
+    </div>
+  </div>
+
+  {% if logs %}
+  <div class="table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th style="width:70px">ID</th>
+          <th style="width:160px">Timestamp</th>
+          <th style="width:180px">Action</th>
+          <th style="width:180px">Actor</th>
+          <th>Event Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in logs %}
+        <tr>
+          <td style="font-family:'Fira Code',monospace;color:var(--ops-muted)">#{{ l.id }}</td>
+          <td style="font-size:0.8rem;color:var(--ops-muted)">{{ l.created_at }}</td>
+          <td>
+            {% if 'APPROVED' in l.action or 'RESOLVED' in l.action %}
+              <span class="ops-badge success"><i class="fas fa-check-circle"></i> {{ l.action }}</span>
+            {% elif 'REJECTED' in l.action or 'DELETED' in l.action %}
+              <span class="ops-badge danger"><i class="fas fa-ban"></i> {{ l.action }}</span>
+            {% elif 'TOGGLED' in l.action or 'STATUS' in l.action %}
+              <span class="ops-badge warning"><i class="fas fa-exchange-alt"></i> {{ l.action }}</span>
+            {% else %}
+              <span class="ops-badge info"><i class="fas fa-info-circle"></i> {{ l.action }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="font-weight:600;font-size:0.88rem">{{ l.admin_name or 'System / Admin' }}</div>
+            {% if l.admin_email %}
+            <div style="font-size:0.75rem;color:var(--ops-muted)">{{ l.admin_email }}</div>
+            {% endif %}
+          </td>
+          <td style="font-size:0.88rem;color:#E2E8F0;font-family:'Fira Code',monospace">
+            {{ l.details }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:3rem 1rem;color:var(--ops-muted)">
+    <i class="fas fa-shield-alt fa-3x mb-3" style="color:var(--ops-border)"></i>
+    <p>No administrative activities recorded in audit logs yet.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

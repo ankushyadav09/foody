@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}Checkout – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#FFF7ED;padding:2.5rem 0;border-bottom:1px solid var(--border)">
+  <div class="container">
+    <h1 style="font-size:2rem;font-weight:800;color:var(--text-dark)">Secure Checkout</h1>
+    <p style="color:var(--text-muted);font-size:.95rem;margin-top:.3rem">
+      Complete your delivery details and choose your preferred payment method
+    </p>
+  </div>
+</div>
+
+<div class="container py-4">
+  <form method="POST" action="/customer/checkout" id="checkoutForm">
+    <div style="display:grid;grid-template-columns:1fr 400px;gap:2rem;align-items:start">
+      
+      <!-- Left Column: Address & Payment Methods -->
+      <div style="display:flex;flex-direction:column;gap:1.5rem">
+        
+        <!-- Step 1: Delivery Address -->
+        <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+          <div class="d-flex align-center gap-2 mb-3">
+            <span style="width:32px;height:32px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem">1</span>
+            <h2 style="font-size:1.25rem;font-weight:700;color:var(--text-dark);margin:0">Delivery Address</h2>
+          </div>
+
+          {% if addresses %}
+          <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.25rem">
+            {% for a in addresses %}
+            <label style="display:flex;align-items:flex-start;gap:.75rem;padding:1rem;border:2px solid {% if loop.first %}var(--primary){% else %}var(--border){% endif %};border-radius:var(--radius-md);cursor:pointer;background:{% if loop.first %}#FFF7ED{% else %}#fff{% endif %}" class="address-option">
+              <input type="radio" name="address_id" value="{{ a.id }}" {% if loop.first %}checked{% endif %} style="margin-top:4px">
+              <div>
+                <strong style="font-size:.95rem;color:var(--text-dark);display:block;margin-bottom:.2rem">
+                  <i class="fas fa-map-marker-alt text-primary"></i> {{ a.label }}
+                </strong>
+                <p style="font-size:.85rem;color:var(--text-muted);margin:0;line-height:1.4">{{ a.address }}, {{ a.city }} - {{ a.pincode }}</p>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div style="margin-top:1rem;border-top:1px dashed var(--border);padding-top:1rem">
+            <label class="form-label" style="font-size:.9rem;font-weight:600;display:block;margin-bottom:.4rem">
+              Or Deliver to a New Address
+            </label>
+            <textarea class="form-control" name="new_address" rows="2"
+                      placeholder="Enter flat/house no., building, street, area, landmark..."></textarea>
+          </div>
+        </div>
+
+        <!-- Step 2: Payment Method -->
+        <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+          <div class="d-flex align-center gap-2 mb-3">
+            <span style="width:32px;height:32px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem">2</span>
+            <h2 style="font-size:1.25rem;font-weight:700;color:var(--text-dark);margin:0">Payment Method</h2>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:.75rem">
+            
+            <!-- Cash on Delivery -->
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border:1px solid var(--border);border-radius:var(--radius-md);cursor:pointer;background:#FAFAFA" class="payment-method-card">
+              <div class="d-flex align-center gap-2">
+                <input type="radio" name="payment_method" value="cod" checked>
+                <div>
+                  <strong style="color:var(--text-dark);font-size:.95rem;display:block">Cash on Delivery (COD)</strong>
+                  <span style="font-size:.8rem;color:var(--text-muted)">Pay in cash or UPI when your food arrives</span>
+                </div>
+              </div>
+              <span style="font-size:1.4rem">💵</span>
+            </label>
+
+            <!-- Demo UPI -->
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border:1px solid var(--border);border-radius:var(--radius-md);cursor:pointer;background:#FAFAFA" class="payment-method-card">
+              <div class="d-flex align-center gap-2">
+                <input type="radio" name="payment_method" value="upi">
+                <div>
+                  <strong style="color:var(--text-dark);font-size:.95rem;display:block">UPI (Google Pay / PhonePe / Paytm)</strong>
+                  <span style="font-size:.8rem;color:#10B981;font-weight:600">Demo Instant Verification Mode</span>
+                </div>
+              </div>
+              <span style="font-size:1.4rem">📱</span>
+            </label>
+
+            <!-- Demo Debit / Credit Card -->
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border:1px solid var(--border);border-radius:var(--radius-md);cursor:pointer;background:#FAFAFA" class="payment-method-card">
+              <div class="d-flex align-center gap-2">
+                <input type="radio" name="payment_method" value="card">
+                <div>
+                  <strong style="color:var(--text-dark);font-size:.95rem;display:block">Credit / Debit Card</strong>
+                  <span style="font-size:.8rem;color:var(--text-muted)">Visa, Mastercard, RuPay & Maestro supported</span>
+                </div>
+              </div>
+              <span style="font-size:1.4rem">💳</span>
+            </label>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Order Summary & Coupon -->
+      <div>
+        
+        <!-- Coupon Code Box -->
+        <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm);margin-bottom:1.5rem">
+          <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:.8rem;color:var(--text-dark);display:flex;align-items:center;gap:.4rem">
+            <i class="fas fa-tags text-primary"></i> Apply Coupon
+          </h3>
+          
+          <div class="d-flex gap-1 mb-2">
+            <input type="text" id="couponCodeInput" name="coupon_code_input" class="form-control" placeholder="Enter coupon code" style="text-transform:uppercase">
+            <button type="button" class="btn btn-primary" onclick="applyCouponCode()" style="white-space:nowrap">
+              Apply
+            </button>
+          </div>
+          
+          <div id="couponMessage" style="font-size:.82rem;margin-bottom:.75rem"></div>
+
+          <!-- Suggested Demo Coupons -->
+          <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem">Tap to apply available coupons:</div>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <button type="button" class="badge" onclick="fillCoupon('WELCOME50')" style="background:#FEF3C7;color:#B45309;border:1px solid #FCD34D;cursor:pointer;font-weight:700">
+              WELCOME50 (50% OFF)
+            </button>
+            <button type="button" class="badge" onclick="fillCoupon('FOOD20')" style="background:#D1FAE5;color:#047857;border:1px solid #6EE7B7;cursor:pointer;font-weight:700">
+              FOOD20 (20% OFF)
+            </button>
+            <button type="button" class="badge" onclick="fillCoupon('HUNTER10')" style="background:#EDE9FE;color:#6D28D9;border:1px solid #C4B5FD;cursor:pointer;font-weight:700">
+              HUNTER10 (10% OFF)
+            </button>
+          </div>
+
+          <!-- Hidden coupon inputs for form submission -->
+          <input type="hidden" name="coupon_code" id="appliedCouponCode" value="">
+          <input type="hidden" name="coupon_id" id="appliedCouponId" value="">
+          <input type="hidden" name="discount" id="appliedDiscount" value="0">
+        </div>
+
+        <!-- Order Bill Summary -->
+        <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+          <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:1rem;color:var(--text-dark)">Order Summary</h3>
+
+          <!-- Items Overview -->
+          <div style="max-height:160px;overflow-y:auto;margin-bottom:1rem;border-bottom:1px solid var(--border-light);padding-bottom:.5rem">
+            {% for item in items %}
+            <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:.4rem">
+              <span style="color:var(--text-dark)">{{ item.name }} × {{ item.quantity }}</span>
+              <span style="font-weight:600">₹{{ "%.2f"|format(item.price * item.quantity) }}</span>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;font-size:.9rem">
+            <span style="color:var(--text-muted)">Item Total</span>
+            <span style="font-weight:600" id="subtotalVal">₹{{ "%.2f"|format(totals.subtotal) }}</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;font-size:.9rem">
+            <span style="color:var(--text-muted)">Delivery Fee</span>
+            <span style="font-weight:600">₹{{ "%.2f"|format(totals.delivery_fee) }}</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;font-size:.9rem">
+            <span style="color:var(--text-muted)">Govt Taxes (5% GST)</span>
+            <span style="font-weight:600" id="taxVal">₹{{ "%.2f"|format(totals.tax) }}</span>
+          </div>
+
+          <div id="discountRow" style="display:none;justify-content:space-between;margin-bottom:.5rem;font-size:.9rem;color:#10B981">
+            <span>Coupon Discount</span>
+            <span style="font-weight:700" id="discountVal">− ₹0.00</span>
+          </div>
+
+          <div style="height:1px;background:var(--border);margin:.75rem 0"></div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+            <div>
+              <div style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Total Payable</div>
+              <div style="font-size:1.6rem;font-weight:900;color:var(--primary)" id="grandTotalVal">
+                ₹{{ "%.2f"|format(totals.grand_total) }}
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-100" style="justify-content:center;border-radius:var(--radius-pill);font-weight:700">
+            <i class="fas fa-lock"></i> Place Order Now
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const baseSubtotal = {{ totals.subtotal }};
+const deliveryFee  = {{ totals.delivery_fee }};
+const taxRate      = 0.05;
+
+function fillCoupon(code) {
+  document.getElementById('couponCodeInput').value = code;
+  applyCouponCode();
+}
+
+async function applyCouponCode() {
+  const code = document.getElementById('couponCodeInput').value.trim();
+  const msgEl = document.getElementById('couponMessage');
+  if (!code) {
+    msgEl.innerHTML = '<span style="color:#EF4444">Please enter a coupon code.</span>';
+    return;
+  }
+
+  msgEl.innerHTML = '<span style="color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Checking coupon...</span>';
+
+  try {
+    const res = await API.post('/api/coupon/apply', { code: code, subtotal: baseSubtotal });
+    if (res.success) {
+      msgEl.innerHTML = `<span style="color:#10B981"><strong>${res.message}</strong></span> <button type="button" onclick="removeCoupon()" style="background:none;border:none;color:#EF4444;text-decoration:underline;cursor:pointer;font-size:.8rem;font-weight:700;margin-left:.5rem">Remove</button>`;
+      
+      const discount = parseFloat(res.discount);
+      document.getElementById('appliedCouponCode').value = res.code || code;
+      document.getElementById('appliedCouponId').value   = res.coupon_id;
+      document.getElementById('appliedDiscount').value   = discount;
+
+      // Recalculate bill
+      const taxable = Math.max(0, baseSubtotal - discount);
+      const tax = (taxable * taxRate);
+      const grandTotal = Math.max(0, taxable + deliveryFee + tax);
+
+      document.getElementById('discountRow').style.display = 'flex';
+      document.getElementById('discountVal').textContent = '− ₹' + discount.toFixed(2);
+      document.getElementById('taxVal').textContent = '₹' + tax.toFixed(2);
+      document.getElementById('grandTotalVal').textContent = '₹' + grandTotal.toFixed(2);
+
+      Toast.success('Coupon applied successfully!');
+    } else {
+      msgEl.innerHTML = `<span style="color:#EF4444">${res.message}</span>`;
+      Toast.error(res.message);
+    }
+  } catch(e) {
+    msgEl.innerHTML = '<span style="color:#EF4444">Failed to validate coupon.</span>';
+  }
+}
+
+function removeCoupon() {
+  document.getElementById('couponCodeInput').value = '';
+  document.getElementById('appliedCouponCode').value = '';
+  document.getElementById('appliedCouponId').value = '';
+  document.getElementById('appliedDiscount').value = '0';
+  document.getElementById('couponMessage').innerHTML = '<span style="color:var(--text-muted)">Coupon removed.</span>';
+  
+  const tax = baseSubtotal * taxRate;
+  const grandTotal = baseSubtotal + deliveryFee + tax;
+  document.getElementById('discountRow').style.display = 'none';
+  document.getElementById('taxVal').textContent = '₹' + tax.toFixed(2);
+  document.getElementById('grandTotalVal').textContent = '₹' + grandTotal.toFixed(2);
+  Toast.info('Coupon removed.');
+}
+</script>
+{% endblock %}

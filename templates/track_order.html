@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+{% block title %}Live Delivery Tracking #{{ order.order_code }} – FOODIE HUNTER{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#0F172A;color:#fff;padding:2rem 0;border-bottom:1px solid #1E293B">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <div class="d-flex align-center gap-2 mb-1">
+        <span class="badge" style="background:#F59E0B;color:#000;font-weight:700">
+          <i class="fas fa-satellite-dish"></i> LIVE GPS TRACKING
+        </span>
+        <span class="badge" style="background:#10B981;color:#fff;font-weight:700" id="headerStageBadge">
+          {{ order.order_status|upper }}
+        </span>
+      </div>
+      <h1 style="font-size:1.9rem;font-weight:800;color:#fff;margin:0">Tracking Order #{{ order.order_code }}</h1>
+      <p style="color:#94A3B8;font-size:.88rem;margin-top:.2rem">
+        Kitchen: <strong>{{ order.restaurant_name }}</strong> &bull; Destination: <strong>{{ order.delivery_address[:30] }}...</strong>
+      </p>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <button class="btn btn-outline" onclick="pollTrackingData()" style="color:#fff;border-color:#334155;border-radius:var(--radius-pill)">
+        <i class="fas fa-sync" id="refreshIcon"></i> Refresh Location
+      </button>
+      <a href="/customer/orders" class="btn btn-primary" style="border-radius:var(--radius-pill)">
+        <i class="fas fa-arrow-left"></i> My Orders
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:2rem;align-items:start">
+    
+    <!-- Left Column: Map & Order Lifecycle Timeline -->
+    <div style="display:flex;flex-direction:column;gap:1.5rem">
+      
+      <!-- Live Map Card -->
+      <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+        
+        <!-- Live Distance, ETA & Telemetry Bar -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:1rem;margin-bottom:1.25rem;background:#F8FAFC;padding:1rem;border-radius:var(--radius-md);border:1px solid #E2E8F0">
+          <div>
+            <span style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block">Distance Remaining</span>
+            <strong style="font-size:1.3rem;color:var(--primary);font-weight:900" id="distRemaining">Calculating...</strong>
+          </div>
+          <div>
+            <span style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block">Estimated Arrival</span>
+            <strong style="font-size:1.3rem;color:#10B981;font-weight:900" id="etaDisplay">Calculating...</strong>
+          </div>
+          <div>
+            <span style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block">Rider Telemetry</span>
+            <strong style="font-size:.95rem;color:var(--text-dark);font-weight:700" id="partnerStatus">Active Dispatch</strong>
+          </div>
+          <div>
+            <span style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block">Last GPS Ping</span>
+            <span style="font-size:.82rem;color:var(--text-muted)" id="lastUpdatedPing">Just now</span>
+          </div>
+        </div>
+
+        <!-- Google Map / Interactive Canvas Viewport -->
+        <div id="mapContainer" style="width:100%;height:400px;border-radius:var(--radius-md);background:#F1F5F9;position:relative;overflow:hidden;border:1px solid #CBD5E1">
+          <!-- Fallback Interactive Canvas -->
+          <div id="fallbackCanvas" style="width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:1.5rem;background:linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%);position:relative">
+            
+            <div style="display:flex;justify-content:space-between;align-items:center;z-index:2">
+              <span class="badge" style="background:#0F172A;color:#fff;font-size:.75rem">
+                <i class="fas fa-map-marked-alt"></i> Mehsana Logistics Grid (23.58° N, 72.36° E)
+              </span>
+              <span class="badge" style="background:#E0E7FF;color:#4338CA;font-size:.75rem" id="fallbackBadge">
+                Live GPS Plot
+              </span>
+            </div>
+
+            <!-- Route Visualization Graphic with moving coordinates -->
+            <div style="position:relative;height:120px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem">
+              <!-- Route Track Line -->
+              <div style="position:absolute;left:4rem;right:4rem;height:6px;background:#CBD5E1;border-radius:3px;z-index:1">
+                <div id="routeProgressFill" style="height:100%;background:linear-gradient(90deg, #F59E0B, #10B981);width:30%;transition:width .8s ease;border-radius:3px"></div>
+              </div>
+
+              <!-- Node 1: Restaurant -->
+              <div style="text-align:center;position:relative;z-index:2">
+                <div style="width:52px;height:52px;background:#fff;border-radius:50%;box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto .3rem;border:3px solid #F59E0B">
+                  🏪
+                </div>
+                <strong style="font-size:.82rem;color:var(--text-dark);display:block">{{ order.restaurant_name[:16] }}</strong>
+                <span style="font-size:.7rem;color:var(--text-muted)">Pickup Origin</span>
+              </div>
+
+              <!-- Moving Rider Icon Node -->
+              <div id="movingRiderNode" style="text-align:center;position:relative;z-index:3;transition:all .8s ease">
+                <div style="width:54px;height:54px;background:#0F172A;color:#fff;border-radius:50%;box-shadow:0 8px 16px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto .3rem;border:3px solid #38BDF8">
+                  🛵
+                </div>
+                <strong style="font-size:.85rem;color:var(--primary);display:block" id="riderNodeName">Rider Moving</strong>
+                <span style="font-size:.72rem;background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:10px" id="riderCoordPill">In Transit</span>
+              </div>
+
+              <!-- Node 3: Customer Home -->
+              <div style="text-align:center;position:relative;z-index:2">
+                <div style="width:52px;height:52px;background:#fff;border-radius:50%;box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto .3rem;border:3px solid #10B981">
+                  🏠
+                </div>
+                <strong style="font-size:.82rem;color:var(--text-dark);display:block">Your Delivery Location</strong>
+                <span style="font-size:.7rem;color:var(--text-muted)">Drop Destination</span>
+              </div>
+            </div>
+
+            <!-- Coordinate Telemetry Footer inside canvas -->
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--text-muted);z-index:2;background:rgba(255,255,255,.8);padding:.5rem 1rem;border-radius:var(--radius-sm)">
+              <div>
+                <strong>Restaurant:</strong> <span id="telemetryRestCoord">{{ "%.4f"|format(order.restaurant_lat or 23.5880) }}, {{ "%.4f"|format(order.restaurant_lng or 72.3693) }}</span>
+              </div>
+              <div>
+                <strong>Rider Live GPS:</strong> <span id="telemetryRiderCoord" style="color:var(--primary);font-weight:700">Tracking...</span>
+              </div>
+              <div>
+                <strong>Destination:</strong> <span id="telemetryCustCoord">{{ "%.4f"|format(order.customer_lat or 23.5880) }}, {{ "%.4f"|format(order.customer_lng or 72.3693) }}</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Real Google Map target div -->
+          <div id="googleMapTarget" style="width:100%;height:100%;display:none"></div>
+        </div>
+
+        <p style="font-size:.8rem;color:var(--text-muted);margin-top:.75rem;margin-bottom:0">
+          <i class="fas fa-info-circle text-primary"></i> 
+          Live location coordinates update automatically via background polling. Coordinates reflect actual Mehsana geography.
+        </p>
+
+      </div>
+
+      <!-- DEMO TRACKING MODE CONTROLS (Requirement #59 - Essential for Viva Presentation) -->
+      <div style="background:#FFFBEB;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid #FCD34D;box-shadow:var(--shadow-sm)">
+        <div class="d-flex justify-between align-center mb-2">
+          <div class="d-flex align-center gap-2">
+            <span class="badge" style="background:#D97706;color:#fff;font-weight:700">
+              <i class="fas fa-gamepad"></i> DEMO TRACKING MODE
+            </span>
+            <strong style="font-size:.95rem;color:#78350F">College Viva & Single-Laptop Simulator</strong>
+          </div>
+          <span style="font-size:.75rem;color:#92400E;font-weight:600">Simulates Rider En Route</span>
+        </div>
+        
+        <p style="font-size:.85rem;color:#92400E;margin-bottom:1rem">
+          Use the controls below to simulate the delivery partner riding between <strong>{{ order.restaurant_name }}</strong> and the customer delivery destination in real-time. Marker positions, distance remaining, and ETA will dynamically update.
+        </p>
+
+        <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+          <button type="button" class="btn btn-sm btn-primary" id="btnPlayDemo" onclick="startDemoSimulation()" style="background:#D97706;border-color:#D97706;border-radius:var(--radius-pill)">
+            <i class="fas fa-play"></i> Run Auto Ride Simulation
+          </button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="stepSimulation(0.25)" style="border-radius:var(--radius-pill);color:#78350F;border-color:#F59E0B">
+            Step 25% (Picked Up)
+          </button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="stepSimulation(0.65)" style="border-radius:var(--radius-pill);color:#78350F;border-color:#F59E0B">
+            Step 65% (Near Circle)
+          </button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="stepSimulation(0.95)" style="border-radius:var(--radius-pill);color:#78350F;border-color:#F59E0B">
+            Step 95% (Arriving)
+          </button>
+        </div>
+
+        <div style="margin-top:1rem;display:flex;align-items:center;gap:1rem">
+          <label style="font-size:.8rem;font-weight:700;color:#78350F;white-space:nowrap">Progress Slider:</label>
+          <input type="range" id="simSlider" min="0" max="100" value="30" style="flex:1;cursor:pointer" oninput="stepSimulation(this.value / 100)">
+          <span id="sliderVal" style="font-size:.82rem;font-weight:700;color:#78350F;min-width:35px">30%</span>
+        </div>
+      </div>
+
+      <!-- Order Status Timeline Card -->
+      <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+        <h2 style="font-size:1.25rem;font-weight:700;color:var(--text-dark);margin-bottom:1.5rem">Order Progression Timeline</h2>
+
+        {% set steps = [
+          ('placed', 'Order Placed', 'Order received and sent to kitchen', 'fa-receipt'),
+          ('confirmed', 'Order Confirmed', 'Restaurant acknowledged ticket', 'fa-check-double'),
+          ('preparing', 'Cooking / In Kitchen', 'Chef is preparing dishes', 'fa-fire-burner'),
+          ('ready_for_pickup', 'Packed & Ready', 'Handover to delivery partner', 'fa-box-open'),
+          ('out_for_delivery', 'Out for Delivery', 'Rider on transit to destination', 'fa-motorcycle'),
+          ('delivered', 'Delivered 🎉', 'Meal delivered successfully', 'fa-house-circle-check')
+        ] %}
+
+        <div class="timeline-container" style="position:relative;padding-left:2.5rem">
+          <div style="position:absolute;left:15px;top:10px;bottom:10px;width:3px;background:var(--border-light)"></div>
+
+          {% for s_code, s_title, s_desc, s_icon in steps %}
+          {% set step_idx = loop.index0 %}
+          {% set is_done = step_idx <= current_index %}
+          {% set is_current = step_idx == current_index %}
+
+          <div class="timeline-step" id="step_{{ s_code }}" style="position:relative;margin-bottom:1.75rem;opacity:{% if is_done %}1{% else %}0.35{% endif %}">
+            <div style="position:absolute;left:-2.5rem;top:0;width:32px;height:32px;border-radius:50%;background:{% if is_current %}var(--primary){% elif is_done %}#10B981{% else %}#CBD5E1{% endif %};color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;z-index:2">
+              <i class="fas {{ s_icon }}"></i>
+            </div>
+            <div>
+              <h3 style="font-size:1rem;font-weight:700;color:{% if is_current %}var(--primary){% else %}var(--text-dark){% endif %};margin:0">
+                {{ s_title }}
+                {% if is_current %}
+                <span class="badge" style="background:#FEF3C7;color:#92400E;font-size:.7rem;margin-left:.4rem">CURRENT STAGE</span>
+                {% elif is_done %}
+                <span style="color:#10B981;font-size:.75rem;margin-left:.4rem">✓ Done</span>
+                {% endif %}
+              </h3>
+              <p style="font-size:.82rem;color:var(--text-muted);margin-top:.15rem">{{ s_desc }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if order.order_status == 'delivered' %}
+        <div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:var(--radius-md);padding:1rem;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <strong style="color:#065F46">Enjoyed your food from {{ order.restaurant_name }}?</strong>
+            <p style="color:#047857;font-size:.85rem;margin:0">Share your feedback to support the kitchen.</p>
+          </div>
+          <a href="/customer/order/review/{{ order.id }}" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
+            ★ Rate & Review
+          </a>
+        </div>
+        {% endif %}
+
+      </div>
+
+    </div>
+
+    <!-- Right Column: Delivery Partner, Support & Order Summary -->
+    <div style="display:flex;flex-direction:column;gap:1.5rem">
+      
+      <!-- Assigned Delivery Partner Card -->
+      <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:var(--text-dark)">Assigned Delivery Partner</h3>
+        
+        <div id="partnerCardContent">
+          {% if order.partner_name %}
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+            <div style="width:50px;height:50px;background:#E0E7FF;color:#4F46E5;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem">
+              <i class="fas fa-motorcycle"></i>
+            </div>
+            <div>
+              <strong style="font-size:1.05rem;color:var(--text-dark);display:block" id="partnerNameDisplay">{{ order.partner_name }}</strong>
+              <span style="font-size:.85rem;color:var(--text-muted)" id="partnerPhoneDisplay">
+                <i class="fas fa-phone-alt"></i> <a href="tel:{{ order.partner_phone }}" style="color:var(--primary)">{{ order.partner_phone or '+91 98250 99999' }}</a>
+              </span>
+              <div style="font-size:.78rem;color:var(--text-muted);margin-top:.2rem" id="partnerVehicleDisplay">
+                {{ order.vehicle_type or 'Motorcycle' }} &bull; {{ order.vehicle_number or 'GJ-02-AK-9821' }}
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <div style="background:#F8FAFC;border-radius:var(--radius-md);padding:1rem;text-align:center;margin-bottom:1rem">
+            <i class="fas fa-motorcycle" style="font-size:1.5rem;color:#94A3B8;margin-bottom:.4rem"></i>
+            <p style="font-size:.85rem;color:var(--text-muted);margin:0">
+              Delivery partner will be assigned automatically once kitchen marks food ready.
+            </p>
+          </div>
+          {% endif %}
+        </div>
+
+        <div style="border-top:1px solid var(--border-light);padding-top:1rem">
+          <h4 style="font-size:.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:.4rem">Restaurant Support</h4>
+          <strong style="font-size:.95rem;color:var(--text-dark);display:block">{{ order.restaurant_name }}</strong>
+          <span style="font-size:.82rem;color:var(--text-muted)">
+            <i class="fas fa-phone-alt"></i> <a href="tel:{{ order.restaurant_phone }}" style="color:var(--text-dark)">{{ order.restaurant_phone }}</a>
+          </span>
+          <div style="font-size:.78rem;color:var(--text-muted);margin-top:.2rem">
+            {{ order.restaurant_address }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Delivery Address Card -->
+      <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:.75rem;color:var(--text-dark)">Delivery Destination</h3>
+        <p style="font-size:.88rem;color:var(--text-muted);line-height:1.4;margin:0">
+          <i class="fas fa-map-marker-alt text-primary"></i> {{ order.delivery_address }}
+        </p>
+        
+        <div style="border-top:1px solid var(--border-light);margin-top:1rem;padding-top:1rem;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.85rem;color:var(--text-muted)">Order Total ({{ order.payment_method|upper }})</span>
+          <strong style="font-size:1.2rem;color:var(--text-dark)">₹{{ "%.2f"|format(order.total_amount) }}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.8rem;color:#10B981;margin-top:.2rem">
+          <span>Payment Status</span>
+          <strong style="text-transform:uppercase">{{ order.payment_status }}</strong>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// LIVE TRACKING CLIENT ENGINE
+// ─────────────────────────────────────────────
+
+const ORDER_ID = {{ order.id }};
+const GOOGLE_API_KEY = "{{ google_maps_api_key or '' }}";
+
+let gMap = null;
+let riderMarker = null;
+let restMarker = null;
+let custMarker = null;
+let isSimulating = false;
+
+// Poll live tracking telemetry from backend every 4 seconds
+async function pollTrackingData() {
+  const icon = document.getElementById('refreshIcon');
+  if (icon) icon.classList.add('fa-spin');
+
+  try {
+    const res = await fetch(`/api/orders/${ORDER_ID}/tracking`);
+    const data = await res.json();
+    if (data.success) {
+      updateTelemetryUI(data);
+    }
+  } catch (err) {
+    console.error("Tracking poll error:", err);
+  } finally {
+    if (icon) icon.classList.remove('fa-spin');
+  }
+}
+
+function updateTelemetryUI(data) {
+  // Update Distance & ETA Badges
+  document.getElementById('distRemaining').textContent = data.distance_remaining || 'In Transit';
+  document.getElementById('etaDisplay').textContent = data.eta || '10 min';
+  document.getElementById('partnerStatus').textContent = data.delivery_partner ? `${data.delivery_partner.name}` : 'Awaiting Rider';
+  document.getElementById('lastUpdatedPing').textContent = new Date().toLocaleTimeString();
+
+  // Update Rider coordinate telemetry
+  if (data.delivery_location) {
+    document.getElementById('telemetryRiderCoord').textContent = 
+      `${data.delivery_location.latitude.toFixed(4)}, ${data.delivery_location.longitude.toFixed(4)}`;
+  }
+
+  // Update Rider node position in fallback visualizer
+  if (data.delivery_location && data.customer_location && data.restaurant_location) {
+    const rLat = data.restaurant_location.latitude;
+    const cLat = data.customer_location.latitude;
+    const curLat = data.delivery_location.latitude;
+    let ratio = (curLat - rLat) / (cLat - rLat || 0.0001);
+    ratio = Math.max(0.1, Math.min(0.9, ratio));
+    
+    const fill = document.getElementById('routeProgressFill');
+    if (fill) fill.style.width = `${Math.round(ratio * 100)}%`;
+  }
+
+  // If Google Maps is active, update marker
+  if (gMap && riderMarker && data.delivery_location) {
+    const newPos = { lat: data.delivery_location.latitude, lng: data.delivery_location.longitude };
+    riderMarker.setPosition(newPos);
+  }
+}
+
+// Demo Simulation Handlers (Requirement #59)
+async function stepSimulation(progress) {
+  document.getElementById('simSlider').value = Math.round(progress * 100);
+  document.getElementById('sliderVal').textContent = `${Math.round(progress * 100)}%`;
+
+  try {
+    const res = await fetch(`/api/orders/${ORDER_ID}/simulate-step`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ progress: progress })
+    });
+    const result = await res.json();
+    if (result.success) {
+      document.getElementById('distRemaining').textContent = result.distance_remaining;
+      document.getElementById('etaDisplay').textContent = result.eta;
+      document.getElementById('telemetryRiderCoord').textContent = 
+        `${result.simulated_location.latitude.toFixed(4)}, ${result.simulated_location.longitude.toFixed(4)}`;
+
+      const fill = document.getElementById('routeProgressFill');
+      if (fill) fill.style.width = `${Math.round(progress * 100)}%`;
+
+      if (gMap && riderMarker) {
+        riderMarker.setPosition({
+          lat: result.simulated_location.latitude,
+          lng: result.simulated_location.longitude
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Simulation error:", err);
+  }
+}
+
+let simInterval = null;
+function startDemoSimulation() {
+  const btn = document.getElementById('btnPlayDemo');
+  if (isSimulating) {
+    clearInterval(simInterval);
+    isSimulating = false;
+    btn.innerHTML = '<i class="fas fa-play"></i> Run Auto Ride Simulation';
+    return;
+  }
+
+  isSimulating = true;
+  btn.innerHTML = '<i class="fas fa-pause"></i> Pause Simulation';
+  let p = parseFloat(document.getElementById('simSlider').value) / 100.0;
+
+  simInterval = setInterval(() => {
+    p += 0.05;
+    if (p > 1.0) {
+      p = 1.0;
+      clearInterval(simInterval);
+      isSimulating = false;
+      btn.innerHTML = '<i class="fas fa-redo"></i> Restart Ride Simulation';
+    }
+    stepSimulation(p);
+  }, 1200);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+  pollTrackingData();
+  // Poll every 5 seconds
+  setInterval(pollTrackingData, 5000);
+});
+</script>
+{% endblock %}

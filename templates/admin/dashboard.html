@@ -1,0 +1,309 @@
+{% extends "ops_base.html" %}
+{% block title %}Executive Operations Dashboard – Foody Hunters Master Control{% endblock %}
+
+{% block page_title %}Executive Command Center{% endblock %}
+{% block page_subtitle %}Live platform telemetry, multi-entity telemetry, and real-time order stream{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <!-- Period Filter -->
+  <div style="background:var(--ops-surface);border:1px solid var(--ops-border);border-radius:var(--ops-radius-sm);padding:0.2rem;display:flex;gap:0.25rem">
+    <a href="?period=today" class="ops-btn ops-btn-sm {% if period == 'today' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}" style="padding:0.25rem 0.6rem">Today</a>
+    <a href="?period=week" class="ops-btn ops-btn-sm {% if period == 'week' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}" style="padding:0.25rem 0.6rem">7 Days</a>
+    <a href="?period=month" class="ops-btn ops-btn-sm {% if period == 'month' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}" style="padding:0.25rem 0.6rem">30 Days</a>
+    <a href="?period=all" class="ops-btn ops-btn-sm {% if period == 'all' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}" style="padding:0.25rem 0.6rem">All Time</a>
+  </div>
+  <a href="/admin/orders" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-boxes"></i> Orders Desk
+  </a>
+  <a href="/admin/activity" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-history"></i> Audit Trail
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- ── EXECUTIVE KPI METRICS ──────────────────────────────────────── -->
+<div class="ops-stats-grid mb-4">
+  
+  <!-- GMV Revenue -->
+  <div class="ops-stat-card glow-cyan">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Period Gross Revenue</span>
+      <div class="ops-stat-icon cyan"><i class="fas fa-indian-rupee-sign"></i></div>
+    </div>
+    <div class="ops-stat-val">₹{{ "%.2f"|format(stats.period_revenue) }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-emerald)">Today: ₹{{ "%.2f"|format(stats.today_revenue) }}</span>
+      <span>// {{ period|upper }}</span>
+    </div>
+  </div>
+
+  <!-- Total Orders & Pipeline -->
+  <div class="ops-stat-card glow-orange">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Total Orders</span>
+      <div class="ops-stat-icon orange"><i class="fas fa-shopping-bag"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.total_orders }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-amber)">{{ stats.pending_orders }} Pending</span>
+      <span>&bull;</span>
+      <span style="color:var(--ops-emerald)">{{ stats.delivered_orders }} Delivered</span>
+    </div>
+  </div>
+
+  <!-- Restaurant Fleet -->
+  <div class="ops-stat-card glow-emerald">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Restaurant Fleet</span>
+      <div class="ops-stat-icon emerald"><i class="fas fa-store"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.total_restaurants }}</div>
+    <div class="ops-stat-meta">
+      {% if stats.pending_restaurants > 0 %}
+        <span style="color:var(--ops-rose);font-weight:700">⚠️ {{ stats.pending_restaurants }} Pending Verification</span>
+      {% else %}
+        <span style="color:var(--ops-emerald)">{{ stats.approved_restaurants }} Approved Hubs</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Delivery Fleet -->
+  <div class="ops-stat-card glow-purple">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Delivery Fleet</span>
+      <div class="ops-stat-icon purple"><i class="fas fa-motorcycle"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.total_partners }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-cyan)">{{ stats.active_partners }} Active Online</span>
+      <span>// Fleet Pool</span>
+    </div>
+  </div>
+
+  <!-- Customers -->
+  <div class="ops-stat-card">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Registered Customers</span>
+      <div class="ops-stat-icon orange"><i class="fas fa-users"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.total_users }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-emerald)">{{ stats.active_customers }} Active Accounts</span>
+    </div>
+  </div>
+
+  <!-- Support Complaints -->
+  <div class="ops-stat-card">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Open Tickets</span>
+      <div class="ops-stat-icon rose"><i class="fas fa-headset"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.open_complaints }}</div>
+    <div class="ops-stat-meta">
+      {% if stats.open_complaints > 0 %}
+        <a href="/admin/complaints" style="color:var(--ops-rose);font-weight:600">Action Required &rarr;</a>
+      {% else %}
+        <span style="color:var(--ops-emerald)">All tickets clear</span>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ── REVENUE TREND CHART ────────────────────────────────────────── -->
+<div class="ops-card mb-4">
+  <div class="d-flex justify-between align-center mb-3 flex-wrap gap-2">
+    <div>
+      <h3 style="margin:0;font-size:1.15rem;font-weight:700">Financial Revenue Telemetry</h3>
+      <p style="margin:0;font-size:0.8rem;color:var(--ops-muted)">Daily Gross Merchandise Value in Foody Hunters network</p>
+    </div>
+    <span class="ops-badge info">
+      <i class="fas fa-chart-line"></i> Chart.js Real-time
+    </span>
+  </div>
+  <div style="height:260px;position:relative">
+    <canvas id="revenueChart"></canvas>
+  </div>
+</div>
+
+<!-- ── TWO-COLUMN OPERATIONAL STREAM ─────────────────────────────── -->
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start">
+  
+  <!-- Live Orders Stream -->
+  <div class="ops-card">
+    <div class="d-flex justify-between align-center mb-3">
+      <div>
+        <h3 style="margin:0;font-size:1.15rem;font-weight:700">Live Orders Stream</h3>
+        <p style="margin:0;font-size:0.8rem;color:var(--ops-muted)">Real-time dispatch status system-wide</p>
+      </div>
+      <a href="/admin/orders" class="ops-btn ops-btn-outline ops-btn-sm">
+        All ({{ stats.total_orders }}) &rarr;
+      </a>
+    </div>
+
+    {% if recent_orders %}
+    <div class="table-responsive">
+      <table class="ops-table">
+        <thead>
+          <tr>
+            <th>Order Code</th>
+            <th>Customer</th>
+            <th>Restaurant</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in recent_orders %}
+          <tr>
+            <td style="font-family:'Fira Code',monospace;font-weight:600;color:var(--ops-orange)">
+              #{{ o.order_code }}
+            </td>
+            <td>{{ o.customer_name }}</td>
+            <td style="color:var(--ops-muted)">{{ o.restaurant_name }}</td>
+            <td style="font-weight:700">₹{{ "%.2f"|format(o.total_amount) }}</td>
+            <td>
+              {% if o.order_status == 'delivered' %}
+                <span class="ops-badge success"><i class="fas fa-check"></i> Delivered</span>
+              {% elif o.order_status == 'cancelled' %}
+                <span class="ops-badge danger"><i class="fas fa-times"></i> Cancelled</span>
+              {% elif o.order_status == 'out_for_delivery' %}
+                <span class="ops-badge cyan"><i class="fas fa-motorcycle"></i> In Transit</span>
+              {% elif o.order_status == 'preparing' %}
+                <span class="ops-badge warning"><i class="fas fa-fire"></i> Kitchen</span>
+              {% else %}
+                <span class="ops-badge info"><i class="fas fa-clock"></i> {{ o.order_status|capitalize }}</span>
+              {% endif %}
+            </td>
+            <td style="font-size:0.78rem;color:var(--ops-muted)">{{ o.created_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:2rem;color:var(--ops-muted)">
+      No orders placed yet.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Audit Trail Stream -->
+  <div class="ops-card">
+    <div class="d-flex justify-between align-center mb-3">
+      <div>
+        <h3 style="margin:0;font-size:1.15rem;font-weight:700">Operations Feed</h3>
+        <p style="margin:0;font-size:0.8rem;color:var(--ops-muted)">Audit events</p>
+      </div>
+      <a href="/admin/activity" class="ops-btn ops-btn-outline ops-btn-sm" style="font-size:0.75rem">
+        View All
+      </a>
+    </div>
+
+    {% if recent_logs %}
+    <div style="display:flex;flex-direction:column;gap:0.75rem">
+      {% for l in recent_logs %}
+      <div style="background:var(--ops-surface-2);border:1px solid var(--ops-border);border-radius:var(--ops-radius-md);padding:0.75rem">
+        <div class="d-flex justify-between align-center mb-1">
+          <span style="font-size:0.75rem;font-weight:700;color:var(--ops-cyan)">{{ l.action }}</span>
+          <span style="font-size:0.7rem;color:var(--ops-muted)">{{ (l.created_at|string)[:16] if l.created_at else '' }}</span>
+        </div>
+        <p style="margin:0;font-size:0.82rem;color:#E2E8F0">{{ l.details }}</p>
+        <div style="font-size:0.7rem;color:var(--ops-muted);margin-top:0.25rem">
+          by {{ l.admin_name or 'Admin' }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:2rem;color:var(--ops-muted)">
+      No audit records yet.
+    </div>
+    {% endif %}
+
+    <!-- Quick Operations Navigation Links -->
+    <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--ops-border)">
+      <div style="font-size:0.75rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.5rem">// QUICK DISPATCH</div>
+      <div style="display:flex;flex-direction:column;gap:0.4rem">
+        <a href="/admin/restaurants?status=pending" class="ops-btn ops-btn-outline ops-btn-sm" style="justify-content:flex-start">
+          <i class="fas fa-store"></i> Pending Restaurants ({% if stats.pending_restaurants > 0 %}{{ stats.pending_restaurants }}{% else %}0{% endif %})
+        </a>
+        <a href="/admin/coupons" class="ops-btn ops-btn-outline ops-btn-sm" style="justify-content:flex-start">
+          <i class="fas fa-tags"></i> Promo Coupons
+        </a>
+        <a href="/admin/reports" class="ops-btn ops-btn-outline ops-btn-sm" style="justify-content:flex-start">
+          <i class="fas fa-chart-pie"></i> Visual Intelligence Reports
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart.js Initialization -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const ctx = document.getElementById('revenueChart');
+  if (ctx) {
+    const rawLabels = {{ chart_labels|safe }};
+    const rawData = {{ chart_data|safe }};
+    const labels = (rawLabels && rawLabels.length) ? rawLabels : ['No Data'];
+    const data = (rawData && rawData.length) ? rawData : [0];
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Gross GMV (₹)',
+          data: data,
+          borderColor: '#EA580C',
+          backgroundColor: 'rgba(234, 88, 12, 0.15)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 3,
+          pointBackgroundColor: '#06B6D4',
+          pointBorderColor: '#0B0F19',
+          pointBorderWidth: 2,
+          pointRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1E293B',
+            borderColor: '#334155',
+            borderWidth: 1,
+            titleColor: '#F8FAFC',
+            bodyColor: '#38BDF8',
+            callbacks: {
+              label: (context) => ' ₹' + Number(context.parsed.y).toFixed(2)
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+            ticks: { color: '#94A3B8' }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+            ticks: {
+              color: '#94A3B8',
+              callback: function(val) { return '₹' + val; }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

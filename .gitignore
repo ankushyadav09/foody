@@ -1,0 +1,37 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+venv/
+env/
+.vscode/
+.idea/
+.DS_Store
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Python virtual environment and cache
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Local databases and backups
+*.db
+*.db-*
+*.db.backup-*
+*.sqlite
+*.sqlite3
+
+# Testing and generated files
+.pytest_cache/
+.coverage
+
+/database.sql
+/database/backup_*.sql

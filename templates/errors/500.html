@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Server Error (500) – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center" style="max-width:600px;min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center">
+  <div style="font-size:5rem;line-height:1;margin-bottom:1rem">⚠️</div>
+  <h1 style="font-size:3.5rem;font-weight:900;color:var(--primary);margin:0">500</h1>
+  <h2 style="font-size:1.6rem;font-weight:800;color:var(--text-dark);margin:.5rem 0">Internal Server Error</h2>
+  <p style="color:var(--text-muted);font-size:1rem;margin-bottom:2rem;line-height:1.6">
+    Our kitchen system ran into an unexpected hiccup. Please try refreshing the page or checking your database connection.
+  </p>
+  <div class="d-flex gap-2 justify-center">
+    <a href="/" class="btn btn-primary btn-lg" style="border-radius:var(--radius-pill)">
+      <i class="fas fa-home"></i> Back to Home
+    </a>
+    <button onclick="window.location.reload()" class="btn btn-outline btn-lg" style="border-radius:var(--radius-pill)">
+      <i class="fas fa-redo"></i> Retry
+    </button>
+  </div>
+</div>
+{% endblock %}

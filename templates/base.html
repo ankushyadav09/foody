@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Foody Hunters – Online Food Delivery{% endblock %}</title>
+  <meta name="description" content="{% block meta_desc %}Order delicious food from your favourite restaurants. Fast delivery at your doorstep.{% endblock %}">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍔</text></svg>">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- ── FLASH MESSAGES ─────────────────────────────────────────────── -->
+{% with messages = get_flashed_messages(with_categories=True) %}
+{% if messages %}
+<div class="flash-messages">
+  {% for category, message in messages %}
+  <div class="flash-msg flash-{{ category }}">
+    <span>
+      {% if category == 'success' %}✅
+      {% elif category == 'danger' %}❌
+      {% elif category == 'warning' %}⚠️
+      {% else %}ℹ️{% endif %}
+    </span>
+    <span>{{ message }}</span>
+    <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- ── NAVBAR ─────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <!-- Brand -->
+    <a class="navbar-brand" href="/">🍔 Foody <span>Hunters</span></a>
+
+    <!-- Desktop Search -->
+    <div class="navbar-search" style="position:relative">
+      <input type="text" id="navSearchInput" placeholder="Search food or restaurants..." autocomplete="off">
+      <button onclick="window.location='/search?q='+document.getElementById('navSearchInput').value">
+        <i class="fas fa-search"></i>
+      </button>
+      <div id="navSearchDropdown" class="search-suggestions" style="display:none"></div>
+    </div>
+
+    <!-- Desktop Nav Links -->
+    <ul class="navbar-nav" id="mainNav">
+      <li><a class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="/">Home</a></li>
+      <li><a class="nav-link {% if request.endpoint == 'main.restaurants' %}active{% endif %}" href="/restaurants">Restaurants</a></li>
+      <li><a class="nav-link {% if request.endpoint == 'main.offers' %}active{% endif %}" href="/offers">Offers</a></li>
+      <li><a class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}" href="/about">About</a></li>
+      <li><a class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}" href="/contact">Contact</a></li>
+
+      {% if current_user_id %}
+        <!-- Logged in -->
+        {% if current_role == 'admin' %}
+          <li><a class="nav-link" href="/admin/profile"><i class="fas fa-user-shield"></i> Profile</a></li>
+          <li><a class="btn btn-primary btn-sm" href="/admin/dashboard"><i class="fas fa-tachometer-alt"></i> Admin</a></li>
+        {% elif current_role == 'restaurant' %}
+          <li><a class="nav-link" href="/restaurant/profile"><i class="fas fa-store-alt"></i> Profile</a></li>
+          <li><a class="btn btn-primary btn-sm" href="/restaurant/dashboard"><i class="fas fa-store"></i> Dashboard</a></li>
+        {% elif current_role == 'delivery' %}
+          <li><a class="nav-link" href="/delivery/profile"><i class="fas fa-id-badge"></i> Profile</a></li>
+          <li><a class="btn btn-primary btn-sm" href="/delivery/dashboard"><i class="fas fa-motorcycle"></i> Dashboard</a></li>
+        {% else %}
+          <!-- Customer -->
+          <li>
+            <a class="cart-btn" href="/customer/cart" title="Cart">
+              <i class="fas fa-shopping-cart"></i>
+              <span class="cart-badge" {% if cart_count == 0 %}style="display:none"{% endif %}>{{ cart_count }}</span>
+            </a>
+          </li>
+          <li>
+            <div class="d-flex align-center gap-1" style="position:relative">
+              <a class="nav-link" href="/customer/profile">
+                <i class="fas fa-user-circle"></i> {{ current_user[:12] }}
+              </a>
+            </div>
+          </li>
+        {% endif %}
+        <li><a class="btn btn-outline btn-sm" href="/auth/logout">Logout</a></li>
+      {% else %}
+        <li><a class="btn btn-outline btn-sm" href="/auth/login">Login</a></li>
+        <li><a class="btn btn-primary btn-sm" href="/auth/register">Register</a></li>
+      {% endif %}
+    </ul>
+
+    <!-- Cart icon (mobile) -->
+    {% if current_role == 'customer' %}
+    <a class="cart-btn" href="/customer/cart" style="margin-left:.5rem">
+      <i class="fas fa-shopping-cart"></i>
+      <span class="cart-badge" {% if cart_count == 0 %}style="display:none"{% endif %}>{{ cart_count }}</span>
+    </a>
+    {% endif %}
+
+    <!-- Hamburger -->
+    <button class="hamburger" onclick="document.getElementById('mainNav').classList.toggle('open')" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- ── PAGE CONTENT ───────────────────────────────────────────────── -->
+{% block content %}{% endblock %}
+
+<!-- ── CLEAR CART MODAL ───────────────────────────────────────────── -->
+<div class="modal-overlay" id="clearCartModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">🛒 Different Restaurant</span>
+      <button class="modal-close" onclick="document.getElementById('clearCartModal').classList.remove('show')">×</button>
+    </div>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">Your cart has items from another restaurant. Do you want to clear your cart and add this item?</p>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline w-100" onclick="document.getElementById('clearCartModal').classList.remove('show')">Keep Current</button>
+      <button class="btn btn-primary w-100" id="clearCartConfirm">Clear & Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────── -->
+{% block footer %}
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <!-- Brand -->
+      <div>
+        <div class="footer-brand">🍔 Foody Hunters</div>
+        <p class="footer-desc">Connecting food lovers with the best restaurants. Fast, fresh, and delicious – delivered to your doorstep.</p>
+        <div class="social-links">
+          <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+          <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+          <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+        </div>
+      </div>
+      <!-- Company -->
+      <div>
+        <div class="footer-heading">Company</div>
+        <div class="footer-links">
+          <a href="/about">About Us</a>
+          <a href="/contact">Contact</a>
+          <a href="/offers">Offers</a>
+          <a href="#">Careers</a>
+          <a href="#">Blog</a>
+        </div>
+      </div>
+      <!-- Help -->
+      <div>
+        <div class="footer-heading">Help</div>
+        <div class="footer-links">
+          <a href="#">FAQ</a>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="/contact">Report Issue</a>
+          <a href="#">Partner with Us</a>
+        </div>
+      </div>
+      <!-- Newsletter -->
+      <div>
+        <div class="footer-heading">Stay Updated</div>
+        <p style="font-size:.88rem;color:rgba(255,255,255,.6);margin-bottom:1rem">Get exclusive deals and offers in your inbox.</p>
+        <div class="footer-newsletter">
+          <input type="email" placeholder="Your email address">
+          <button><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <p style="font-size:.78rem;color:rgba(255,255,255,.4);margin-top:1rem">📞 +91 98765 43210 &nbsp;|&nbsp; ✉️ hello@foodyhunters.com</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2024 Foody Hunters. All rights reserved. | Final Year Project – BCA/iMCA</span>
+      <span>Made with ❤️ in India</span>
+    </div>
+  </div>
+</footer>
+{% endblock %}
+
+<!-- ── TOAST CONTAINER ────────────────────────────────────────────── -->
+<div class="toast-container"></div>
+
+<!-- ── SCRIPTS ────────────────────────────────────────────────────── -->
+<script src="/static/js/main.js"></script>
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Complete Payment – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#FFF7ED;padding:2.5rem 0;border-bottom:1px solid var(--border)">
+  <div class="container text-center" style="max-width:600px">
+    <div style="font-size:2.5rem;margin-bottom:.5rem">🔒</div>
+    <h1 style="font-size:2rem;font-weight:800;color:var(--text-dark)">Payment Processing Gateway</h1>
+    <p style="color:var(--text-muted);font-size:.95rem">
+      Academic Demo Sandbox Mode – Safe & simulated food delivery transaction
+    </p>
+  </div>
+</div>
+
+<div class="container py-4" style="max-width:620px">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-md)">
+    
+    <!-- Amount Banner -->
+    <div style="background:#F9FAFB;border-radius:var(--radius-md);padding:1.25rem;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+      <div>
+        <span style="font-size:.85rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Amount to Pay</span>
+        <div style="font-size:1.8rem;font-weight:900;color:var(--primary)">₹{{ "%.2f"|format(order_data.totals.grand_total) }}</div>
+      </div>
+      <div>
+        {% if razorpay_enabled %}
+        <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700;font-size:.85rem">
+          <i class="fas fa-check-circle"></i> Razorpay Gateway Online
+        </span>
+        {% else %}
+        <span class="badge" style="background:#FEF3C7;color:#B45309;font-weight:700;font-size:.85rem" title="Razorpay keys not configured in environment. Demo verification mode active.">
+          <i class="fas fa-info-circle"></i> Demo Sandbox Mode
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Payment Form -->
+    <form method="POST" action="/customer/payment/demo-confirm" id="paymentForm">
+      <input type="hidden" name="payment_method" value="{{ order_data.payment_method or 'demo_upi' }}">
+
+      {% if order_data.payment_method == 'card' %}
+      <!-- Card Payment Interface -->
+      <div id="cardSection">
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Card Number</label>
+          <div class="input-group">
+            <i class="fas fa-credit-card input-icon"></i>
+            <input type="text" class="form-control" placeholder="4532 •••• •••• 8892" value="4532 8821 9912 8892" required>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Expiry Date</label>
+            <input type="text" class="form-control" placeholder="MM/YY" value="12/28" required>
+          </div>
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">CVV / CVC</label>
+            <input type="password" class="form-control" placeholder="•••" maxlength="4" value="789" required>
+          </div>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Cardholder Name</label>
+          <input type="text" class="form-control" placeholder="Enter name printed on card" value="{{ session.get('user_name', 'Student Customer') }}" required>
+        </div>
+      </div>
+
+      {% else %}
+      <!-- UPI Payment Interface -->
+      <div id="upiSection" style="text-align:center;padding:1rem 0">
+        <div style="background:#FFF7ED;border:1px dashed var(--primary);border-radius:var(--radius-lg);padding:1.5rem;display:inline-block;margin-bottom:1rem">
+          <!-- Demo QR Code SVG -->
+          <svg width="160" height="160" viewBox="0 0 100 100" style="margin:0 auto;display:block">
+            <rect width="100" height="100" fill="#fff" rx="4"/>
+            <path d="M10 10h30v30h-30zM50 10h10v10h-10zM70 10h20v20h-20zM20 20h10v10h-10zM80 20h10v10h-10zM10 50h10v20h-10zM30 50h10v10h-10zM50 40h20v20h-20zM80 50h10v10h-10zM10 80h30v10h-30zM50 70h10v20h-10zM70 70h20v20h-20z" fill="#1C1C1C"/>
+          </svg>
+          <div style="font-size:.82rem;font-weight:700;color:var(--text-muted);margin-top:.5rem">
+            Scan with any UPI App (GPay / PhonePe / Paytm)
+          </div>
+        </div>
+
+        <div class="form-group mb-3" style="text-align:left">
+          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Or Enter Virtual Payment Address (UPI ID)</label>
+          <div class="input-group">
+            <i class="fas fa-mobile-alt input-icon"></i>
+            <input type="text" class="form-control" placeholder="e.g. mobile@upi" value="student@okaxis">
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Processing State Placeholder -->
+      <div id="processingLoader" style="display:none;text-align:center;padding:1.5rem 0">
+        <div class="spinner" style="width:40px;height:40px;border-width:4px;margin:0 auto 1rem"></div>
+        <strong style="color:var(--primary);font-size:1.1rem;display:block">Processing Demo Payment...</strong>
+        <p style="color:var(--text-muted);font-size:.85rem">Communicating with mock banking server...</p>
+      </div>
+
+      <button type="button" id="payButton" onclick="simulatePayment()" class="btn btn-primary btn-lg w-100" style="justify-content:center;border-radius:var(--radius-pill);font-weight:800">
+        <i class="fas fa-check-circle"></i> Pay ₹{{ "%.2f"|format(order_data.totals.grand_total) }} (Demo Sandbox)
+      </button>
+
+      <div style="text-align:center;margin-top:1rem">
+        <a href="/customer/checkout" style="font-size:.85rem;color:var(--text-muted)">
+          <i class="fas fa-arrow-left"></i> Cancel and return to checkout
+        </a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function simulatePayment() {
+  const btn = document.getElementById('payButton');
+  const loader = document.getElementById('processingLoader');
+  const form = document.getElementById('paymentForm');
+
+  btn.style.display = 'none';
+  loader.style.display = 'block';
+
+  setTimeout(() => {
+    form.submit();
+  }, 1200);
+}
+</script>
+{% endblock %}

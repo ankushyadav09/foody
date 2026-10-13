@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Support Complaints – Foody Hunters Admin{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Customer Inquiries & Support Tickets</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Resolve feedback tickets submitted via the public contact desk</p>
+    </div>
+    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Support Messages ({{ complaints|length }})</h2>
+
+    {% if complaints %}
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
+            <th style="padding:.75rem">Sender</th>
+            <th style="padding:.75rem">Email</th>
+            <th style="padding:.75rem">Message</th>
+            <th style="padding:.75rem">Status</th>
+            <th style="padding:.75rem">Date</th>
+            <th style="padding:.75rem;text-align:right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in complaints %}
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:.75rem;font-weight:700">{{ c.name or 'Anonymous' }}</td>
+            <td style="padding:.75rem"><a href="mailto:{{ c.email }}">{{ c.email }}</a></td>
+            <td style="padding:.75rem;max-width:320px">{{ c.message }}</td>
+            <td style="padding:.75rem">
+              {% if c.status == 'resolved' %}
+              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">✓ Resolved</span>
+              {% else %}
+              <span class="badge" style="background:#FEF3C7;color:#B45309;font-weight:700">Open Ticket</span>
+              {% endif %}
+            </td>
+            <td style="padding:.75rem;color:var(--text-muted);font-size:.85rem">{{ c.created_at }}</td>
+            <td style="padding:.75rem;text-align:right">
+              {% if c.status != 'resolved' %}
+              <form method="POST" action="/admin/complaints/resolve/{{ c.id }}" style="display:inline">
+                <button type="submit" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
+                  <i class="fas fa-check"></i> Mark Resolved
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted);text-align:center;padding:3rem">No complaints or inquiries logged.</p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

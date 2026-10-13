@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}About Us – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:linear-gradient(135deg,#FFF7ED,#FFEDD5);padding:3.5rem 0;border-bottom:1px solid var(--border)">
+  <div class="container text-center" style="max-width:750px">
+    <span class="badge badge-primary mb-2">🚀 Our Story</span>
+    <h1 style="font-size:2.8rem;font-weight:900;color:var(--text-dark)">About Foody Hunters</h1>
+    <p style="color:var(--text-muted);font-size:1.1rem;margin-top:.75rem;line-height:1.6">
+      Empowering local food culinary creators, connecting food lovers, and redefining doorstep delivery with lightning-fast service.
+    </p>
+  </div>
+</div>
+
+<div class="container py-5">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;margin-bottom:4rem">
+    <div>
+      <span class="badge" style="background:#FEF3C7;color:#B45309;font-weight:700;margin-bottom:.5rem">Mission & Vision</span>
+      <h2 style="font-size:2rem;font-weight:800;color:var(--text-dark);margin-bottom:1rem">Making Great Food Accessible Everywhere</h2>
+      <p style="color:var(--text-muted);line-height:1.7;margin-bottom:1rem">
+        Foody Hunters was developed as a comprehensive Online Food Delivery System that bridges the gap between hungry food lovers and passionate restaurant owners. Built with modern web engineering, our platform ensures seamless order dispatching, dynamic price calculation, and real-time order tracking.
+      </p>
+      <p style="color:var(--text-muted);line-height:1.7">
+        Whether you are craving authentic wood-fired pizzas, traditional royal Gujarati thalis, aromatic Hyderabadi biryanis, or fresh health bowls, Foody Hunters delivers quality food at honest prices.
+      </p>
+    </div>
+    <div style="border-radius:var(--radius-xl);overflow:hidden;box-shadow:var(--shadow-lg)">
+      <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=700&q=80" alt="Restaurant Dining" style="width:100%;height:380px;object-fit:cover">
+    </div>
+  </div>
+
+  <!-- Key Pillars -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:2rem">
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm);text-align:center">
+      <div style="font-size:3rem;margin-bottom:1rem">⚡</div>
+      <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:.5rem">Superfast Delivery</h3>
+      <p style="color:var(--text-muted);font-size:.9rem">Optimized dispatch routing to deliver fresh food in under 35 minutes.</p>
+    </div>
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm);text-align:center">
+      <div style="font-size:3rem;margin-bottom:1rem">🛡️</div>
+      <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:.5rem">100% Hygienic</h3>
+      <p style="color:var(--text-muted);font-size:.9rem">Partnered with FSSAI-certified top kitchens with strict safety protocols.</p>
+    </div>
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm);text-align:center">
+      <div style="font-size:3rem;margin-bottom:1rem">💳</div>
+      <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:.5rem">Easy Payments</h3>
+      <p style="color:var(--text-muted);font-size:.9rem">Support for Cash on Delivery, UPI, Credit/Debit cards, and instant refunds.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Kitchen Orders – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#1E293B;color:#fff;padding:2.5rem 0;border-bottom:1px solid #334155">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <span class="badge" style="background:#10B981;color:#fff;margin-bottom:.5rem">🔔 Order Stream</span>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Kitchen Incoming Orders</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Accept new orders, set kitchen preparation stages, and dispatch to riders</p>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <button class="btn btn-primary" onclick="window.location.reload()" style="border-radius:var(--radius-pill)">
+        <i class="fas fa-sync"></i> Refresh Orders
+      </button>
+      <a href="/restaurant/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#475569">
+        <i class="fas fa-arrow-left"></i> Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+  
+  <!-- Status Filter Pills -->
+  <div class="d-flex gap-2 mb-4" style="overflow-x:auto;padding-bottom:.5rem">
+    <a href="/restaurant/orders" class="btn btn-sm {% if status == 'all' or not status %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">
+      All Orders
+    </a>
+    <a href="/restaurant/orders?status=placed" class="btn btn-sm {% if status == 'placed' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">
+      New Placed
+    </a>
+    <a href="/restaurant/orders?status=confirmed" class="btn btn-sm {% if status == 'confirmed' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">
+      Accepted
+    </a>
+    <a href="/restaurant/orders?status=preparing" class="btn btn-sm {% if status == 'preparing' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">
+      Cooking / Preparing
+    </a>
+    <a href="/restaurant/orders?status=ready" class="btn btn-sm {% if status == 'ready' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">
+      Ready for Pickup
+    </a>
+    <a href="/restaurant/orders?status=delivered" class="btn btn-sm {% if status == 'delivered' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">
+      Delivered
+    </a>
+  </div>
+
+  {% if orders %}
+  <div style="display:flex;flex-direction:column;gap:1.25rem">
+    {% for o in orders %}
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem">
+      
+      <div style="flex:1;min-width:280px">
+        <div class="d-flex align-center gap-2 mb-1">
+          <strong style="font-size:1.15rem;color:var(--text-dark)">#{{ o.order_code }}</strong>
+          {% if o.order_status == 'placed' %}
+          <span class="badge" style="background:#FEF3C7;color:#B45309;font-weight:700">🔔 NEW ORDER</span>
+          {% elif o.order_status == 'confirmed' %}
+          <span class="badge" style="background:#DBEAFE;color:#1D4ED8;font-weight:700">Accepted</span>
+          {% elif o.order_status == 'preparing' %}
+          <span class="badge" style="background:#E0E7FF;color:#4338CA;font-weight:700">Cooking</span>
+          {% elif o.order_status == 'ready' %}
+          <span class="badge" style="background:#EDE9FE;color:#6D28D9;font-weight:700">Ready for Rider</span>
+          {% elif o.order_status == 'delivered' %}
+          <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">Completed</span>
+          {% else %}
+          <span class="badge" style="background:#F3F4F6;color:var(--text-dark)">{{ o.order_status }}</span>
+          {% endif %}
+        </div>
+
+        <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:.5rem">
+          Customer: <strong>{{ o.customer_name }}</strong> ({{ o.customer_phone }}) &bull; {{ o.created_at }}
+        </div>
+
+        <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:.5rem">
+          <i class="fas fa-map-marker-alt text-primary"></i> {{ o.delivery_address or 'Customer Address' }}
+        </p>
+
+        {% if o.notes %}
+        <div style="font-size:.82rem;background:#FFF7ED;color:#C2410C;padding:.3rem .6rem;border-radius:var(--radius-sm);display:inline-block">
+          Note: {{ o.notes }}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Controls & Actions -->
+      <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem">
+        <div style="font-size:1.35rem;font-weight:900;color:var(--text-dark)">
+          ₹{{ "%.2f"|format(o.total_amount) }}
+          <span style="font-size:.75rem;font-weight:600;color:var(--text-muted);display:block;text-transform:uppercase">
+            {{ o.payment_method }} ({{ o.payment_status }})
+          </span>
+        </div>
+
+        <!-- Quick Status Update Buttons -->
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          {% if o.order_status == 'placed' %}
+          <form method="POST" action="/restaurant/order/update-status" style="display:inline">
+            <input type="hidden" name="order_id" value="{{ o.id }}">
+            <input type="hidden" name="status" value="confirmed">
+            <button type="submit" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
+              <i class="fas fa-check"></i> Accept Order
+            </button>
+          </form>
+          <form method="POST" action="/restaurant/order/update-status" style="display:inline">
+            <input type="hidden" name="order_id" value="{{ o.id }}">
+            <input type="hidden" name="status" value="cancelled">
+            <button type="submit" class="btn btn-outline btn-sm" style="color:#EF4444;border-color:#EF4444;border-radius:var(--radius-pill)">
+              Reject
+            </button>
+          </form>
+          {% elif o.order_status == 'confirmed' %}
+          <form method="POST" action="/restaurant/order/update-status" style="display:inline">
+            <input type="hidden" name="order_id" value="{{ o.id }}">
+            <input type="hidden" name="status" value="preparing">
+            <button type="submit" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill);background:#6366F1;border-color:#6366F1">
+              <i class="fas fa-fire"></i> Start Cooking
+            </button>
+          </form>
+          {% elif o.order_status == 'preparing' %}
+          <form method="POST" action="/restaurant/order/update-status" style="display:inline">
+            <input type="hidden" name="order_id" value="{{ o.id }}">
+            <input type="hidden" name="status" value="ready">
+            <button type="submit" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill);background:#8B5CF6;border-color:#8B5CF6">
+              <i class="fas fa-box-check"></i> Mark Ready for Pickup
+            </button>
+          </form>
+          {% endif %}
+
+          <a href="/restaurant/order/{{ o.id }}" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)">
+            View Items
+          </a>
+        </div>
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="color:var(--text-muted);text-align:center;padding:4rem;background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border)">
+    No orders found under this status filter.
+  </p>
+  {% endif %}
+
+</div>
+{% endblock %}

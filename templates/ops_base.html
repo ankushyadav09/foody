@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Operations Center – Foody Hunters{% endblock %}</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Chart.js CDN for interactive futuristic analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Base & Operations Center Styles -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/ops_center.css">
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="ops-body">
+
+<!-- ── OPERATIONS HEADER ─────────────────────────────────────────── -->
+<header class="ops-header">
+  <div style="display:flex;align-items:center;gap:1rem">
+    <button type="button" class="btn btn-outline btn-sm d-lg-none" onclick="toggleOpsSidebar()" style="color:#fff;border-color:var(--ops-border);padding:0.35rem 0.65rem">
+      <i class="fas fa-bars"></i>
+    </button>
+    <a href="/ops" class="ops-brand">
+      <span style="color:var(--ops-orange);font-size:1.3rem">🍔</span>
+      <span>Foody<span style="color:var(--ops-orange)">Hunters</span></span>
+      <span class="ops-brand-badge">OPS CENTER</span>
+    </a>
+    <div class="ops-node-status d-none d-md-inline-flex">
+      <span class="pulse-dot"></span>
+      <span>SYS LIVE // NODE-01</span>
+    </div>
+  </div>
+
+  <!-- Role-Aware Operations Area Switcher -->
+  <div class="ops-role-switcher">
+    {% if session.get('role') == 'admin' %}
+      <a href="/admin/dashboard" class="ops-role-btn {% if request.path.startswith('/admin') %}active{% endif %}">
+        <i class="fas fa-crown"></i> Admin Control
+      </a>
+      <a href="/admin/restaurants" class="ops-role-btn {% if request.path.startswith('/admin/restaurants') %}active restaurant{% endif %}">
+        <i class="fas fa-store"></i> Restaurant Fleet
+      </a>
+      <a href="/admin/delivery-partners" class="ops-role-btn {% if request.path.startswith('/admin/delivery-partners') %}active delivery{% endif %}">
+        <i class="fas fa-motorcycle"></i> Delivery Fleet
+      </a>
+    {% elif session.get('role') == 'restaurant' %}
+      <a href="/restaurant/dashboard" class="ops-role-btn active restaurant">
+        <i class="fas fa-store"></i> Restaurant Operations
+      </a>
+      <a href="/restaurant/orders" class="ops-role-btn">
+        <i class="fas fa-receipt"></i> Kitchen Orders
+      </a>
+    {% elif session.get('role') == 'delivery' %}
+      <a href="/delivery/dashboard" class="ops-role-btn active delivery">
+        <i class="fas fa-motorcycle"></i> Rider Portal
+      </a>
+      <a href="/delivery/history" class="ops-role-btn">
+        <i class="fas fa-history"></i> Trips
+      </a>
+    {% endif %}
+  </div>
+
+  <!-- Right Actions: Public Site Link & User Profile -->
+  <div style="display:flex;align-items:center;gap:0.75rem">
+    <a href="/" target="_blank" class="ops-btn ops-btn-outline ops-btn-sm d-none d-sm-inline-flex" title="View Customer Storefront">
+      <i class="fas fa-external-link-alt"></i> Storefront
+    </a>
+    <div class="ops-user-badge">
+      <div class="ops-avatar-micro">
+        {{ (session.get('user_name') or 'U')[:1]|upper }}
+      </div>
+      <span style="font-weight:600">{{ (session.get('user_name') or 'Staff')[:12] }}</span>
+      <span class="ops-chip {% if session.get('role')=='admin' %}warning{% elif session.get('role')=='restaurant' %}success{% else %}info{% endif %}" style="font-size:0.65rem;padding:0.1rem 0.45rem">
+        {{ (session.get('role') or 'user')|upper }}
+      </span>
+    </div>
+    <a href="/auth/logout" class="ops-btn ops-btn-outline ops-btn-sm" title="Log Out" style="color:var(--ops-rose)">
+      <i class="fas fa-power-off"></i>
+    </a>
+  </div>
+</header>
+
+<!-- ── MAIN OPERATIONS LAYOUT ────────────────────────────────────── -->
+<div class="ops-layout">
+  
+  <!-- Left Role-Specific Sidebar Rail -->
+  <aside class="ops-sidebar" id="opsSidebar">
+    <div>
+      {% if session.get('role') == 'admin' %}
+        <!-- ADMIN NAVIGATION -->
+        <div class="ops-nav-group-title">// MASTER CONTROL</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/admin/dashboard" class="ops-nav-link {% if request.path == '/admin/dashboard' or request.path == '/admin/' %}active{% endif %}">
+              <span><i class="fas fa-tachometer-alt"></i> Executive Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/orders" class="ops-nav-link {% if request.path.startswith('/admin/orders') %}active{% endif %}">
+              <span><i class="fas fa-receipt"></i> Orders & Dispatches</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/payments" class="ops-nav-link {% if request.path.startswith('/admin/payments') %}active{% endif %}">
+              <span><i class="fas fa-credit-card"></i> Payments & Revenue</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="ops-nav-group-title">// FLEET & ENTITIES</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/admin/restaurants" class="ops-nav-link {% if request.path.startswith('/admin/restaurants') %}active{% endif %}">
+              <span><i class="fas fa-store"></i> Restaurant Directory</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/delivery-partners" class="ops-nav-link {% if request.path.startswith('/admin/delivery-partners') %}active{% endif %}">
+              <span><i class="fas fa-motorcycle"></i> Delivery Fleet</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/users" class="ops-nav-link {% if request.path.startswith('/admin/users') %}active{% endif %}">
+              <span><i class="fas fa-users"></i> User Accounts</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="ops-nav-group-title">// CATALOG & OFFERS</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/admin/categories" class="ops-nav-link {% if request.path.startswith('/admin/categories') %}active{% endif %}">
+              <span><i class="fas fa-th-large"></i> Food Categories</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/food-items" class="ops-nav-link {% if request.path.startswith('/admin/food-items') %}active{% endif %}">
+              <span><i class="fas fa-utensils"></i> Food Dishes Catalog</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/coupons" class="ops-nav-link {% if request.path.startswith('/admin/coupons') %}active{% endif %}">
+              <span><i class="fas fa-tags"></i> Coupons & Discounts</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="ops-nav-group-title">// INTEL & AUDIT</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/admin/reports" class="ops-nav-link {% if request.path.startswith('/admin/reports') %}active{% endif %}">
+              <span><i class="fas fa-chart-pie"></i> Visual Analytics</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/activity" class="ops-nav-link {% if request.path.startswith('/admin/activity') %}active{% endif %}">
+              <span><i class="fas fa-history"></i> Operations Audit Log</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/reviews" class="ops-nav-link {% if request.path.startswith('/admin/reviews') %}active{% endif %}">
+              <span><i class="fas fa-star"></i> Customer Reviews</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/complaints" class="ops-nav-link {% if request.path.startswith('/admin/complaints') %}active{% endif %}">
+              <span><i class="fas fa-exclamation-triangle"></i> Grievance Tickets</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="ops-nav-group-title">// SYSTEM</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/admin/profile" class="ops-nav-link {% if request.path.startswith('/admin/profile') %}active{% endif %}">
+              <span><i class="fas fa-shield-alt"></i> Security & Profile</span>
+            </a>
+          </li>
+        </ul>
+
+      {% elif session.get('role') == 'restaurant' %}
+        <!-- RESTAURANT NAVIGATION -->
+        <div class="ops-nav-group-title">// RESTAURANT DESK</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/restaurant/dashboard" class="ops-nav-link restaurant {% if request.path == '/restaurant/dashboard' or request.path == '/restaurant/' %}active restaurant{% endif %}">
+              <span><i class="fas fa-tachometer-alt"></i> Kitchen Overview</span>
+            </a>
+          </li>
+          <li>
+            <a href="/restaurant/orders" class="ops-nav-link restaurant {% if request.path.startswith('/restaurant/orders') %}active restaurant{% endif %}">
+              <span><i class="fas fa-bell"></i> Live Customer Orders</span>
+            </a>
+          </li>
+          <li>
+            <a href="/restaurant/sales" class="ops-nav-link restaurant {% if request.path.startswith('/restaurant/sales') %}active restaurant{% endif %}">
+              <span><i class="fas fa-chart-line"></i> Sales & Earnings</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="ops-nav-group-title">// MENU CATALOG</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/restaurant/menu" class="ops-nav-link restaurant {% if request.path.startswith('/restaurant/menu') and not request.path.endswith('/add') %}active restaurant{% endif %}">
+              <span><i class="fas fa-utensils"></i> Published Menu</span>
+            </a>
+          </li>
+          <li>
+            <a href="/restaurant/menu/add" class="ops-nav-link restaurant {% if request.path.endswith('/add') or request.path.startswith('/restaurant/add-food') %}active restaurant{% endif %}">
+              <span><i class="fas fa-plus-circle"></i> Add New Dish</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="ops-nav-group-title">// STORE SETTINGS</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/restaurant/reviews" class="ops-nav-link restaurant {% if request.path.startswith('/restaurant/reviews') %}active restaurant{% endif %}">
+              <span><i class="fas fa-star"></i> Customer Feedback</span>
+            </a>
+          </li>
+          <li>
+            <a href="/restaurant/profile" class="ops-nav-link restaurant {% if request.path.startswith('/restaurant/profile') %}active restaurant{% endif %}">
+              <span><i class="fas fa-store-alt"></i> Store Info & Hours</span>
+            </a>
+          </li>
+        </ul>
+
+      {% elif session.get('role') == 'delivery' %}
+        <!-- DELIVERY PARTNER NAVIGATION -->
+        <div class="ops-nav-group-title">// RIDER PORTAL</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/delivery/dashboard" class="ops-nav-link delivery {% if request.path == '/delivery/dashboard' or request.path == '/delivery/' %}active delivery{% endif %}">
+              <span><i class="fas fa-motorcycle"></i> Active Deliveries</span>
+            </a>
+          </li>
+          <li>
+            <a href="/delivery/history" class="ops-nav-link delivery {% if request.path.startswith('/delivery/history') %}active delivery{% endif %}">
+              <span><i class="fas fa-history"></i> Completed Trips</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="ops-nav-group-title">// RIDER PROFILE</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/delivery/profile" class="ops-nav-link delivery {% if request.path.startswith('/delivery/profile') %}active delivery{% endif %}">
+              <span><i class="fas fa-id-card"></i> Vehicle & Profile</span>
+            </a>
+          </li>
+        </ul>
+      {% endif %}
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="ops-sidebar-footer">
+      <div class="ops-account-box">
+        <div class="ops-avatar-micro">
+          <i class="fas fa-user-check"></i>
+        </div>
+        <div style="overflow:hidden">
+          <div style="font-size:0.82rem;font-weight:700;color:#fff;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
+            {{ session.get('user_name', 'Operator') }}
+          </div>
+          <div style="font-size:0.7rem;color:var(--ops-text-dim);font-family:var(--ops-font-mono)">
+            SEC-LEVEL: {{ (session.get('role') or 'AUTH')|upper }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Content Workspace -->
+  <main class="ops-content">
+    <!-- Flash Messages in Ops Center -->
+    {% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+    <div style="margin-bottom:1.5rem;display:flex;flex-direction:column;gap:0.75rem">
+      {% for category, message in messages %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.25rem;border-radius:var(--ops-radius-md);font-size:0.88rem;background:{% if category=='success' %}rgba(16,185,129,0.12){% elif category=='danger' %}rgba(239,68,68,0.12){% elif category=='warning' %}rgba(245,158,11,0.12){% else %}rgba(6,182,212,0.12){% endif %};border:1px solid {% if category=='success' %}rgba(16,185,129,0.35){% elif category=='danger' %}rgba(239,68,68,0.35){% elif category=='warning' %}rgba(245,158,11,0.35){% else %}rgba(6,182,212,0.35){% endif %};color:#fff">
+        <div style="display:flex;align-items:center;gap:0.6rem">
+          <span>
+            {% if category == 'success' %}<i class="fas fa-check-circle" style="color:var(--ops-emerald)"></i>
+            {% elif category == 'danger' %}<i class="fas fa-times-circle" style="color:var(--ops-rose)"></i>
+            {% elif category == 'warning' %}<i class="fas fa-exclamation-triangle" style="color:var(--ops-amber)"></i>
+            {% else %}<i class="fas fa-info-circle" style="color:var(--ops-cyan)"></i>{% endif %}
+          </span>
+          <span>{{ message }}</span>
+        </div>
+        <button type="button" onclick="this.parentElement.remove()" style="background:transparent;border:none;color:var(--ops-text-muted);cursor:pointer;font-size:1rem">&times;</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div class="ops-banner">
+      <div>
+        <h1 class="ops-banner-title">{% block page_title %}Operations Command Desk{% endblock %}</h1>
+        <div class="ops-banner-subtitle">{% block page_subtitle %}Foody Hunters Multi-Role Operational Telemetry{% endblock %}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem;z-index:2">
+        {% block page_actions %}{% endblock %}
+      </div>
+    </div>
+
+    {% block content %}{% block ops_content %}{% endblock %}{% endblock %}
+  </main>
+
+</div>
+
+<script>
+function toggleOpsSidebar() {
+  const sidebar = document.getElementById('opsSidebar');
+  sidebar.classList.toggle('mobile-open');
+}
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

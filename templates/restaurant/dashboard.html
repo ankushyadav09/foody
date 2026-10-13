@@ -1,0 +1,223 @@
+{% extends "ops_base.html" %}
+{% block title %}Kitchen Operations Dashboard – {{ restaurant.name }}{% endblock %}
+
+{% block page_title %}{{ restaurant.name }} Operations Desk{% endblock %}
+{% block page_subtitle %}{{ restaurant.cuisine }} &bull; {{ restaurant.address }} &bull; Kitchen Dispatch & Operations{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <span class="ops-badge {% if restaurant.is_open %}success{% else %}danger{% endif %}" style="font-size:0.8rem;padding:0.4rem 0.8rem">
+    <i class="fas fa-circle" style="font-size:0.6rem"></i> {% if restaurant.is_open %}STORE OPEN & ACCEPTING ORDERS{% else %}STORE CURRENTLY CLOSED{% endif %}
+  </span>
+  <a href="/restaurant/menu/add" class="ops-btn ops-btn-primary ops-btn-sm">
+    <i class="fas fa-plus"></i> Add New Dish
+  </a>
+  <a href="/restaurant/orders" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-receipt"></i> Kitchen Orders
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- ── KITCHEN KPI CARDS ───────────────────────────────────────────── -->
+<div class="ops-stats-grid mb-4">
+  
+  <div class="ops-stat-card glow-emerald">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Today's Kitchen Sales</span>
+      <div class="ops-stat-icon emerald"><i class="fas fa-indian-rupee-sign"></i></div>
+    </div>
+    <div class="ops-stat-val">₹{{ "%.2f"|format(stats.today_sales) }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-emerald)">{{ stats.today_orders }} orders completed today</span>
+    </div>
+  </div>
+
+  <div class="ops-stat-card glow-orange">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Pending Orders</span>
+      <div class="ops-stat-icon orange"><i class="fas fa-bell"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.pending_orders }}</div>
+    <div class="ops-stat-meta">
+      {% if stats.pending_orders > 0 %}
+        <span style="color:var(--ops-rose);font-weight:700">⚡ Requires immediate kitchen attention</span>
+      {% else %}
+        <span style="color:var(--ops-muted)">Kitchen queue clear</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="ops-stat-card glow-cyan">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Active Dishes</span>
+      <div class="ops-stat-icon cyan"><i class="fas fa-utensils"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.total_items }}</div>
+    <div class="ops-stat-meta">
+      <a href="/restaurant/menu" style="color:var(--ops-cyan);font-weight:600">Manage Published Menu &rarr;</a>
+    </div>
+  </div>
+
+  <div class="ops-stat-card glow-purple">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Lifetime Orders</span>
+      <div class="ops-stat-icon purple"><i class="fas fa-chart-line"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.total_orders }}</div>
+    <div class="ops-stat-meta">
+      <a href="/restaurant/sales" style="color:var(--ops-purple);font-weight:600">Sales Intelligence &rarr;</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── LIVE INCOMING ORDERS & CONTROLS ───────────────────────────── -->
+<div style="display:grid;grid-template-columns:2.2fr 1fr;gap:1.5rem;align-items:start">
+  
+  <!-- Live Orders Feed -->
+  <div class="ops-card">
+    <div class="d-flex justify-between align-center mb-3">
+      <div>
+        <h3 style="margin:0;font-size:1.15rem;font-weight:700">Incoming & Active Kitchen Orders</h3>
+        <p style="margin:0;font-size:0.8rem;color:var(--ops-muted)">Accept, cook, and mark orders ready for delivery rider pickup</p>
+      </div>
+      <a href="/restaurant/orders" class="ops-btn ops-btn-outline ops-btn-sm">
+        All Orders &rarr;
+      </a>
+    </div>
+
+    {% if recent_orders %}
+    <div class="table-responsive">
+      <table class="ops-table">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Kitchen Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in recent_orders %}
+          <tr>
+            <td>
+              <a href="/restaurant/orders/{{ o.id }}" style="font-family:'Fira Code',monospace;font-weight:700;color:var(--ops-orange)">
+                #{{ o.order_code }}
+              </a>
+              <div style="font-size:0.75rem;color:var(--ops-muted)">{{ o.created_at }}</div>
+            </td>
+            <td>
+              <div style="font-weight:600">{{ o.customer_name }}</div>
+              {% if o.customer_phone %}
+              <div style="font-size:0.75rem;color:var(--ops-muted)">📞 {{ o.customer_phone }}</div>
+              {% endif %}
+            </td>
+            <td style="font-weight:700">₹{{ "%.2f"|format(o.total_amount) }}</td>
+            <td>
+              {% if o.order_status == 'placed' %}
+                <span class="ops-badge warning"><i class="fas fa-clock"></i> New Placed</span>
+              {% elif o.order_status == 'confirmed' %}
+                <span class="ops-badge info"><i class="fas fa-check"></i> Confirmed</span>
+              {% elif o.order_status == 'preparing' %}
+                <span class="ops-badge orange"><i class="fas fa-fire"></i> Cooking</span>
+              {% elif o.order_status in ['ready', 'ready_for_pickup'] %}
+                <span class="ops-badge cyan"><i class="fas fa-box"></i> Ready</span>
+              {% elif o.order_status == 'out_for_delivery' %}
+                <span class="ops-badge purple"><i class="fas fa-motorcycle"></i> In Transit</span>
+              {% elif o.order_status == 'delivered' %}
+                <span class="ops-badge success"><i class="fas fa-check-double"></i> Delivered</span>
+              {% else %}
+                <span class="ops-badge danger"><i class="fas fa-ban"></i> {{ o.order_status|capitalize }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex align-center gap-1">
+                {% if o.order_status == 'placed' %}
+                  <form method="POST" action="/restaurant/order/update-status" style="display:inline">
+                    <input type="hidden" name="order_id" value="{{ o.id }}">
+                    <input type="hidden" name="status" value="confirmed">
+                    <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm" style="padding:0.25rem 0.5rem;font-size:0.75rem" title="Accept Order">
+                      <i class="fas fa-check"></i> Accept
+                    </button>
+                  </form>
+                  <form method="POST" action="/restaurant/order/update-status" style="display:inline">
+                    <input type="hidden" name="order_id" value="{{ o.id }}">
+                    <input type="hidden" name="status" value="rejected">
+                    <button type="submit" class="ops-btn ops-btn-outline ops-btn-sm" style="padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--ops-rose)" title="Reject Order" onclick="return confirm('Reject order?')">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </form>
+                {% elif o.order_status == 'confirmed' %}
+                  <form method="POST" action="/restaurant/order/update-status" style="display:inline">
+                    <input type="hidden" name="order_id" value="{{ o.id }}">
+                    <input type="hidden" name="status" value="preparing">
+                    <button type="submit" class="ops-btn ops-btn-outline ops-btn-sm" style="padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--ops-amber)" title="Start Cooking">
+                      <i class="fas fa-fire"></i> Start Prep
+                    </button>
+                  </form>
+                {% elif o.order_status == 'preparing' %}
+                  <form method="POST" action="/restaurant/order/update-status" style="display:inline">
+                    <input type="hidden" name="order_id" value="{{ o.id }}">
+                    <input type="hidden" name="status" value="ready_for_pickup">
+                    <button type="submit" class="ops-btn ops-btn-outline ops-btn-sm" style="padding:0.25rem 0.5rem;font-size:0.75rem;color:var(--ops-cyan)" title="Food Packed, Ready for Dispatch">
+                      <i class="fas fa-box"></i> Ready Pickup
+                    </button>
+                  </form>
+                {% else %}
+                  <a href="/restaurant/orders/{{ o.id }}" class="ops-btn ops-btn-outline ops-btn-sm" style="padding:0.25rem 0.5rem;font-size:0.75rem">
+                    <i class="fas fa-eye"></i> View
+                  </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:3rem 1rem;color:var(--ops-muted)">
+      <i class="fas fa-utensils fa-3x mb-3" style="color:var(--ops-border)"></i>
+      <p>No orders currently in the kitchen queue.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Store Controls & Quick Actions -->
+  <div class="ops-card">
+    <h3 style="margin:0;font-size:1.15rem;font-weight:700;margin-bottom:0.25rem">Kitchen Operations</h3>
+    <p style="margin:0;font-size:0.8rem;color:var(--ops-muted);margin-bottom:1rem">Store profile and operational settings</p>
+
+    <div style="background:var(--ops-surface-2);border:1px solid var(--ops-border);border-radius:var(--ops-radius-md);padding:1rem;margin-bottom:1rem">
+      <div style="font-size:0.75rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700">// STORE DETAILS</div>
+      <div style="font-size:1.05rem;font-weight:700;margin-top:0.35rem">{{ restaurant.name }}</div>
+      <div style="font-size:0.82rem;color:var(--ops-muted)">{{ restaurant.cuisine }}</div>
+      <div style="font-size:0.82rem;color:var(--ops-muted);margin-top:0.25rem">📍 {{ restaurant.address }}</div>
+      <div style="font-size:0.82rem;color:var(--ops-muted)">⏰ {{ restaurant.open_time or '09:00' }} - {{ restaurant.close_time or '23:00' }}</div>
+      <div style="margin-top:0.75rem">
+        <a href="/restaurant/profile" class="ops-btn ops-btn-outline ops-btn-sm w-100">
+          <i class="fas fa-edit"></i> Edit Store Profile
+        </a>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:0.5rem">
+      <a href="/restaurant/menu" class="ops-btn ops-btn-outline ops-btn-sm" style="justify-content:flex-start">
+        <i class="fas fa-utensils"></i> Full Menu Management
+      </a>
+      <a href="/restaurant/sales" class="ops-btn ops-btn-outline ops-btn-sm" style="justify-content:flex-start">
+        <i class="fas fa-chart-line"></i> Daily Sales & Reports
+      </a>
+      <a href="/restaurant/reviews" class="ops-btn ops-btn-outline ops-btn-sm" style="justify-content:flex-start">
+        <i class="fas fa-star"></i> Customer Feedback
+      </a>
+      <a href="/" target="_blank" class="ops-btn ops-btn-outline ops-btn-sm" style="justify-content:flex-start">
+        <i class="fas fa-external-link-alt"></i> Preview Public Storefront
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

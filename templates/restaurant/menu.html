@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Menu Management – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#1E293B;color:#fff;padding:2.5rem 0;border-bottom:1px solid #334155">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <span class="badge" style="background:#10B981;color:#fff;margin-bottom:.5rem">🍽️ Menu Catalog</span>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Restaurant Food Menu</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Add, modify pricing, toggle dish availability, or remove items</p>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <a href="/restaurant/add-food" class="btn btn-primary" style="border-radius:var(--radius-pill)">
+        <i class="fas fa-plus"></i> Add New Dish
+      </a>
+      <a href="/restaurant/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#475569">
+        <i class="fas fa-arrow-left"></i> Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    
+    <div class="d-flex justify-between align-center mb-3">
+      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark)">All Menu Dishes ({{ items|length }})</h2>
+      <a href="/restaurant/add-food" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
+        <i class="fas fa-plus"></i> Add Dish
+      </a>
+    </div>
+
+    {% if items %}
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
+            <th style="padding:.75rem">Item</th>
+            <th style="padding:.75rem">Category</th>
+            <th style="padding:.75rem">Type</th>
+            <th style="padding:.75rem">Price</th>
+            <th style="padding:.75rem">Status</th>
+            <th style="padding:.75rem">Rating</th>
+            <th style="padding:.75rem;text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:.75rem">
+              <div style="display:flex;align-items:center;gap:.75rem">
+                <img src="{{ item.image or 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&q=80' }}"
+                     alt="{{ item.name }}" style="width:48px;height:48px;border-radius:var(--radius-sm);object-fit:cover"
+                     onerror="this.src='https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&q=80'">
+                <div>
+                  <strong style="color:var(--text-dark);display:block">{{ item.name }}</strong>
+                  <small style="color:var(--text-muted)">{{ item.description[:45] }}...</small>
+                </div>
+              </div>
+            </td>
+            <td style="padding:.75rem">{{ item.category_name }}</td>
+            <td style="padding:.75rem">
+              {% if item.veg_type == 'veg' %}
+              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">VEG</span>
+              {% else %}
+              <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">NON-VEG</span>
+              {% endif %}
+            </td>
+            <td style="padding:.75rem;font-weight:700">₹{{ "%.2f"|format(item.price) }}</td>
+            <td style="padding:.75rem">
+              <form method="POST" action="/restaurant/food/toggle/{{ item.id }}" style="display:inline">
+                {% if item.availability == 1 %}
+                <button type="submit" class="badge" style="background:#D1FAE5;color:#047857;border:none;cursor:pointer;font-weight:700" title="Click to disable">
+                  ✓ Available
+                </button>
+                {% else %}
+                <button type="submit" class="badge" style="background:#FEE2E2;color:#B91C1C;border:none;cursor:pointer;font-weight:700" title="Click to enable">
+                  ✕ Out of Stock
+                </button>
+                {% endif %}
+              </form>
+            </td>
+            <td style="padding:.75rem;color:#F59E0B;font-weight:700">★ {{ item.rating }}</td>
+            <td style="padding:.75rem;text-align:right">
+              <div style="display:inline-flex;gap:.5rem">
+                <a href="/restaurant/food/edit/{{ item.id }}" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)" title="Edit">
+                  <i class="fas fa-edit"></i>
+                </a>
+                <form method="POST" action="/restaurant/food/delete/{{ item.id }}" onsubmit="return confirm('Delete this food item permanently?')" style="display:inline">
+                  <button type="submit" class="btn btn-outline btn-sm" style="color:#EF4444;border-color:#EF4444;border-radius:var(--radius-pill)" title="Delete">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted);text-align:center;padding:3rem">No dishes added to menu yet. Click "Add New Dish" above.</p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

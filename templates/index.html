@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+{% block title %}Foody Hunters – Discover Food You'll Love{% endblock %}
+
+{% block content %}
+
+<!-- ── HERO SECTION ─────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-blob"></div>
+  <div class="hero-inner">
+    <!-- Left: Text & Search -->
+    <div>
+      <div class="hero-badge">
+        <span>📍</span> Mehsana's Premier Food Delivery Network
+      </div>
+      <h1 class="hero-title">
+        Discover the Best Food<br><span>in Mehsana</span>
+      </h1>
+      <p class="hero-subtitle">
+        Explore 50+ authentic dining hubs, Kathiyawadi & Gujarati thalis, North Indian, and fast bites delivered fresh across Mehsana.
+      </p>
+
+      <!-- Search Box -->
+      <div class="hero-search-box">
+        <div class="hero-search-row">
+          <div class="hero-search-input" style="position:relative;flex:1.2">
+            <i class="fas fa-map-marker-alt" style="color:var(--primary)"></i>
+            <input type="text" id="locationInput" value="Mehsana, Gujarat" placeholder="City or area..." autocomplete="off">
+          </div>
+          <div class="hero-search-input" style="position:relative;flex:2">
+            <i class="fas fa-search" style="color:var(--text-muted)"></i>
+            <input type="text" id="heroSearchInput" placeholder="Search for restaurant or food..." autocomplete="off">
+            <div id="heroSearchDropdown" class="search-suggestions" style="display:none"></div>
+          </div>
+        </div>
+        <a class="btn btn-primary btn-lg w-100"
+           onclick="const q=document.getElementById('heroSearchInput').value; if(q) window.location='/search?q='+q; else window.location='/restaurants';"
+           style="justify-content:center;cursor:pointer">
+          <i class="fas fa-search"></i> Find Food
+        </a>
+      </div>
+
+      <!-- Stats -->
+      <div class="d-flex gap-3 mt-3" style="flex-wrap:wrap">
+        <div style="text-align:center">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--primary)">50+</div>
+          <div style="font-size:.8rem;color:var(--text-muted)">Restaurants</div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div style="text-align:center">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--primary)">500+</div>
+          <div style="font-size:.8rem;color:var(--text-muted)">Menu Items</div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div style="text-align:center">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--primary)">30 min</div>
+          <div style="font-size:.8rem;color:var(--text-muted)">Avg Delivery</div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div style="text-align:center">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--primary)">4.8 ⭐</div>
+          <div style="font-size:.8rem;color:var(--text-muted)">Avg Rating</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Hero image + float cards -->
+    <div class="hero-img-wrap">
+      <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80"
+           alt="Delicious Food"
+           class="hero-img"
+           onerror="this.src='https://placehold.co/540x420/FF4500/FFF?text=Foody+Hunters'">
+
+      <div class="hero-float-card card-1">
+        <div class="hero-float-icon" style="background:#FEF3C7">🍕</div>
+        <div>
+          <div style="font-size:.75rem;color:var(--text-muted)">Just Ordered</div>
+          <div>Margherita Pizza</div>
+        </div>
+      </div>
+      <div class="hero-float-card card-2">
+        <div class="hero-float-icon" style="background:#D1FAE5">⭐</div>
+        <div>
+          <div style="font-size:.75rem;color:var(--text-muted)">Top Rated</div>
+          <div>4.9 Rating</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOD CATEGORIES ─────────────────────────────────────────────── -->
+<section class="section-py">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Categories</div>
+      <h2 class="section-title">What Are You Craving?</h2>
+      <p class="section-subtitle">Choose from a wide variety of cuisines and find exactly what you want</p>
+    </div>
+    <div class="category-grid">
+      {% if categories %}
+        {% for cat in categories %}
+        <a href="/restaurants?cuisine={{ cat.name }}" class="category-card">
+          <div class="category-icon">{{ cat.icon or '🍽️' }}</div>
+          <div class="category-name">{{ cat.name }}</div>
+        </a>
+        {% endfor %}
+      {% else %}
+        <!-- Fallback static categories -->
+        {% for emoji, name in [('🍕','Pizza'),('🍔','Burger'),('🍛','Gujarati'),('🍜','Chinese'),('🍗','Biryani'),('🌮','South Indian'),('🥘','Punjabi'),('🍰','Desserts'),('🥤','Beverages'),('🥗','Healthy')] %}
+        <a href="/restaurants?cuisine={{ name }}" class="category-card">
+          <div class="category-icon">{{ emoji }}</div>
+          <div class="category-name">{{ name }}</div>
+        </a>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ── TOP RESTAURANTS ─────────────────────────────────────────────── -->
+<section class="section-py" style="background:var(--border-light)">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Restaurants</div>
+      <h2 class="section-title">Top Restaurants Near You</h2>
+      <p class="section-subtitle">Handpicked restaurants with the best ratings and fastest delivery</p>
+    </div>
+
+    {% if top_restaurants %}
+    <div class="restaurant-grid">
+      {% for r in top_restaurants %}
+      <a href="/restaurant/{{ r.id }}" class="restaurant-card">
+        <div class="restaurant-img-wrap">
+          <img src="{{ r.image or 'https://images.unsplash.com/photo-1552566626-52f8b828329d?w=400&q=80' }}"
+               alt="{{ r.name }}" class="restaurant-img"
+               onerror="this.src='https://placehold.co/400x190/FF4500/FFF?text={{ r.name[:15] }}'">
+          <div class="restaurant-overlay"></div>
+          <div class="restaurant-offer">🎁 Up to 30% OFF</div>
+          <div class="restaurant-status open">● Open</div>
+        </div>
+        <div class="restaurant-info">
+          <div class="restaurant-name">{{ r.name }}</div>
+          <div class="restaurant-cuisine">{{ r.cuisine }}</div>
+          <div class="restaurant-meta">
+            <span class="restaurant-rating"><i class="fas fa-star"></i> {{ r.rating or '4.2' }}</span>
+            <span><i class="fas fa-clock"></i> {{ r.delivery_time or 30 }} min</span>
+            <span><i class="fas fa-motorcycle"></i> ₹{{ r.delivery_fee or 40 }}</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🏪</div>
+      <div class="empty-title">No restaurants yet</div>
+      <p class="empty-text">Import the database.sql file to see restaurants here.</p>
+    </div>
+    {% endif %}
+
+    <div class="text-center mt-3">
+      <a href="/restaurants" class="btn btn-outline btn-lg">
+        <i class="fas fa-store"></i> View All Restaurants
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── POPULAR FOODS ──────────────────────────────────────────────── -->
+<section class="section-py">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Popular</div>
+      <h2 class="section-title">Most Loved Dishes</h2>
+      <p class="section-subtitle">These crowd favourites are ordered again and again for a reason</p>
+    </div>
+
+    <div class="food-grid">
+      {% if popular_foods %}
+        {% for food in popular_foods %}
+        <div class="food-card">
+          <div class="food-img-wrap">
+            <img src="{{ food.image or 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80' }}"
+                 alt="{{ food.name }}" class="food-img"
+                 onerror="this.src='https://placehold.co/400x180/FF8C00/FFF?text={{ food.name[:15] }}'">
+            <div class="veg-indicator {{ 'veg' if food.veg_type == 'veg' else 'non-veg' }}">
+              {{ '●' }}
+            </div>
+          </div>
+          <div class="food-info">
+            <div class="food-name">{{ food.name }}</div>
+            <div class="food-desc">{{ food.description or 'Freshly prepared with the finest ingredients' }}</div>
+            <div class="food-footer">
+              <div>
+                <div class="food-price">₹{{ food.price }}</div>
+                <div style="font-size:.75rem;color:var(--text-muted)">
+                  <i class="fas fa-store"></i> {{ food.restaurant_name }}
+                </div>
+              </div>
+              {% if current_role == 'customer' %}
+              <button class="add-btn add-to-cart" data-food-id="{{ food.id }}">ADD</button>
+              {% else %}
+              <a href="/restaurant/{{ food.restaurant_id }}" class="add-btn" style="text-decoration:none">View</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        {% for item in [('Margherita Pizza','₹249','🍕'),('Chicken Biryani','₹279','🍗'),('Paneer Tikka','₹199','🥘'),('Burger Delight','₹149','🍔'),('Masala Dosa','₹99','🫓'),('Gulab Jamun','₹79','🍡'),('Chinese Fried Rice','₹169','🍜'),('Punjabi Thali','₹249','🥗')] %}
+        <div class="food-card">
+          <div class="food-img-wrap">
+            <img src="https://placehold.co/400x180/FF8C00/FFF?text={{ item[2] }}" alt="{{ item[0] }}" class="food-img">
+            <div class="veg-indicator veg">●</div>
+          </div>
+          <div class="food-info">
+            <div class="food-name">{{ item[0] }}</div>
+            <div class="food-desc">Freshly prepared with finest ingredients</div>
+            <div class="food-footer">
+              <div class="food-price">{{ item[1] }}</div>
+              <a href="/restaurants" class="add-btn" style="text-decoration:none">View</a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ── BEST OFFERS ──────────────────────────────────────────────────── -->
+<section class="section-py" style="background:linear-gradient(135deg,#FFF5F2,#FFFBF0)">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Offers</div>
+      <h2 class="section-title">Today's Best Deals</h2>
+    </div>
+    <div class="coupon-grid">
+      {% for code, desc, disc in [('WELCOME50','First Order Discount','50% off up to ₹100'),('FOOD20','Weekend Special','20% off above ₹199'),('HUNTER10','Always On','₹10 off every order'),('BINGE30','Combo Deal','30% off on 3+ items')] %}
+      <div class="coupon-card">
+        <div style="font-size:.8rem;margin-bottom:.5rem;opacity:.85">{{ desc }}</div>
+        <div class="coupon-code">{{ code }}</div>
+        <div style="font-size:.85rem;margin-top:.5rem;opacity:.9">{{ disc }}</div>
+        <button onclick="navigator.clipboard.writeText('{{ code }}').then(()=>Toast.success('Copied: {{ code }}'))"
+                style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:.3rem .9rem;border-radius:999px;font-size:.78rem;margin-top:.75rem;cursor:pointer">
+          Copy Code
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ─────────────────────────────────────────────────── -->
+<section class="section-py how-it-works">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Process</div>
+      <h2 class="section-title">How Foody Hunters Works</h2>
+      <p class="section-subtitle">Order your favourite food in just 4 simple steps</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-icon">📍</div>
+        <div class="step-title">Choose Location</div>
+        <div class="step-desc">Enter your delivery address to see restaurants and menus near you.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-icon">🍽️</div>
+        <div class="step-title">Pick Your Food</div>
+        <div class="step-desc">Browse menus, read reviews, and add your favourite items to the cart.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-icon">💳</div>
+        <div class="step-title">Pay Securely</div>
+        <div class="step-desc">Choose from COD, UPI, or Card payment. All transactions are secure.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">4</div>
+        <div class="step-icon">🚀</div>
+        <div class="step-title">Fast Delivery</div>
+        <div class="step-desc">Track your order in real-time as it's prepared and delivered to you.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── WHY CHOOSE US ────────────────────────────────────────────────── -->
+<section class="section-py">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Why Us</div>
+      <h2 class="section-title">Why Choose Foody Hunters?</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Super Fast Delivery</div>
+        <div class="feature-desc">Average delivery in 30 minutes. We partner with the fastest delivery partners in the city.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌿</div>
+        <div class="feature-title">Fresh & Hygienic</div>
+        <div class="feature-desc">All restaurants are vetted for food safety. We ensure the freshest ingredients every time.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <div class="feature-title">Best Prices</div>
+        <div class="feature-desc">Exclusive discounts, combo deals, and loyalty rewards save you money on every order.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <div class="feature-title">Real-time Tracking</div>
+        <div class="feature-desc">Track your order status from kitchen to doorstep. Always know where your food is.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Secure Payments</div>
+        <div class="feature-desc">Multiple payment options including UPI, Cards, and COD. 100% safe and encrypted.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⭐</div>
+        <div class="feature-title">Verified Reviews</div>
+        <div class="feature-desc">Only real customers can leave reviews. Honest feedback helps you make better choices.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CUSTOMER REVIEWS ──────────────────────────────────────────────── -->
+<section class="section-py" style="background:var(--border-light)">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-tag">Reviews</div>
+      <h2 class="section-title">What Our Customers Say</h2>
+      <p class="section-subtitle">Real reviews from real food lovers</p>
+    </div>
+    <div class="reviews-grid">
+      {% if reviews %}
+        {% for review in reviews %}
+        <div class="review-card">
+          <div class="review-header">
+            <div class="reviewer-avatar">{{ review.user_name[0].upper() }}</div>
+            <div>
+              <div class="reviewer-name">{{ review.user_name }}</div>
+              <div class="stars">{% for i in range(review.rating) %}⭐{% endfor %}</div>
+            </div>
+          </div>
+          <p class="review-text">{{ review.comment or 'Great food and fast delivery!' }}</p>
+        </div>
+        {% endfor %}
+      {% else %}
+        {% for name, stars, text in [
+          ('Priya S.', 5, 'Absolutely loved the Gujarati Thali from Royal Gujarati! Authentic taste and quick delivery. Will order again!'),
+          ('Rahul M.', 5, 'Pizza Palace has the best margherita in town. Always fresh and perfectly baked. The 30-min delivery is impressive!'),
+          ('Anjali K.', 4, 'South Indian Kitchen\'s dosas are amazing! App is easy to use and payment was smooth. Foody Hunters is my go-to app now.'),
+          ('Vikram P.', 5, 'Urban Biryani never disappoints. The chicken biryani is simply outstanding. Highly recommend this app!'),
+          ('Neha T.', 5, 'Quick delivery, hot food, and the coupon system is fantastic! Saved ₹100 on my first order with WELCOME50.'),
+          ('Arjun D.', 4, 'Great variety of restaurants. The order tracking feature is very helpful. Overall excellent experience!')
+        ] %}
+        <div class="review-card">
+          <div class="review-header">
+            <div class="reviewer-avatar">{{ name[0] }}</div>
+            <div>
+              <div class="reviewer-name">{{ name }}</div>
+              <div class="stars">{% for i in range(stars) %}⭐{% endfor %}</div>
+            </div>
+          </div>
+          <p class="review-text">{{ text }}</p>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ── APP PROMO ────────────────────────────────────────────────────── -->
+<section class="section-py" style="background:linear-gradient(135deg,var(--bg-dark),#0D1B2A)">
+  <div class="container">
+    <div class="d-flex align-center gap-3" style="flex-wrap:wrap;justify-content:center;text-align:center">
+      <div style="max-width:500px">
+        <div class="section-tag" style="background:rgba(255,69,0,.2)">Download App</div>
+        <h2 class="section-title" style="color:#fff;margin-top:.75rem">Order Faster with the Foody Hunters App</h2>
+        <p style="color:rgba(255,255,255,.7);margin-bottom:2rem">Get exclusive app-only discounts, faster checkout, and live order tracking right on your phone.</p>
+        <div class="d-flex gap-2 justify-center flex-wrap">
+          <a href="#" class="btn btn-light">
+            <i class="fab fa-google-play" style="color:#4CAF50"></i> Google Play
+          </a>
+          <a href="#" class="btn btn-light">
+            <i class="fab fa-apple" style="color:#333"></i> App Store
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Hero search on Enter key
+document.getElementById('heroSearchInput')?.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const q = this.value.trim();
+    if (q) window.location = '/search?q=' + encodeURIComponent(q);
+    else window.location = '/restaurants';
+  }
+});
+</script>
+{% endblock %}

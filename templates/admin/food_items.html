@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Menu Inventory – Foody Hunters Admin{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Platform Food Item Directory</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Inventory oversight across all registered restaurant partner kitchens</p>
+    </div>
+    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    
+    <!-- Search Bar -->
+    <form method="GET" action="/admin/food-items" class="d-flex justify-between align-center mb-3">
+      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark)">All Listed Dishes ({{ items|length }})</h2>
+      <div class="d-flex gap-1">
+        <input type="text" class="form-control" name="q" value="{{ q or '' }}" placeholder="Search dish or restaurant..." style="width:240px">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
+      </div>
+    </form>
+
+    {% if items %}
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
+            <th style="padding:.75rem">Dish Name</th>
+            <th style="padding:.75rem">Restaurant</th>
+            <th style="padding:.75rem">Category</th>
+            <th style="padding:.75rem">Type</th>
+            <th style="padding:.75rem">Price</th>
+            <th style="padding:.75rem">Status</th>
+            <th style="padding:.75rem">Rating</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:.75rem">
+              <div style="display:flex;align-items:center;gap:.75rem">
+                <img src="{{ item.image or 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&q=80' }}"
+                     alt="{{ item.name }}" style="width:42px;height:42px;border-radius:var(--radius-sm);object-fit:cover"
+                     onerror="this.src='https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&q=80'">
+                <div>
+                  <strong style="color:var(--text-dark);display:block">{{ item.name }}</strong>
+                </div>
+              </div>
+            </td>
+            <td style="padding:.75rem;font-weight:600">{{ item.restaurant_name }}</td>
+            <td style="padding:.75rem">{{ item.category_name }}</td>
+            <td style="padding:.75rem">
+              {% if item.veg_type == 'veg' %}
+              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">VEG</span>
+              {% else %}
+              <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">NON-VEG</span>
+              {% endif %}
+            </td>
+            <td style="padding:.75rem;font-weight:700">₹{{ "%.2f"|format(item.price) }}</td>
+            <td style="padding:.75rem">
+              {% if item.availability == 1 %}
+              <span class="badge" style="background:#D1FAE5;color:#047857">In Stock</span>
+              {% else %}
+              <span class="badge" style="background:#FEE2E2;color:#B91C1C">Unavailable</span>
+              {% endif %}
+            </td>
+            <td style="padding:.75rem;color:#F59E0B;font-weight:700">★ {{ item.rating }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted);text-align:center;padding:3rem">No items found matching search.</p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

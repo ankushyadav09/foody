@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Restaurant Profile – FOODIE HUNTER{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#1E293B;color:#fff;padding:2.5rem 0;border-bottom:1px solid #334155">
+  <div class="container d-flex justify-between align-center flex-wrap gap-3">
+    <div class="d-flex align-center gap-3">
+      {% if restaurant and restaurant.image %}
+      <img src="{{ restaurant.image }}" alt="{{ restaurant.name }}"
+           style="width:75px;height:75px;border-radius:12px;object-fit:cover;border:2px solid #475569">
+      {% else %}
+      <div style="width:75px;height:75px;background:var(--primary);color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800">
+        <i class="fas fa-store"></i>
+      </div>
+      {% endif %}
+      <div>
+        <div class="d-flex align-center gap-2">
+          <h1 style="font-size:1.8rem;font-weight:800;color:#fff;margin:0">{{ restaurant.name if restaurant else 'My Restaurant' }}</h1>
+          {% if restaurant %}
+          <span class="badge" style="background:{% if restaurant.verification_status=='approved' %}#10B981{% else %}#F59E0B{% endif %};color:#fff;font-size:.78rem">
+            {{ restaurant.verification_status|upper }}
+          </span>
+          <span class="badge" style="background:{% if restaurant.is_open %}#3B82F6{% else %}#EF4444{% endif %};color:#fff;font-size:.78rem">
+            {% if restaurant.is_open %}● OPEN NOW{% else %}● CURRENTLY CLOSED{% endif %}
+          </span>
+          {% endif %}
+        </div>
+        <p style="color:#94A3B8;font-size:.88rem;margin-top:.25rem">
+          Owner: <strong>{{ owner.name if owner else 'Me' }}</strong> &bull; Rating: <strong>★ {{ restaurant.rating if restaurant else '4.5' }}</strong>
+        </p>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <form method="POST" action="/restaurant/profile/toggle-open" style="display:inline">
+        <button type="submit" class="btn btn-outline" style="color:#fff;border-color:#475569;font-size:.85rem">
+          <i class="fas fa-power-off"></i> Toggle Open/Closed
+        </button>
+      </form>
+      <a href="/restaurant/dashboard" class="btn btn-primary" style="font-size:.85rem">
+        <i class="fas fa-chart-line"></i> Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4" style="max-width:850px">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    
+    <div class="d-flex justify-between align-center mb-3">
+      <div>
+        <h2 style="font-size:1.3rem;font-weight:700;color:var(--text-dark);margin:0">Restaurant Listing & Operational Profile</h2>
+        <p style="font-size:.85rem;color:var(--text-muted);margin-top:.2rem">
+          All changes immediately update MySQL and reflect on the customer marketplace.
+        </p>
+      </div>
+      <span class="badge" style="background:#F3F4F6;color:var(--text-muted);font-size:.75rem">
+        Last Sync: {{ (restaurant.updated_at|string)[:19] if restaurant and restaurant.updated_at else 'Active' }}
+      </span>
+    </div>
+
+    <form method="POST" action="/restaurant/profile" enctype="multipart/form-data">
+      
+      <!-- Restaurant Basic Details -->
+      <div class="form-group mb-3">
+        <label class="form-label" style="font-weight:600;font-size:.85rem">Restaurant Outlet Name *</label>
+        <input type="text" class="form-control" name="name" value="{{ restaurant.name if restaurant else '' }}" required>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Cuisine Types (Comma Separated) *</label>
+          <input type="text" class="form-control" name="cuisine" value="{{ restaurant.cuisine if restaurant else '' }}" required placeholder="e.g. Gujarati, Kathiyawadi, Punjabi">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Contact Phone / Telephone *</label>
+          <input type="text" class="form-control" name="phone" value="{{ restaurant.phone if restaurant else '' }}" required>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Business Email</label>
+          <input type="email" class="form-control" name="email" value="{{ restaurant.email if restaurant else (owner.email if owner else '') }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Daily Opening Time</label>
+          <input type="text" class="form-control" name="open_time" value="{{ restaurant.open_time if restaurant else '09:00' }}" placeholder="09:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Daily Closing Time</label>
+          <input type="text" class="form-control" name="close_time" value="{{ restaurant.close_time if restaurant else '23:00' }}" placeholder="23:00">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Delivery Time (Estimate)</label>
+          <input type="text" class="form-control" name="delivery_time" value="{{ restaurant.delivery_time if restaurant else '25-35 min' }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Standard Delivery Fee (₹)</label>
+          <input type="number" step="0.01" class="form-control" name="delivery_fee" value="{{ restaurant.delivery_fee if restaurant else '40.00' }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Minimum Order Amount (₹)</label>
+          <input type="number" step="0.01" class="form-control" name="min_order" value="{{ restaurant.min_order if restaurant else '100.00' }}" required>
+        </div>
+      </div>
+
+      <!-- Address & GPS Coordinates in Mehsana -->
+      <div class="form-group mb-3">
+        <label class="form-label" style="font-weight:600;font-size:.85rem">Physical Outlet Address *</label>
+        <textarea class="form-control" name="address" rows="2" required>{{ restaurant.address if restaurant else '' }}</textarea>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem;margin-bottom:1.25rem">
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Area / Neighborhood</label>
+          <input type="text" class="form-control" name="area" value="{{ restaurant.area if restaurant else 'Radhanpur Road' }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">City</label>
+          <input type="text" class="form-control" name="city" value="{{ restaurant.city if restaurant else 'Mehsana' }}" readonly style="background:#F9FAFB">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">State</label>
+          <input type="text" class="form-control" name="state" value="{{ restaurant.state if restaurant else 'Gujarat' }}" readonly style="background:#F9FAFB">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Pincode</label>
+          <input type="text" class="form-control" name="pincode" value="{{ restaurant.pincode if restaurant else '384002' }}">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:end;margin-bottom:1.25rem;background:#F9FAFB;padding:1rem;border-radius:10px">
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.82rem">GPS Latitude (Mehsana ~23.58)</label>
+          <input type="number" step="0.0000001" class="form-control" name="latitude" id="restLat" value="{{ restaurant.latitude if restaurant else '23.5880000' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.82rem">GPS Longitude (Mehsana ~72.36)</label>
+          <input type="number" step="0.0000001" class="form-control" name="longitude" id="restLng" value="{{ restaurant.longitude if restaurant else '72.3693000' }}">
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline btn-sm w-100" onclick="detectRestLocation()" style="font-size:.8rem">
+            <i class="fas fa-crosshairs"></i> Set Current Device GPS
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" style="font-weight:600;font-size:.85rem">Restaurant Description & Specialties</label>
+        <textarea class="form-control" name="description" rows="3">{{ restaurant.description if restaurant else '' }}</textarea>
+      </div>
+
+      <!-- Storefront Image -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem">
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Image URL (Optional)</label>
+          <input type="url" class="form-control" name="image_url" value="{{ restaurant.image if restaurant else '' }}" placeholder="https://images.unsplash.com/...">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:.85rem">Upload Image File</label>
+          <input type="file" class="form-control" name="image" accept="image/*">
+        </div>
+      </div>
+
+      <!-- Open / Closed Switch -->
+      <div class="form-group mb-4" style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:.85rem 1rem">
+        <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer;margin:0;font-weight:600;color:#166534">
+          <input type="checkbox" name="is_open" value="1" {% if not restaurant or restaurant.is_open %}checked{% endif %} style="width:18px;height:18px">
+          Accepting Orders (Mark Restaurant as OPEN NOW)
+        </label>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:1rem;align-items:center">
+        <button type="submit" class="btn btn-primary" style="padding:.75rem 2rem;font-weight:700">
+          <i class="fas fa-save"></i> Save Restaurant Profile
+        </button>
+        <a href="/restaurant/profile" class="btn btn-outline" style="padding:.75rem 1.5rem">
+          <i class="fas fa-times"></i> Cancel
+        </a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function detectRestLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.getElementById('restLat').value = pos.coords.latitude.toFixed(7);
+        document.getElementById('restLng').value = pos.coords.longitude.toFixed(7);
+        alert('Restaurant coordinates updated to device GPS!');
+      },
+      (err) => {
+        alert('GPS detection failed: ' + err.message);
+      }
+    );
+  } else {
+    alert('Browser does not support Geolocation.');
+  }
+}
+</script>
+{% endblock %}

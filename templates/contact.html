@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Contact & Support – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#FFF7ED;padding:3rem 0;border-bottom:1px solid var(--border)">
+  <div class="container text-center" style="max-width:650px">
+    <span class="badge badge-primary mb-2">💬 24/7 Customer Helpdesk</span>
+    <h1 style="font-size:2.5rem;font-weight:900;color:var(--text-dark)">We'd Love to Hear From You</h1>
+    <p style="color:var(--text-muted);font-size:1rem;margin-top:.5rem">
+      Have a question about an order, restaurant partnership, or rider feedback? Send us a message!
+    </p>
+  </div>
+</div>
+
+<div class="container py-5" style="max-width:900px">
+  <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:2.5rem;background:#fff;border-radius:var(--radius-xl);padding:2.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    
+    <!-- Contact Info -->
+    <div>
+      <h2 style="font-size:1.4rem;font-weight:800;color:var(--text-dark);margin-bottom:1.5rem">Support Information</h2>
+      
+      <div style="display:flex;flex-direction:column;gap:1.5rem">
+        <div class="d-flex align-center gap-2">
+          <div style="width:45px;height:45px;background:#FFF7ED;color:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">
+            <i class="fas fa-map-marker-alt"></i>
+          </div>
+          <div>
+            <strong style="font-size:.95rem;color:var(--text-dark);display:block">Headquarters</strong>
+            <span style="font-size:.85rem;color:var(--text-muted)">Sindhu Bhavan Road, Bodakdev, Ahmedabad - 380054</span>
+          </div>
+        </div>
+
+        <div class="d-flex align-center gap-2">
+          <div style="width:45px;height:45px;background:#FFF7ED;color:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">
+            <i class="fas fa-envelope"></i>
+          </div>
+          <div>
+            <strong style="font-size:.95rem;color:var(--text-dark);display:block">Email Support</strong>
+            <span style="font-size:.85rem;color:var(--text-muted)">support@foodyhunters.com</span>
+          </div>
+        </div>
+
+        <div class="d-flex align-center gap-2">
+          <div style="width:45px;height:45px;background:#FFF7ED;color:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">
+            <i class="fas fa-phone-alt"></i>
+          </div>
+          <div>
+            <strong style="font-size:.95rem;color:var(--text-dark);display:block">Toll-Free Helpline</strong>
+            <span style="font-size:.85rem;color:var(--text-muted)">+91 1800 200 4848 (9 AM - 11 PM)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Form -->
+    <div>
+      <h2 style="font-size:1.4rem;font-weight:800;color:var(--text-dark);margin-bottom:1.5rem">Send a Message</h2>
+      <form method="POST" action="/contact">
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:600;font-size:.85rem;display:block;margin-bottom:.3rem">Your Name</label>
+          <input type="text" class="form-control" name="name" required placeholder="Enter full name">
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:600;font-size:.85rem;display:block;margin-bottom:.3rem">Your Email</label>
+          <input type="email" class="form-control" name="email" required placeholder="you@example.com">
+        </div>
+        <div class="form-group mb-4">
+          <label class="form-label" style="font-weight:600;font-size:.85rem;display:block;margin-bottom:.3rem">Message / Feedback</label>
+          <textarea class="form-control" name="message" rows="4" required placeholder="How can we help you today?"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg w-100" style="justify-content:center;border-radius:var(--radius-pill);font-weight:700">
+          <i class="fas fa-paper-plane"></i> Send Message
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

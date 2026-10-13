@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Search Results for "{{ query }}" – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#FFF7ED;padding:2.5rem 0;border-bottom:1px solid var(--border)">
+  <div class="container">
+    <h1 style="font-size:2rem;font-weight:800;color:var(--text-dark)">
+      Search Results for "<span class="text-primary">{{ query }}</span>"
+    </h1>
+    <p style="color:var(--text-muted);font-size:.95rem;margin-top:.3rem">
+      Found {{ (restaurants|length) + (foods|length) }} matching items
+    </p>
+  </div>
+</div>
+
+<div class="container py-4">
+  <!-- Matching Restaurants -->
+  {% if restaurants %}
+  <div class="mb-4">
+    <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:1rem;color:var(--text-dark);display:flex;align-items:center;gap:.5rem">
+      <i class="fas fa-store text-primary"></i> Restaurants ({{ restaurants|length }})
+    </h2>
+    <div class="restaurant-grid">
+      {% for r in restaurants %}
+      <div class="restaurant-card" onclick="window.location='/restaurant/{{ r.id }}'" style="cursor:pointer">
+        <div class="restaurant-img-wrap" style="position:relative;height:180px;overflow:hidden">
+          <img src="{{ r.image or 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80' }}"
+               alt="{{ r.name }}" style="width:100%;height:100%;object-fit:cover"
+               onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80'">
+          <span class="rating-badge" style="position:absolute;bottom:10px;right:10px;background:#10B981;color:#fff;padding:.25rem .6rem;border-radius:var(--radius-pill);font-size:.85rem;font-weight:700">
+            ★ {{ r.rating }}
+          </span>
+        </div>
+        <div class="restaurant-body" style="padding:1.25rem">
+          <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:.3rem">{{ r.name }}</h3>
+          <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:.5rem">{{ r.cuisine }}</p>
+          <div class="d-flex justify-between align-center">
+            <span style="font-size:.8rem;color:var(--text-muted)"><i class="fas fa-clock text-primary"></i> {{ r.delivery_time }}</span>
+            <a href="/restaurant/{{ r.id }}" class="btn btn-primary btn-sm">View Menu</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Matching Food Items -->
+  {% if foods %}
+  <div class="mb-4">
+    <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:1rem;color:var(--text-dark);display:flex;align-items:center;gap:.5rem">
+      <i class="fas fa-hamburger text-primary"></i> Dishes & Food Items ({{ foods|length }})
+    </h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:1.25rem">
+      {% for item in foods %}
+      <div class="food-card" style="background:#fff;border-radius:var(--radius-md);border:1px solid var(--border);padding:1.25rem;display:flex;justify-content:space-between;gap:1rem;box-shadow:var(--shadow-sm)">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem">
+            {% if item.veg_type == 'veg' %}
+            <span style="display:inline-block;width:14px;height:14px;border:2px solid #10B981;border-radius:3px;padding:2px">
+              <span style="display:block;width:6px;height:6px;background:#10B981;border-radius:50%"></span>
+            </span>
+            <span style="font-size:.75rem;color:#10B981;font-weight:700">VEG</span>
+            {% else %}
+            <span style="display:inline-block;width:14px;height:14px;border:2px solid #EF4444;border-radius:3px;padding:2px">
+              <span style="display:block;width:6px;height:6px;background:#EF4444;border-radius:50%"></span>
+            </span>
+            <span style="font-size:.75rem;color:#EF4444;font-weight:700">NON-VEG</span>
+            {% endif %}
+            <span style="font-size:.75rem;color:var(--text-muted)">from <strong style="color:var(--text-dark)">{{ item.restaurant_name }}</strong></span>
+          </div>
+          <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-dark);margin-bottom:.2rem">{{ item.name }}</h3>
+          <div style="font-size:1.05rem;font-weight:800;color:var(--text-dark);margin-bottom:.4rem">₹{{ "%.2f"|format(item.price) }}</div>
+          <p style="font-size:.8rem;color:var(--text-muted);line-height:1.4">{{ item.description[:70] }}...</p>
+        </div>
+        <div style="width:100px;display:flex;flex-direction:column;align-items:center;gap:.5rem;flex-shrink:0">
+          <div style="width:100px;height:85px;border-radius:var(--radius-md);overflow:hidden;background:var(--border-light)">
+            <img src="{{ item.image or 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80' }}"
+                 alt="{{ item.name }}" style="width:100%;height:100%;object-fit:cover"
+                 onerror="this.src='https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80'">
+          </div>
+          <div class="menu-item-actions w-100">
+            <button class="btn btn-primary btn-sm w-100 add-to-cart" data-food-id="{{ item.id }}" style="justify-content:center;font-weight:700">
+              ADD
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not restaurants and not foods %}
+  <div style="text-align:center;padding:5rem 2rem;background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border)">
+    <div style="font-size:3.5rem;margin-bottom:1rem">🔍</div>
+    <h3 style="font-size:1.4rem;font-weight:700;color:var(--text-dark);margin-bottom:.5rem">No Results Found</h3>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">We couldn't find anything matching "{{ query }}". Try searching for "Pizza", "Biryani", "Burger" or browse all restaurants.</p>
+    <a href="/restaurants" class="btn btn-primary">
+      <i class="fas fa-utensils"></i> Browse All Restaurants
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

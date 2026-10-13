@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}My Orders – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="page-header" style="background:#FFF7ED;padding:2.5rem 0;border-bottom:1px solid var(--border)">
+  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h1 style="font-size:2rem;font-weight:800;color:var(--text-dark)">Order History</h1>
+      <p style="color:var(--text-muted);font-size:.95rem;margin-top:.2rem">Track your past meals, download receipts, and reorder favourite dishes</p>
+    </div>
+    <a href="/restaurants" class="btn btn-primary" style="border-radius:var(--radius-pill)">
+      <i class="fas fa-plus"></i> Order New Food
+    </a>
+  </div>
+</div>
+
+<div class="container py-4">
+  {% if orders %}
+  <div style="display:flex;flex-direction:column;gap:1.25rem">
+    {% for o in orders %}
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem">
+      
+      <div style="flex:1;min-width:260px">
+        <div class="d-flex align-center gap-2 mb-2">
+          <span style="font-size:1.1rem;font-weight:800;color:var(--text-dark)">{{ o.restaurant_name }}</span>
+          {% if o.order_status == 'delivered' %}
+          <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">✓ Delivered</span>
+          {% elif o.order_status == 'cancelled' %}
+          <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Cancelled</span>
+          {% else %}
+          <span class="badge" style="background:#FEF3C7;color:#B45309;font-weight:700;animation:pulse 1.5s infinite">
+            ● {{ o.order_status|capitalize }}
+          </span>
+          {% endif %}
+        </div>
+
+        <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:.5rem">
+          Order <strong>#{{ o.order_code }}</strong> &bull; Placed on {{ o.created_at }}
+        </div>
+
+        {% if o.items_summary %}
+        <div style="font-size:.88rem;color:var(--text-dark);margin-bottom:.4rem">
+          <i class="fas fa-utensils text-primary" style="font-size:.8rem"></i> {{ o.items_summary }}
+        </div>
+        {% endif %}
+
+        <div style="font-size:.9rem;color:var(--text-muted)">
+          Payment: <strong style="text-transform:uppercase;color:var(--text-dark)">{{ o.payment_method }}</strong> ({{ o.payment_status }})
+        </div>
+      </div>
+
+      <!-- Price & Actions -->
+      <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem">
+        <div style="font-size:1.4rem;font-weight:900;color:var(--text-dark)">
+          ₹{{ "%.2f"|format(o.total_amount) }}
+        </div>
+
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <a href="/customer/order/track/{{ o.id }}" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
+            <i class="fas fa-map-marker-alt"></i> Track
+          </a>
+          <a href="/customer/order/{{ o.id }}" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)">
+            <i class="fas fa-receipt"></i> Details
+          </a>
+          {% if o.order_status == 'delivered' %}
+          <a href="/customer/order/review/{{ o.id }}" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill);color:#F59E0B;border-color:#F59E0B">
+            ★ Rate
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:5rem 2rem;background:#fff;border-radius:var(--radius-lg);border:1px solid var(--border);max-width:550px;margin:2rem auto">
+    <div style="font-size:3.5rem;margin-bottom:1rem">📦</div>
+    <h2 style="font-size:1.5rem;font-weight:800;color:var(--text-dark);margin-bottom:.5rem">No Orders Yet</h2>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">You haven't ordered any meals yet. Treat yourself to something delicious today!</p>
+    <a href="/restaurants" class="btn btn-primary btn-lg" style="border-radius:var(--radius-pill)">
+      <i class="fas fa-utensils"></i> Order Now
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
