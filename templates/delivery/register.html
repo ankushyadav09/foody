@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Join Delivery Fleet – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper" style="background:linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);padding:2.5rem 1rem">
+  <div class="auth-card" style="max-width:580px;margin:auto;border:1px solid #BFDBFE;box-shadow:0 12px 30px rgba(29, 78, 216, 0.12)">
+    <div class="auth-header" style="background:linear-gradient(135deg, #2563EB, #1D4ED8);text-align:center;padding:2rem 1.5rem">
+      <div class="auth-logo" style="color:#fff;font-size:1.8rem;font-weight:800">
+        🛵 Foody Hunters Fleet
+      </div>
+      <div class="auth-subtitle" style="color:rgba(255,255,255,0.9);font-size:0.92rem;margin-top:0.3rem">
+        Delivery Partner Onboarding – Drive & Earn in Mehsana
+      </div>
+    </div>
+
+    <div class="auth-body" style="padding:1.5rem">
+      <form method="POST" action="/delivery/register" id="deliveryRegisterForm">
+        <!-- Section 1: Personal Details -->
+        <h4 style="font-size:0.92rem;font-weight:700;color:#1D4ED8;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.4rem">
+          <i class="fas fa-id-badge"></i> 1. Rider Profile Information
+        </h4>
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:600;font-size:0.85rem">Full Name *</label>
+          <div class="input-group">
+            <i class="fas fa-user input-icon"></i>
+            <input type="text" class="form-control" name="name" id="name"
+                   placeholder="e.g. Vikram Singh Rathore" required
+                   value="{{ form.get('name','') }}">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="mb-3">
+          <div class="form-group">
+            <label class="form-label" style="font-weight:600;font-size:0.85rem">Email Address *</label>
+            <div class="input-group">
+              <i class="fas fa-envelope input-icon"></i>
+              <input type="email" class="form-control" name="email" id="email"
+                     placeholder="rider@delivery.com" required
+                     value="{{ form.get('email','') }}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight:600;font-size:0.85rem">Mobile Number *</label>
+            <div class="input-group">
+              <i class="fas fa-phone input-icon"></i>
+              <input type="tel" class="form-control" name="phone" id="phone"
+                     placeholder="9876543210" maxlength="10" required
+                     value="{{ form.get('phone','') }}">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Vehicle & License Details -->
+        <h4 style="font-size:0.92rem;font-weight:700;color:#1D4ED8;margin:1.25rem 0 0.75rem;padding-top:0.75rem;border-top:1px dashed #BFDBFE;display:flex;align-items:center;gap:0.4rem">
+          <i class="fas fa-motorcycle"></i> 2. Vehicle & Driving License Details
+        </h4>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="mb-3">
+          <div class="form-group">
+            <label class="form-label" style="font-weight:600;font-size:0.85rem">Vehicle Type *</label>
+            <select class="form-control" name="vehicle_type">
+              <option value="Motorcycle">Motorcycle</option>
+              <option value="Scooter">Scooter</option>
+              <option value="Electric Bike">Electric Bike (EV)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight:600;font-size:0.85rem">Vehicle Number *</label>
+            <input type="text" class="form-control" name="vehicle_number" id="vehicle_number"
+                   placeholder="e.g. GJ-02-AB-1234" required
+                   value="{{ form.get('vehicle_number','') }}">
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:600;font-size:0.85rem">Driving License Number *</label>
+          <div class="input-group">
+            <i class="fas fa-id-card input-icon"></i>
+            <input type="text" class="form-control" name="license_number" id="license_number"
+                   placeholder="e.g. DL-GJ02-2022-XXXXX" required
+                   value="{{ form.get('license_number','') }}">
+          </div>
+        </div>
+
+        <!-- Section 3: Residential Address -->
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight:600;font-size:0.85rem">Residential Address in Mehsana *</label>
+          <div class="input-group">
+            <i class="fas fa-map-marker-alt input-icon"></i>
+            <input type="text" class="form-control" name="address"
+                   placeholder="Street address, Society, Area in Mehsana"
+                   value="{{ form.get('address','') }}" required>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="mb-3">
+          <div class="form-group">
+            <label class="form-label" style="font-weight:600;font-size:0.85rem">City</label>
+            <input type="text" class="form-control" name="city" value="Mehsana" readonly style="background:#F9FAFB">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight:600;font-size:0.85rem">Pincode</label>
+            <input type="text" class="form-control" name="pincode" value="384002" maxlength="6">
+          </div>
+        </div>
+
+        <!-- Section 4: Security Credentials -->
+        <h4 style="font-size:0.92rem;font-weight:700;color:#1D4ED8;margin:1.25rem 0 0.75rem;padding-top:0.75rem;border-top:1px dashed #BFDBFE;display:flex;align-items:center;gap:0.4rem">
+          <i class="fas fa-key"></i> 3. Rider App Password
+        </h4>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="mb-4">
+          <div class="form-group">
+            <label class="form-label" style="font-weight:600;font-size:0.85rem">Password *</label>
+            <div class="input-group">
+              <i class="fas fa-lock input-icon"></i>
+              <input type="password" class="form-control" name="password" id="password"
+                     placeholder="Min 6 chars" required style="padding-right:2.75rem">
+              <button type="button" class="input-suffix"
+                      onclick="togglePassword('password','pwIcon2')"
+                      aria-label="Toggle password visibility"
+                      style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0.5rem;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">
+                <i class="fas fa-eye" id="pwIcon2"></i>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight:600;font-size:0.85rem">Confirm Password *</label>
+            <div class="input-group">
+              <i class="fas fa-lock input-icon"></i>
+              <input type="password" class="form-control" name="confirm_password" id="confirm_password"
+                     placeholder="Repeat password" required>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn w-100" style="background:#2563EB;color:#fff;border:none;justify-content:center;padding:0.75rem;font-weight:700;font-size:1rem;border-radius:var(--radius-md);box-shadow:0 4px 12px rgba(37, 99, 235, 0.25)">
+          <i class="fas fa-motorcycle"></i> Submit Rider Application
+        </button>
+      </form>
+    </div>
+
+    <div class="auth-footer" style="text-align:center;padding:1.15rem;border-top:1px solid #BFDBFE;font-size:0.9rem;background:#EFF6FF">
+      Already registered as a delivery rider? <a href="/delivery/login" style="color:#2563EB;font-weight:700">Sign in to Rider Desk</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

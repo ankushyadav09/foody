@@ -1,79 +1,92 @@
-{% extends "base.html" %}
-{% block title %}Delivery Fleet Partners – Foody Hunters Admin{% endblock %}
+{% extends "ops_base.html" %}
+{% block title %}Delivery Fleet & Riders – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}🛵 Delivery Fleet & Riders{% endblock %}
+{% block page_subtitle %}Manage partner couriers, verify onboarding status, and supervise delivery availability{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+  <a href="/admin/delivery-partners/add" class="ops-btn ops-btn-primary ops-btn-sm">
+    <i class="fas fa-user-plus"></i> Register New Rider
+  </a>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
-  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
     <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Delivery Fleet & Riders</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Manage registered delivery partners and view active fleet</p>
+      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">Registered Courier Fleet</h3>
+      <small style="color:var(--ops-text-dim)">Total active delivery partners in operations database</small>
     </div>
-    <div style="display:flex;gap:.75rem">
-      <a href="/admin/delivery-partners/add" class="btn btn-primary" style="border-radius:var(--radius-pill)">
-        <i class="fas fa-user-plus"></i> Add New Rider
-      </a>
-      <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
-        <i class="fas fa-arrow-left"></i> Dashboard
-      </a>
-    </div>
+    <span class="ops-badge info">{{ partners|length }} Riders</span>
   </div>
-</div>
 
-<div class="container py-4">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    
-    <div class="d-flex justify-between align-center mb-3">
-      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark)">Active Delivery Riders ({{ partners|length }})</h2>
-      <a href="/admin/delivery-partners/add" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
-        <i class="fas fa-plus"></i> Register Rider
-      </a>
-    </div>
-
-    {% if partners %}
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
-            <th style="padding:.75rem">Rider Name</th>
-            <th style="padding:.75rem">Email Login</th>
-            <th style="padding:.75rem">Mobile Phone</th>
-            <th style="padding:.75rem">Status</th>
-            <th style="padding:.75rem">Registered At</th>
-            <th style="padding:.75rem;text-align:right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for p in partners %}
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:.75rem">
-              <strong style="color:var(--text-dark)"><i class="fas fa-motorcycle text-primary"></i> {{ p.name }}</strong>
-            </td>
-            <td style="padding:.75rem">{{ p.email }}</td>
-            <td style="padding:.75rem">{{ p.phone }}</td>
-            <td style="padding:.75rem">
-              {% if p.status == 'active' %}
-              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">Available / Active</span>
-              {% else %}
-              <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Suspended</span>
-              {% endif %}
-            </td>
-            <td style="padding:.75rem;color:var(--text-muted)">{{ p.created_at }}</td>
-            <td style="padding:.75rem;text-align:right">
-              <form method="POST" action="/admin/users/toggle/{{ p.id }}" style="display:inline">
-                <button type="submit" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)">
-                  {% if p.status == 'active' %}Deactivate{% else %}Activate{% endif %}
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p style="color:var(--text-muted);text-align:center;padding:3rem">No delivery partners registered yet.</p>
-    {% endif %}
-
+  {% if partners %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Rider Name</th>
+          <th>Contact & Email</th>
+          <th>Phone Number</th>
+          <th>Fleet Status</th>
+          <th>Registration Date</th>
+          <th style="text-align:right">Fleet Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in partners %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:0.75rem">
+              <div style="width:36px;height:36px;border-radius:50%;background:rgba(6,182,212,0.15);color:var(--ops-cyan);display:flex;align-items:center;justify-content:center;font-weight:700">
+                <i class="fas fa-motorcycle"></i>
+              </div>
+              <div>
+                <strong style="color:var(--ops-foreground);display:block">{{ p.name }}</strong>
+                <small style="color:var(--ops-muted);font-family:var(--ops-font-mono)">ID #{{ p.id }}</small>
+              </div>
+            </div>
+          </td>
+          <td>{{ p.email }}</td>
+          <td>{{ p.phone or 'N/A' }}</td>
+          <td>
+            {% if p.status == 'active' %}
+            <span class="ops-badge success"><i class="fas fa-check-circle"></i> Active / Ready</span>
+            {% else %}
+            <span class="ops-badge danger"><i class="fas fa-ban"></i> Suspended</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--ops-muted);font-size:0.85rem">{{ p.created_at or 'N/A' }}</td>
+          <td style="text-align:right">
+            <form method="POST" action="/admin/users/toggle/{{ p.id }}" style="display:inline">
+              <button type="submit" class="ops-btn ops-btn-sm {% if p.status == 'active' %}ops-btn-outline{% else %}ops-btn-primary{% endif %}">
+                {% if p.status == 'active' %}
+                  <i class="fas fa-pause"></i> Suspend
+                {% else %}
+                  <i class="fas fa-play"></i> Activate
+                {% endif %}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+  {% else %}
+  <div class="ops-empty-state">
+    <i class="fas fa-motorcycle ops-empty-icon"></i>
+    <div class="ops-empty-title">No Delivery Partners Registered</div>
+    <div class="ops-empty-desc">No courier riders have onboarded onto the Foody Hunters fleet yet.</div>
+    <a href="/admin/delivery-partners/add" class="ops-btn ops-btn-primary ops-btn-sm" style="margin-top:1rem">
+      <i class="fas fa-plus"></i> Onboard First Rider
+    </a>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

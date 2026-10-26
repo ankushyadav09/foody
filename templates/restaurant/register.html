@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% block title %}Partner With Us – Register Restaurant | Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="section-py" style="background: linear-gradient(135deg, #FFFDF9 0%, #FFF5ED 100%); min-height: 85vh; padding: 3rem 1rem;">
+  <div class="container" style="max-width: 680px;">
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'error' else 'danger' }} mb-4" style="border-radius:var(--radius-md); padding:1rem 1.25rem;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card" style="background:#FFFFFF; border: 1px solid #FED7AA; box-shadow: 0 16px 40px rgba(234, 88, 12, 0.08); border-radius: var(--radius-lg); overflow:hidden;">
+      
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #FF4500, #EA580C); text-align:center; padding: 2.25rem 1.75rem; color:#fff;">
+        <div style="display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,0.18); margin-bottom:0.75rem; font-size:1.8rem;">
+          👨‍🍳
+        </div>
+        <h2 style="font-size: 1.85rem; font-weight: 800; margin: 0; letter-spacing: -0.02em;">
+          Partner With Foody Hunters
+        </h2>
+        <p style="margin: 0.4rem 0 0; opacity: 0.92; font-size: 0.95rem;">
+          List Your Restaurant on FOODY HUNTERS &bull; Expand food orders in Mehsana and supported cities across Gujarat
+        </p>
+      </div>
+
+      <!-- Registration Form -->
+      <div style="padding: 2.25rem 2rem;">
+        <form method="POST" action="/restaurant/register" enctype="multipart/form-data" id="restaurantRegisterForm">
+          
+          <!-- Section 1: Owner Details -->
+          <div style="margin-bottom: 1.75rem;">
+            <h4 style="font-size:1rem; font-weight:700; color:#C2410C; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem">
+              <i class="fas fa-user-tie"></i> 1. Restaurant Owner Information
+            </h4>
+
+            <div class="form-group mb-3">
+              <label class="form-label" for="name" style="font-weight:600; font-size:0.88rem; color:#374151">
+                Owner Full Name <span style="color:#DC2626">*</span>
+              </label>
+              <div class="input-group">
+                <i class="fas fa-user input-icon" style="color:#9CA3AF"></i>
+                <input type="text" class="form-control" name="name" id="name"
+                       placeholder="e.g. Sanjeev Kumar Patel" required
+                       value="{{ form.get('name','') }}">
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;" class="mb-3">
+              <div class="form-group">
+                <label class="form-label" for="email" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Business Email <span style="color:#DC2626">*</span>
+                </label>
+                <div class="input-group">
+                  <i class="fas fa-envelope input-icon" style="color:#9CA3AF"></i>
+                  <input type="email" class="form-control" name="email" id="email"
+                         placeholder="owner@restaurant.com" required
+                         value="{{ form.get('email','') }}">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="phone" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Contact Mobile <span style="color:#DC2626">*</span>
+                </label>
+                <div class="input-group">
+                  <i class="fas fa-phone input-icon" style="color:#9CA3AF"></i>
+                  <input type="tel" class="form-control" name="phone" id="phone"
+                         placeholder="9876543210" maxlength="10" required pattern="[6-9][0-9]{9}"
+                         title="Enter a valid 10-digit Indian phone number starting with 6-9"
+                         value="{{ form.get('phone','') }}">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Outlet Specifications -->
+          <div style="margin-bottom: 1.75rem; padding-top:1.5rem; border-top:1px dashed #FED7AA;">
+            <h4 style="font-size:1rem; font-weight:700; color:#C2410C; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem">
+              <i class="fas fa-store"></i> 2. Outlet & Dining Specifications
+            </h4>
+
+            <div class="form-group mb-3">
+              <label class="form-label" for="restaurant_name" style="font-weight:600; font-size:0.88rem; color:#374151">
+                Restaurant Outlet Name <span style="color:#DC2626">*</span>
+              </label>
+              <div class="input-group">
+                <i class="fas fa-utensils input-icon" style="color:#9CA3AF"></i>
+                <input type="text" class="form-control" name="restaurant_name" id="restaurant_name"
+                       placeholder="e.g. Shree Radhey Kathiyawadi & Punjabi" required
+                       value="{{ form.get('restaurant_name','') }}">
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;" class="mb-3">
+              <div class="form-group">
+                <label class="form-label" for="cuisine" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Cuisine Types <span style="color:#DC2626">*</span>
+                </label>
+                <input type="text" class="form-control" name="cuisine" id="cuisine"
+                       placeholder="e.g. Gujarati, Punjabi, Chinese, Fast Food" required
+                       value="{{ form.get('cuisine','') }}">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="restaurant_area" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Area / Locality <span style="color:#DC2626">*</span>
+                </label>
+                <input type="text" class="form-control" name="restaurant_area" id="restaurant_area"
+                       placeholder="e.g. Radhanpur Road / Modhera Road" required
+                       value="{{ form.get('restaurant_area','Radhanpur Road') }}">
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <label class="form-label" for="address" style="font-weight:600; font-size:0.88rem; color:#374151">
+                Shop / Outlet Full Address <span style="color:#DC2626">*</span>
+              </label>
+              <div class="input-group">
+                <i class="fas fa-map-marker-alt input-icon" style="color:#9CA3AF"></i>
+                <input type="text" class="form-control" name="address" id="address"
+                       placeholder="Shop No., Complex/Floor, Landmark" required
+                       value="{{ form.get('address','') }}">
+              </div>
+            </div>
+
+            <!-- Extensible City & Pincode -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;" class="mb-3">
+              <div class="form-group">
+                <label class="form-label" for="cityChoice" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  City <span style="color:#DC2626">*</span>
+                </label>
+                <select class="form-control" name="city_choice" id="cityChoice" onchange="checkCustomCity(this.value)">
+                  <option value="Mehsana" selected>Mehsana (Default Hub)</option>
+                  <option value="Ahmedabad">Ahmedabad</option>
+                  <option value="Gandhinagar">Gandhinagar</option>
+                  <option value="Surat">Surat</option>
+                  <option value="Vadodara">Vadodara</option>
+                  <option value="Rajkot">Rajkot</option>
+                  <option value="Patan">Patan</option>
+                  <option value="Unjha">Unjha</option>
+                  <option value="Kadi">Kadi</option>
+                  <option value="Other">Other Supported City...</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="pincode" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Postal Pincode <span style="color:#DC2626">*</span>
+                </label>
+                <input type="text" class="form-control" name="pincode" id="pincode"
+                       placeholder="384002" maxlength="6" pattern="[0-9]{6}" required
+                       value="{{ form.get('pincode','384002') }}">
+              </div>
+            </div>
+
+            <!-- Custom City Input (Hidden by default, shown if Other is selected) -->
+            <div class="form-group mb-3" id="customCityGroup" style="display:none;">
+              <label class="form-label" for="custom_city" style="font-weight:600; font-size:0.88rem; color:#374151">
+                Specify City Name <span style="color:#DC2626">*</span>
+              </label>
+              <input type="text" class="form-control" name="custom_city" id="custom_city"
+                     placeholder="Enter your city name">
+            </div>
+
+            <!-- Operating Hours & Description -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;" class="mb-3">
+              <div class="form-group">
+                <label class="form-label" for="open_time" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Opening Time
+                </label>
+                <input type="time" class="form-control" name="open_time" id="open_time" value="{{ form.get('open_time','09:00') }}">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="close_time" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Closing Time
+                </label>
+                <input type="time" class="form-control" name="close_time" id="close_time" value="{{ form.get('close_time','23:00') }}">
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <label class="form-label" for="description" style="font-weight:600; font-size:0.88rem; color:#374151">
+                Outlet Description
+              </label>
+              <textarea class="form-control" name="description" id="description" rows="2"
+                        placeholder="Brief summary of your specialties, seating, or specialties...">{{ form.get('description','') }}</textarea>
+            </div>
+          </div>
+
+          <!-- Section 3: Verification & KYC Documents -->
+          <div style="margin-bottom: 1.75rem; padding-top:1.5rem; border-top:1px dashed #FED7AA;">
+            <h4 style="font-size:1rem; font-weight:700; color:#C2410C; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem">
+              <i class="fas fa-file-shield"></i> 3. Business Verification & KYC
+            </h4>
+
+            <div class="form-group mb-3">
+              <label class="form-label" for="fssai_number" style="font-weight:600; font-size:0.88rem; color:#374151">
+                FSSAI License / GSTIN (Optional / Recommended)
+              </label>
+              <div class="input-group">
+                <i class="fas fa-certificate input-icon" style="color:#9CA3AF"></i>
+                <input type="text" class="form-control" name="fssai_number" id="fssai_number"
+                       placeholder="e.g. 10721012000000 or GSTIN"
+                       value="{{ form.get('fssai_number','') }}">
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <label class="form-label" for="document" style="font-weight:600; font-size:0.88rem; color:#374151">
+                Verification Document Proof (PDF or Image, max 5MB)
+              </label>
+              <input type="file" class="form-control" name="document" id="document"
+                     accept=".png,.jpg,.jpeg,.pdf,.webp" style="padding:0.5rem">
+              <small style="color:var(--text-muted); font-size:0.8rem; display:block; margin-top:0.35rem">
+                Upload FSSAI License, Trade License, Shop Establishment Act, or GST Certificate.
+              </small>
+            </div>
+          </div>
+
+          <!-- Section 4: Portal Security Password -->
+          <div style="margin-bottom: 2rem; padding-top:1.5rem; border-top:1px dashed #FED7AA;">
+            <h4 style="font-size:1rem; font-weight:700; color:#C2410C; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem">
+              <i class="fas fa-key"></i> 4. Kitchen Operations Desk Password
+            </h4>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+              <div class="form-group">
+                <label class="form-label" for="password" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Access Password <span style="color:#DC2626">*</span>
+                </label>
+                <div class="input-group" style="position:relative">
+                  <i class="fas fa-lock input-icon" style="color:#9CA3AF"></i>
+                  <input type="password" class="form-control" name="password" id="password"
+                         placeholder="Min 6 characters" required style="padding-right:2.5rem">
+                  <button type="button" class="input-suffix" onclick="togglePassword('password','pwIcon1')"
+                          aria-label="Toggle password visibility"
+                          style="position:absolute; right:0.5rem; top:50%; transform:translateY(-50%); background:none; border:none; color:#9CA3AF; cursor:pointer;">
+                    <i class="fas fa-eye" id="pwIcon1"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="confirm_password" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Confirm Password <span style="color:#DC2626">*</span>
+                </label>
+                <div class="input-group" style="position:relative">
+                  <i class="fas fa-lock input-icon" style="color:#9CA3AF"></i>
+                  <input type="password" class="form-control" name="confirm_password" id="confirm_password"
+                         placeholder="Repeat password" required style="padding-right:2.5rem">
+                  <button type="button" class="input-suffix" onclick="togglePassword('confirm_password','pwIcon2')"
+                          aria-label="Toggle confirm password visibility"
+                          style="position:absolute; right:0.5rem; top:50%; transform:translateY(-50%); background:none; border:none; color:#9CA3AF; cursor:pointer;">
+                    <i class="fas fa-eye" id="pwIcon2"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="btn w-100" style="background:linear-gradient(135deg, #FF4500, #EA580C); color:#fff; border:none; justify-content:center; padding:0.9rem; font-weight:800; font-size:1.05rem; border-radius:var(--radius-md); box-shadow:0 6px 20px rgba(255,69,0,0.3); cursor:pointer;">
+            <i class="fas fa-paper-plane" style="margin-right:0.5rem"></i> Submit Application for Administrator Approval
+          </button>
+        </form>
+      </div>
+
+      <!-- Footer -->
+      <div style="background:#FAF8F5; text-align:center; padding:1.25rem; border-top:1px solid #FED7AA; font-size:0.92rem; color:var(--text-muted)">
+        Already a registered Foody Hunters restaurant partner? 
+        <a href="/restaurant/login" style="color:#EA580C; font-weight:700; margin-left:0.35rem">
+          Sign In to Kitchen Dashboard &rarr;
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function checkCustomCity(val) {
+  const customGroup = document.getElementById('customCityGroup');
+  const customInput = document.getElementById('custom_city');
+  if (val === 'Other') {
+    customGroup.style.display = 'block';
+    customInput.required = true;
+    customInput.focus();
+  } else {
+    customGroup.style.display = 'none';
+    customInput.required = false;
+  }
+}
+</script>
+{% endblock %}

@@ -1,100 +1,114 @@
-{% extends "base.html" %}
-{% block title %}Order Dispatch & Management – Foody Hunters Admin{% endblock %}
+{% extends "ops_base.html" %}
+{% block title %}System Orders & Dispatches – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}📦 System Orders & Dispatches{% endblock %}
+{% block page_subtitle %}Live customer orders, kitchen fulfillment stages, and courier dispatch assignments{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+  <button onclick="location.reload()" class="ops-btn ops-btn-primary ops-btn-sm">
+    <i class="fas fa-sync-alt"></i> Refresh Feed
+  </button>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
-  <div class="container d-flex justify-between align-center flex-wrap gap-2">
-    <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">System Orders & Fleet Dispatch</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Monitor all live orders across restaurants and assign delivery partners</p>
+<div class="ops-card mb-4">
+  <!-- Status Filters & Search Bar -->
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
+    <div class="d-flex gap-1 flex-wrap">
+      <a href="/admin/orders?status=all" class="ops-btn ops-btn-sm {% if status == 'all' or not status %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">All</a>
+      <a href="/admin/orders?status=placed" class="ops-btn ops-btn-sm {% if status == 'placed' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">Placed</a>
+      <a href="/admin/orders?status=confirmed" class="ops-btn ops-btn-sm {% if status == 'confirmed' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">Confirmed</a>
+      <a href="/admin/orders?status=preparing" class="ops-btn ops-btn-sm {% if status == 'preparing' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">Cooking</a>
+      <a href="/admin/orders?status=ready" class="ops-btn ops-btn-sm {% if status == 'ready' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">Ready</a>
+      <a href="/admin/orders?status=out_for_delivery" class="ops-btn ops-btn-sm {% if status == 'out_for_delivery' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">In Transit</a>
+      <a href="/admin/orders?status=delivered" class="ops-btn ops-btn-sm {% if status == 'delivered' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">Delivered</a>
     </div>
-    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
-      <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
-  </div>
-</div>
 
-<div class="container py-4">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    
-    <!-- Filter Bar -->
-    <form method="GET" action="/admin/orders" class="d-flex justify-between align-center flex-wrap gap-2 mb-3">
-      <div class="d-flex gap-1" style="flex-wrap:wrap">
-        <a href="/admin/orders?status=all" class="btn btn-sm {% if status == 'all' or not status %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">All Orders</a>
-        <a href="/admin/orders?status=placed" class="btn btn-sm {% if status == 'placed' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Placed</a>
-        <a href="/admin/orders?status=confirmed" class="btn btn-sm {% if status == 'confirmed' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Confirmed</a>
-        <a href="/admin/orders?status=preparing" class="btn btn-sm {% if status == 'preparing' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Cooking</a>
-        <a href="/admin/orders?status=ready" class="btn btn-sm {% if status == 'ready' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Ready</a>
-        <a href="/admin/orders?status=out_for_delivery" class="btn btn-sm {% if status == 'out_for_delivery' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">In Transit</a>
-        <a href="/admin/orders?status=delivered" class="btn btn-sm {% if status == 'delivered' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Delivered</a>
-      </div>
-
-      <div class="d-flex gap-1">
-        <input type="text" class="form-control" name="q" value="{{ q or '' }}" placeholder="Search order code, user..." style="width:220px">
-        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
-      </div>
+    <form method="GET" action="/admin/orders" class="d-flex gap-1">
+      <input type="text" class="ops-input" name="q" value="{{ q or '' }}" placeholder="Search order code or user..." style="width:210px;padding:0.4rem 0.75rem;font-size:0.85rem">
+      <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm"><i class="fas fa-search"></i></button>
     </form>
-
-    {% if orders %}
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
-            <th style="padding:.75rem">Order</th>
-            <th style="padding:.75rem">Customer</th>
-            <th style="padding:.75rem">Restaurant</th>
-            <th style="padding:.75rem">Amount</th>
-            <th style="padding:.75rem">Status</th>
-            <th style="padding:.75rem">Assign Rider</th>
-            <th style="padding:.75rem">Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for o in orders %}
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:.75rem">
-              <strong>#{{ o.order_code }}</strong>
-            </td>
-            <td style="padding:.75rem">{{ o.customer_name }}</td>
-            <td style="padding:.75rem">{{ o.restaurant_name }}</td>
-            <td style="padding:.75rem;font-weight:700">₹{{ "%.2f"|format(o.total_amount) }}</td>
-            <td style="padding:.75rem">
-              {% if o.order_status == 'delivered' %}
-              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">Delivered</span>
-              {% elif o.order_status == 'cancelled' %}
-              <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Cancelled</span>
-              {% else %}
-              <span class="badge" style="background:#FEF3C7;color:#B45309;font-weight:700">{{ o.order_status|capitalize }}</span>
-              {% endif %}
-            </td>
-            <td style="padding:.75rem">
-              {% if o.order_status not in ('delivered', 'cancelled') %}
-              <form method="POST" action="/admin/delivery-partners/assign" style="display:flex;gap:.3rem;align-items:center">
-                <input type="hidden" name="order_id" value="{{ o.id }}">
-                <select name="partner_id" class="form-control" style="font-size:.8rem;padding:.2rem .4rem;width:140px" required>
-                  <option value="">Select Rider</option>
-                  {% for p in partners %}
-                  <option value="{{ p.id }}" {% if o.partner_name == p.name %}selected{% endif %}>{{ p.name }}</option>
-                  {% endfor %}
-                </select>
-                <button type="submit" class="btn btn-primary btn-sm" style="padding:.2rem .6rem;font-size:.8rem">
-                  Assign
-                </button>
-              </form>
-              {% else %}
-              <small style="color:var(--text-muted)">{{ o.partner_name or '–' }}</small>
-              {% endif %}
-            </td>
-            <td style="padding:.75rem;color:var(--text-muted);font-size:.85rem">{{ o.created_at }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p style="color:var(--text-muted);text-align:center;padding:3rem">No orders found.</p>
-    {% endif %}
-
   </div>
+
+  {% if orders %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Order Code</th>
+          <th>Customer</th>
+          <th>Restaurant</th>
+          <th>Total Bill</th>
+          <th>Fulfillment Status</th>
+          <th>Courier Assignment</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td>
+            <strong style="color:var(--ops-foreground);font-family:var(--ops-font-mono)">#{{ o.order_code }}</strong>
+          </td>
+          <td>
+            <span style="font-weight:600">{{ o.customer_name }}</span>
+          </td>
+          <td>
+            <span style="color:var(--ops-amber)"><i class="fas fa-store"></i> {{ o.restaurant_name }}</span>
+          </td>
+          <td style="font-family:var(--ops-font-mono);font-weight:700;color:var(--ops-emerald)">
+            ₹{{ "%.2f"|format(o.total_amount) }}
+          </td>
+          <td>
+            {% if o.order_status == 'delivered' %}
+            <span class="ops-badge success"><i class="fas fa-check-double"></i> Delivered</span>
+            {% elif o.order_status == 'cancelled' %}
+            <span class="ops-badge danger"><i class="fas fa-times-circle"></i> Cancelled</span>
+            {% elif o.order_status == 'out_for_delivery' %}
+            <span class="ops-badge info"><i class="fas fa-motorcycle"></i> In Transit</span>
+            {% elif o.order_status == 'ready' %}
+            <span class="ops-badge warning"><i class="fas fa-box"></i> Ready</span>
+            {% elif o.order_status == 'preparing' %}
+            <span class="ops-badge warning"><i class="fas fa-fire"></i> Cooking</span>
+            {% else %}
+            <span class="ops-badge info"><i class="fas fa-clock"></i> {{ o.order_status|capitalize }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if o.order_status not in ('delivered', 'cancelled') %}
+            <form method="POST" action="/admin/delivery-partners/assign" style="display:flex;gap:0.4rem;align-items:center">
+              <input type="hidden" name="order_id" value="{{ o.id }}">
+              <select name="partner_id" class="ops-select" style="font-size:0.8rem;padding:0.25rem 0.5rem;width:140px" required>
+                <option value="">Select Rider</option>
+                {% for p in partners %}
+                <option value="{{ p.id }}" {% if o.partner_name == p.name %}selected{% endif %}>{{ p.name }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm" style="padding:0.25rem 0.5rem;font-size:0.75rem">
+                Assign
+              </button>
+            </form>
+            {% else %}
+            <small style="color:var(--ops-muted)"><i class="fas fa-user-check"></i> {{ o.partner_name or 'Unassigned' }}</small>
+            {% endif %}
+          </td>
+          <td style="color:var(--ops-muted);font-size:0.82rem">{{ o.created_at or 'N/A' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="ops-empty-state">
+    <i class="fas fa-receipt ops-empty-icon"></i>
+    <div class="ops-empty-title">No Orders Match Filter</div>
+    <div class="ops-empty-desc">There are no orders matching this status or search filter in the dispatch queue.</div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Administrator Credentials – Foody Hunters Control Desk{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper" style="background: linear-gradient(135deg, #FFFDF9 0%, #FFF5ED 100%); min-height:85vh; display:flex; align-items:center; justify-content:center; padding:2.5rem 1rem;">
+  <div class="auth-card" style="background:#FFFFFF; border:1px solid #FED7AA; box-shadow:0 20px 45px rgba(234, 88, 12, 0.10); max-width:460px; width:100%; border-radius:var(--radius-lg); overflow:hidden;">
+    <div class="auth-header" style="background:linear-gradient(135deg, #FF4500, #EA580C); text-align:center; padding:2.25rem 1.75rem; color:#fff;">
+      <div class="auth-logo" style="color:#fff; font-size:1.85rem; font-weight:800; letter-spacing:-0.02em">
+        🛡️ Foody Hunters
+      </div>
+      <div class="auth-subtitle" style="color:rgba(255,255,255,0.92); font-size:0.88rem; margin-top:0.35rem; font-weight:500;">
+        Administrator Direct Account Sign In
+      </div>
+    </div>
+
+    <div class="auth-body" style="padding:2rem 1.75rem">
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'error' else 'danger' }} mb-3" style="border-radius:var(--radius-md); font-size:0.88rem; padding:0.75rem 1rem;">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="/admin/login" id="adminLoginForm">
+        <div class="form-group mb-3">
+          <label class="form-label" for="email" style="font-weight:600; font-size:0.88rem; color:#374151">Administrator Email</label>
+          <div class="input-group">
+            <i class="fas fa-shield-alt input-icon" style="color:#FF4500"></i>
+            <input type="email" class="form-control" id="email" name="email"
+                   placeholder="admin@foodyhunters.com" required autocomplete="username"
+                   style="background:#FFFFFF; border-color:#D1D5DB; color:#111827">
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem">
+            <label class="form-label" for="password" style="font-weight:600; font-size:0.88rem; color:#374151; margin:0">Master Passkey</label>
+          </div>
+          <div class="input-group" style="position:relative">
+            <i class="fas fa-key input-icon" style="color:#FF4500"></i>
+            <input type="password" class="form-control" id="password" name="password"
+                   placeholder="Enter administrator passkey" required autocomplete="current-password"
+                   style="background:#FFFFFF; border-color:#D1D5DB; color:#111827; padding-right:2.75rem">
+            <button type="button" class="input-suffix" onclick="togglePassword('password','pwIconAdmin')"
+                    aria-label="Toggle password visibility"
+                    style="position:absolute; right:0.5rem; top:50%; transform:translateY(-50%); background:none; border:none; color:#9CA3AF; cursor:pointer; padding:0.5rem; min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center">
+              <i class="fas fa-eye" id="pwIconAdmin"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group mb-4">
+          <div class="form-check">
+            <input type="checkbox" id="remember_me" name="remember_me">
+            <label for="remember_me" style="font-size:0.88rem; cursor:pointer; color:#4B5563">Keep executive console open</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn w-100" style="background:linear-gradient(135deg, #FF4500, #EA580C); color:#fff; border:none; justify-content:center; padding:0.85rem 1rem; font-size:1rem; font-weight:800; border-radius:var(--radius-md); box-shadow:0 6px 20px rgba(255, 69, 0, 0.28); cursor:pointer">
+          <i class="fas fa-lock"></i> Authenticate Executive Desk
+        </button>
+      </form>
+
+      <div style="margin-top:1.5rem; padding-top:1.25rem; border-top:1px dashed #E5E7EB; text-align:center">
+        <a href="/" class="btn btn-sm btn-outline" style="border-radius:var(--radius-pill); color:#6B7280; border-color:#D1D5DB; font-size:0.82rem">
+          <i class="fas fa-arrow-left"></i> Return to Customer Storefront
+        </a>
+      </div>
+    </div>
+
+    <div class="auth-footer" style="text-align:center; padding:1rem; border-top:1px solid #FED7AA; font-size:0.82rem; color:#6B7280; background:#FAF8F5">
+      Authorized personnel only. Public registration for administrative roles is strictly prohibited.
+    </div>
+  </div>
+</div>
+{% endblock %}

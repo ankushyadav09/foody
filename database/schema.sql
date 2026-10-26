@@ -42,7 +42,7 @@ CREATE TABLE `users` (
   `email` VARCHAR(120) NOT NULL UNIQUE,
   `phone` VARCHAR(20) NOT NULL,
   `password_hash` VARCHAR(255) NOT NULL,
-  `role` ENUM('customer', 'restaurant', 'delivery', 'admin') NOT NULL DEFAULT 'customer',
+  `role` ENUM('customer', 'restaurant', 'delivery', 'admin', 'staff') NOT NULL DEFAULT 'customer',
   `gender` ENUM('male', 'female', 'other') DEFAULT NULL,
   `dob` DATE DEFAULT NULL,
   `address` TEXT DEFAULT NULL,
@@ -425,3 +425,93 @@ CREATE TABLE `admin_logs` (
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`admin_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 21. Table: restaurant_staff
+-- Hotel/restaurant staff membership, role assignments, and permissions
+-- --------------------------------------------------------
+CREATE TABLE `restaurant_staff` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL UNIQUE,
+  `restaurant_id` INT NOT NULL,
+  `staff_role` ENUM('kitchen_staff', 'restaurant_manager') NOT NULL DEFAULT 'kitchen_staff',
+  `status` ENUM('pending', 'approved', 'rejected', 'suspended') NOT NULL DEFAULT 'approved',
+  `shift` VARCHAR(50) DEFAULT 'Full Time',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE CASCADE,
+  INDEX `idx_staff_rest` (`restaurant_id`),
+  INDEX `idx_staff_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 22. Table: delivery_shifts
+-- Delivery partner roster and shifts
+-- --------------------------------------------------------
+CREATE TABLE `delivery_shifts` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(100) NOT NULL,
+  `shift_date` DATE NOT NULL,
+  `start_time` TIME NOT NULL,
+  `end_time` TIME NOT NULL,
+  `city` VARCHAR(60) DEFAULT 'Mehsana',
+  `zone` VARCHAR(100) DEFAULT 'Mehsana Central',
+  `max_capacity` INT DEFAULT 10,
+  `status` ENUM('open', 'full', 'completed', 'cancelled') DEFAULT 'open',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_shift_date` (`shift_date`),
+  INDEX `idx_shift_city` (`city`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 23. Table: shift_bookings
+-- Delivery partner shift reservations
+-- --------------------------------------------------------
+CREATE TABLE `shift_bookings` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `shift_id` INT NOT NULL,
+  `partner_id` INT NOT NULL,
+  `status` ENUM('booked', 'completed', 'cancelled') DEFAULT 'booked',
+  `booked_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `cancelled_at` DATETIME DEFAULT NULL,
+  FOREIGN KEY (`shift_id`) REFERENCES `delivery_shifts`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`partner_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_sb_shift` (`shift_id`),
+  INDEX `idx_sb_partner` (`partner_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 24. Table: delivery_incentive_rules
+-- Delivery milestone and peak incentives
+-- --------------------------------------------------------
+CREATE TABLE `delivery_incentive_rules` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(150) NOT NULL,
+  `incentive_type` ENUM('deliveries_milestone', 'shift_completion', 'peak_hours', 'weekend_special') DEFAULT 'deliveries_milestone',
+  `target_count` INT NOT NULL DEFAULT 5,
+  `bonus_amount` DECIMAL(8,2) NOT NULL DEFAULT 150.00,
+  `min_shift_hours` DECIMAL(4,2) DEFAULT 0.00,
+  `description` VARCHAR(255) DEFAULT NULL,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- 25. Table: delivery_partner_incentives
+-- Earned bonuses and payout progress
+-- --------------------------------------------------------
+CREATE TABLE `delivery_partner_incentives` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `partner_id` INT NOT NULL,
+  `rule_id` INT NOT NULL,
+  `shift_id` INT DEFAULT NULL,
+  `qualifying_deliveries` INT DEFAULT 0,
+  `earned_amount` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+  `status` ENUM('in_progress', 'earned', 'paid') DEFAULT 'earned',
+  `credited_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`partner_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_dpi_partner` (`partner_id`),
+  INDEX `idx_dpi_rule` (`rule_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+

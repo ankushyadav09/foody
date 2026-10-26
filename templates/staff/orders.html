@@ -1,0 +1,130 @@
+{% extends "ops_base.html" %}
+{% block title %}Kitchen Orders Queue – {{ restaurant.name }}{% endblock %}
+
+{% block page_title %}📋 Kitchen Orders Queue{% endblock %}
+{% block page_subtitle %}Review & update orders for {{ restaurant.name }} &bull; Restaurant-isolated kitchen flow{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/staff/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Kitchen Desk
+  </a>
+  <a href="/staff/menu" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-toggle-on"></i> Dish Stock
+  </a>
+  <button onclick="location.reload()" class="ops-btn ops-btn-primary ops-btn-sm">
+    <i class="fas fa-sync-alt"></i> Refresh Queue
+  </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
+    <!-- Filter pills -->
+    <div class="d-flex gap-1 flex-wrap">
+      <a href="/staff/orders?status=active" class="ops-btn ops-btn-sm {% if status_filter == 'active' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Active Queue
+      </a>
+      <a href="/staff/orders?status=placed" class="ops-btn ops-btn-sm {% if status_filter == 'placed' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Placed
+      </a>
+      <a href="/staff/orders?status=confirmed" class="ops-btn ops-btn-sm {% if status_filter == 'confirmed' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Confirmed
+      </a>
+      <a href="/staff/orders?status=preparing" class="ops-btn ops-btn-sm {% if status_filter == 'preparing' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Preparing
+      </a>
+      <a href="/staff/orders?status=ready_for_pickup" class="ops-btn ops-btn-sm {% if status_filter == 'ready_for_pickup' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Ready for Pickup
+      </a>
+      <a href="/staff/orders?status=delivered" class="ops-btn ops-btn-sm {% if status_filter == 'delivered' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Delivered
+      </a>
+      <a href="/staff/orders?status=cancelled" class="ops-btn ops-btn-sm {% if status_filter == 'cancelled' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Cancelled
+      </a>
+    </div>
+
+    <span class="ops-badge info">{{ orders|length }} Orders Listed</span>
+  </div>
+
+  {% if orders %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Order Code</th>
+          <th>Customer</th>
+          <th>Dishes & Items</th>
+          <th>Amount</th>
+          <th>Payment</th>
+          <th>Status</th>
+          <th>Time</th>
+          <th style="text-align:right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td style="font-weight:700;color:var(--ops-foreground)">#{{ o.order_code }}</td>
+          <td>
+            <div style="font-weight:600">{{ o.customer_name }}</div>
+            <div style="font-size:0.8rem;color:var(--ops-muted)"><i class="fas fa-phone"></i> {{ o.customer_phone or '–' }}</div>
+          </td>
+          <td>
+            <div style="font-size:0.84rem">
+              {% for itm in o.order_items %}
+                <div>&bull; {{ itm.quantity }}x {{ itm.item_name }}</div>
+              {% endfor %}
+            </div>
+            {% if o.special_instructions %}
+              <div style="font-size:0.75rem;color:#D97706;margin-top:0.25rem"><i class="fas fa-comment"></i> {{ o.special_instructions }}</div>
+            {% endif %}
+          </td>
+          <td style="font-weight:700">₹{{ "%.2f"|format(o.total_amount) }}</td>
+          <td>
+            <span class="ops-badge {% if o.payment_status == 'paid' %}success{% else %}warning{% endif %}">
+              {{ o.payment_method|upper }} ({{ o.payment_status|title }})
+            </span>
+          </td>
+          <td>
+            <span class="ops-badge {% if o.order_status == 'placed' %}warning{% elif o.order_status == 'preparing' %}cyan{% elif o.order_status == 'ready_for_pickup' %}emerald{% elif o.order_status == 'delivered' %}success{% else %}danger{% endif %}">
+              {{ o.order_status|replace('_', ' ')|title }}
+            </span>
+          </td>
+          <td style="font-size:0.82rem;color:var(--ops-muted)">
+            {{ o.created_at|string }}
+          </td>
+          <td style="text-align:right">
+            {% if o.order_status in ['placed', 'confirmed', 'preparing'] %}
+            <form method="POST" action="/staff/order/update-status" style="display:inline-block">
+              <input type="hidden" name="order_id" value="{{ o.id }}">
+              {% if o.order_status in ['placed', 'confirmed'] %}
+                <button type="submit" name="status" value="preparing" class="ops-btn ops-btn-primary ops-btn-sm">
+                  <i class="fas fa-fire-burner"></i> Start Prep
+                </button>
+              {% elif o.order_status == 'preparing' %}
+                <button type="submit" name="status" value="ready_for_pickup" class="ops-btn ops-btn-emerald ops-btn-sm">
+                  <i class="fas fa-box-open"></i> Ready
+                </button>
+              {% endif %}
+            </form>
+            {% else %}
+              <span style="font-size:0.82rem;color:var(--ops-muted)">–</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="p-5 text-center">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem">📋</div>
+    <h4 style="color:var(--ops-foreground)">No orders found</h4>
+    <p style="color:var(--ops-muted);font-size:0.9rem">No orders match the selected filter criteria.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

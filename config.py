@@ -23,6 +23,12 @@ class Config:
     DB_NAME = os.environ.get('DB_NAME', 'foodie_hunter')
     DB_PORT = int(os.environ.get('DB_PORT', 3306))
 
+    # Security Gate Passkey for Admin Portal Access (Default: food@1234)
+    ADMIN_GATE_PASSWORD = os.environ.get('ADMIN_GATE_PASSWORD', 'food@1234').strip()
+
+    # Direct Demo Admin Access Flow (Default: True for seamless college presentation)
+    ADMIN_DIRECT_LOGIN_ENABLED = os.environ.get('ADMIN_DIRECT_LOGIN_ENABLED', '1').strip().lower() in ('1', 'true', 'yes')
+
     # Google Maps Platform API Key
     GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '').strip()
 
@@ -30,15 +36,27 @@ class Config:
     RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', '').strip()
     RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '').strip()
 
-    # Upload folder for food/restaurant images
+    # Upload folder for food/restaurant images and verification documents
     UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload size
 
-    # Allowed image extensions
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    # Allowed image and document extensions
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf'}
+    ALLOWED_DOC_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'webp'}
 
-    # App settings
-    DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
+    # App and Network settings
+    HOST = os.environ.get('HOST', '127.0.0.1').strip()
+    try:
+        PORT = int(os.environ.get('PORT', 5000))
+    except (ValueError, TypeError):
+        PORT = 5000
+
+    # Debug configuration: default FLASK_DEBUG is 0 (off)
+    # Debug mode is forced OFF when binding to 0.0.0.0 unless FLASK_DEBUG=1
+    _raw_debug = os.environ.get('FLASK_DEBUG', os.environ.get('DEBUG', '0')).strip().lower()
+    DEBUG = _raw_debug in ('1', 'true', 'yes')
+    if HOST == '0.0.0.0' and os.environ.get('FLASK_DEBUG', '').strip().lower() not in ('1', 'true', 'yes'):
+        DEBUG = False
     TESTING = False
 
     # Session configuration

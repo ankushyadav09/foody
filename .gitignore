@@ -35,3 +35,6 @@ __pycache__/
 
 /database.sql
 /database/backup_*.sql
+# Runtime uploads may contain private documents
+static/uploads/*
+!static/uploads/.gitkeep

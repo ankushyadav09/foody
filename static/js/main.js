@@ -294,13 +294,59 @@ const LiveSearch = {
   }
 };
 
-/* ── NAVBAR ──────────────────────────────────────────────────────── */
+/* ── NAVBAR & MOBILE DRAWER ─────────────────────────────────────── */
 function initNavbar() {
-  const hamburger = document.querySelector('.hamburger');
-  const nav       = document.querySelector('.navbar-nav');
-  if (hamburger && nav) {
-    hamburger.addEventListener('click', () => nav.classList.toggle('open'));
+  const hamburger = document.getElementById('hamburgerBtn') || document.querySelector('.hamburger');
+  const nav       = document.getElementById('mainNav') || document.querySelector('.navbar-nav');
+  const backdrop  = document.getElementById('navBackdrop');
+
+  function openNav() {
+    nav?.classList.add('open');
+    hamburger?.classList.add('open');
+    backdrop?.classList.add('show');
+    document.body.classList.add('nav-locked');
   }
+
+  function closeNav() {
+    nav?.classList.remove('open');
+    hamburger?.classList.remove('open');
+    backdrop?.classList.remove('show');
+    document.body.classList.remove('nav-locked');
+  }
+
+  window.closeMobileNav = closeNav;
+
+  if (hamburger && nav) {
+    hamburger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = nav.classList.contains('open');
+      if (isOpen) {
+        closeNav();
+      } else {
+        openNav();
+      }
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener('click', closeNav);
+  }
+
+  // Close when pressing Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && nav?.classList.contains('open')) {
+      closeNav();
+    }
+  });
+
+  // Auto-close drawer when clicking on any nav link
+  nav?.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        closeNav();
+      }
+    });
+  });
 
   // Sticky shadow on scroll
   const navbar = document.querySelector('.navbar');
@@ -308,6 +354,7 @@ function initNavbar() {
     navbar?.classList.toggle('scrolled', window.scrollY > 20);
   });
 }
+
 
 /* ── FLASH MESSAGE AUTO-DISMISS ──────────────────────────────────── */
 function initFlashMessages() {

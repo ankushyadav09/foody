@@ -1,0 +1,99 @@
+{% extends "ops_base.html" %}
+{% block title %}Kitchen Staff Profile – Foody Hunters{% endblock %}
+
+{% block page_title %}👤 Staff Profile & Shift Information{% endblock %}
+{% block page_subtitle %}Kitchen badge details and assigned operational parameters{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/staff/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Kitchen Desk
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="ops-grid-2 mb-4" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:1.5rem">
+  
+  <!-- Personal Staff Information Card -->
+  <div class="ops-card">
+    <div class="ops-card-header">
+      <h3 class="ops-card-title"><i class="fas fa-id-card" style="color:var(--ops-primary)"></i> Staff Credentials</h3>
+    </div>
+    <div class="p-4">
+      <div class="d-flex align-center gap-3 mb-4">
+        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg, #0D9488, #0F766E);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.75rem;font-weight:800">
+          {{ user.name[:1]|upper }}
+        </div>
+        <div>
+          <h4 style="margin:0;font-size:1.2rem;color:var(--ops-foreground)">{{ user.name }}</h4>
+          <span class="ops-badge cyan" style="margin-top:0.25rem;display:inline-block">
+            {{ staff.staff_role|replace('_', ' ')|title }}
+          </span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.9rem">
+        <div class="d-flex justify-between py-2" style="border-bottom:1px solid var(--border-light)">
+          <span style="color:var(--ops-muted)">Email Address</span>
+          <span style="font-weight:600;color:var(--ops-foreground)">{{ user.email }}</span>
+        </div>
+        <div class="d-flex justify-between py-2" style="border-bottom:1px solid var(--border-light)">
+          <span style="color:var(--ops-muted)">Contact Phone</span>
+          <span style="font-weight:600;color:var(--ops-foreground)">{{ user.phone or '–' }}</span>
+        </div>
+        <div class="d-flex justify-between py-2" style="border-bottom:1px solid var(--border-light)">
+          <span style="color:var(--ops-muted)">Account Status</span>
+          <span class="ops-badge {% if staff.status == 'approved' %}success{% else %}warning{% endif %}">
+            {{ staff.status|title }}
+          </span>
+        </div>
+        <div class="d-flex justify-between py-2">
+          <span style="color:var(--ops-muted)">System Role</span>
+          <span style="font-weight:600;color:var(--ops-foreground)">Restricted Staff Portal</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assigned Restaurant & Shift Schedule -->
+  <div class="ops-card">
+    <div class="ops-card-header">
+      <h3 class="ops-card-title"><i class="fas fa-store" style="color:var(--ops-orange)"></i> Assigned Kitchen & Shift</h3>
+    </div>
+    <div class="p-4">
+      <div style="background:rgba(255,255,255,0.03);border-radius:var(--radius-md);padding:1rem;margin-bottom:1.25rem;border:1px solid var(--border-light)">
+        <h4 style="margin:0 0 0.4rem 0;color:var(--ops-foreground);font-size:1.1rem">
+          👨‍🍳 {{ staff.restaurant_name }}
+        </h4>
+        <div style="font-size:0.85rem;color:var(--ops-muted);margin-bottom:0.4rem">
+          <i class="fas fa-map-marker-alt"></i> {{ staff.restaurant_address or 'Mehsana, Gujarat' }}
+        </div>
+        {% if staff.restaurant_phone %}
+        <div style="font-size:0.85rem;color:var(--ops-muted)">
+          <i class="fas fa-phone"></i> {{ staff.restaurant_phone }}
+        </div>
+        {% endif %}
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.9rem">
+        <div class="d-flex justify-between py-2" style="border-bottom:1px solid var(--border-light)">
+          <span style="color:var(--ops-muted)">Assigned Shift</span>
+          <span class="ops-badge emerald" style="font-weight:700">
+            <i class="fas fa-business-time"></i> {{ staff.shift or 'Full Time' }}
+          </span>
+        </div>
+        <div class="d-flex justify-between py-2" style="border-bottom:1px solid var(--border-light)">
+          <span style="color:var(--ops-muted)">Assigned Position</span>
+          <span style="font-weight:600;color:var(--ops-foreground)">{{ staff.staff_role|replace('_', ' ')|title }}</span>
+        </div>
+        <div class="d-flex justify-between py-2">
+          <span style="color:var(--ops-muted)">Data Boundary</span>
+          <span style="font-size:0.8rem;color:var(--ops-muted)">Isolated to {{ staff.restaurant_name }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

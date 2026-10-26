@@ -1,60 +1,74 @@
-{% extends "base.html" %}
-{% block title %}Review Moderation – Foody Hunters Admin{% endblock %}
+{% extends "ops_base.html" %}
+{% block title %}Review Moderation – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}⭐ Review & Rating Moderation{% endblock %}
+{% block page_subtitle %}Audit consumer feedback, monitor kitchen ratings, and purge spam comments{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
-  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
     <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Reviews & Ratings Moderation</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Audit community reviews across restaurant dining listings</p>
+      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">Public Feedback Journal</h3>
+      <small style="color:var(--ops-text-dim)">Customer dining and dish experience assessments</small>
     </div>
-    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
-      <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
+    <span class="ops-badge info">{{ reviews|length }} Reviews</span>
   </div>
-</div>
 
-<div class="container py-4">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">All User Reviews ({{ reviews|length }})</h2>
-
-    {% if reviews %}
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
-            <th style="padding:.75rem">Customer</th>
-            <th style="padding:.75rem">Restaurant</th>
-            <th style="padding:.75rem">Rating</th>
-            <th style="padding:.75rem">Comment</th>
-            <th style="padding:.75rem">Date</th>
-            <th style="padding:.75rem;text-align:right">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for rv in reviews %}
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:.75rem;font-weight:600">{{ rv.user_name }}</td>
-            <td style="padding:.75rem">{{ rv.restaurant_name }}</td>
-            <td style="padding:.75rem;color:#F59E0B;font-weight:700">★ {{ rv.rating }}</td>
-            <td style="padding:.75rem;color:var(--text-dark);max-width:350px">"{{ rv.comment }}"</td>
-            <td style="padding:.75rem;color:var(--text-muted);font-size:.85rem">{{ rv.created_at }}</td>
-            <td style="padding:.75rem;text-align:right">
-              <form method="POST" action="/admin/reviews/delete/{{ rv.id }}" onsubmit="return confirm('Delete this review?')" style="display:inline">
-                <button type="submit" class="btn btn-outline btn-sm" style="color:#EF4444;border-color:#EF4444;border-radius:var(--radius-pill)">
-                  <i class="fas fa-trash-alt"></i> Delete
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p style="color:var(--text-muted);text-align:center;padding:3rem">No customer reviews yet.</p>
-    {% endif %}
-
+  {% if reviews %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Restaurant</th>
+          <th>Score</th>
+          <th>Commentary</th>
+          <th>Date Submitted</th>
+          <th style="text-align:right">Moderation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rv in reviews %}
+        <tr>
+          <td>
+            <strong style="color:var(--ops-foreground)">{{ rv.user_name }}</strong>
+          </td>
+          <td>
+            <span style="color:var(--ops-amber)"><i class="fas fa-store"></i> {{ rv.restaurant_name }}</span>
+          </td>
+          <td style="color:var(--ops-amber);font-weight:800;font-size:0.95rem">
+            ★ {{ rv.rating }}
+          </td>
+          <td style="color:var(--ops-text-dim);max-width:350px;font-style:italic">
+            "{{ rv.comment }}"
+          </td>
+          <td style="color:var(--ops-muted);font-size:0.82rem">{{ rv.created_at or 'N/A' }}</td>
+          <td style="text-align:right">
+            <form method="POST" action="/admin/reviews/delete/{{ rv.id }}" onsubmit="return confirm('Permanently remove this review?')" style="display:inline">
+              <button type="submit" class="ops-btn ops-btn-sm ops-btn-danger" title="Remove Review">
+                <i class="fas fa-trash-alt"></i> Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+  {% else %}
+  <div class="ops-empty-state">
+    <i class="fas fa-comment-slash ops-empty-icon"></i>
+    <div class="ops-empty-title">No Reviews Submitted</div>
+    <div class="ops-empty-desc">No customer reviews are currently awaiting moderation.</div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

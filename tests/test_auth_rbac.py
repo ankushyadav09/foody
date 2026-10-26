@@ -88,6 +88,7 @@ def run_tests():
         sess['user_id'] = 4
         sess['role'] = 'admin'
         sess['user_name'] = 'System Administrator'
+        sess['admin_gate_passed'] = True
 
     res = client.get('/admin/dashboard', follow_redirects=False)
     assert res.status_code == 200, f"Admin could not access dashboard! Status: {res.status_code}"

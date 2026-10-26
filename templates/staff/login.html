@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Kitchen Staff Login – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper" style="background:linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%);padding:2.5rem 1rem">
+  <div class="auth-card" style="border:1px solid #99F6E4;box-shadow:0 12px 30px rgba(13, 148, 136, 0.12)">
+    <div class="auth-header" style="background:linear-gradient(135deg, #0D9488, #0F766E);text-align:center;padding:2rem 1.5rem">
+      <div class="auth-logo" style="color:#fff;font-size:1.8rem;font-weight:800">
+        🍳 Foody Hunters
+      </div>
+      <div class="auth-subtitle" style="color:rgba(255,255,255,0.92);font-size:0.92rem;margin-top:0.3rem">
+        Restaurant & Hotel Kitchen Operations Desk
+      </div>
+    </div>
+
+    <div class="auth-body" style="padding:1.75rem">
+      <form method="POST" action="/staff/login" id="staffLoginForm">
+        <div class="form-group mb-3">
+          <label class="form-label" for="email" style="font-weight:600;font-size:0.88rem">Registered Staff Email or Mobile</label>
+          <div class="input-group">
+            <i class="fas fa-id-badge input-icon" style="color:#0D9488"></i>
+            <input type="text" class="form-control" id="email" name="email"
+                   placeholder="staff@restaurant.com or 10-digit mobile" required autocomplete="username">
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+            <label class="form-label" for="password" style="font-weight:600;font-size:0.88rem;margin:0">Staff Password</label>
+            <a href="/auth/forgot-password" style="font-size:0.82rem;color:#0D9488;font-weight:600">Forgot Password?</a>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-lock input-icon"></i>
+            <input type="password" class="form-control" id="password" name="password"
+                   placeholder="Enter your kitchen password" required autocomplete="current-password"
+                   style="padding-right:2.75rem">
+            <button type="button" class="input-suffix" onclick="togglePassword('password','pwIcon')"
+                    aria-label="Toggle password visibility"
+                    style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0.5rem;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">
+              <i class="fas fa-eye" id="pwIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <div class="form-check">
+            <input type="checkbox" id="remember_me" name="remember_me">
+            <label for="remember_me" style="font-size:0.9rem;cursor:pointer">Keep kitchen desk active</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn w-100" style="background:#0D9488;color:#fff;border:none;justify-content:center;padding:0.75rem 1rem;font-size:1rem;font-weight:700;border-radius:var(--radius-md);box-shadow:0 4px 12px rgba(13, 148, 136, 0.25)">
+          <i class="fas fa-sign-in-alt"></i> Login to Kitchen Desk
+        </button>
+      </form>
+
+      <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px dashed var(--border-light);text-align:center">
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem">Looking for other portals?</p>
+        <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
+          <a href="/auth/login" class="btn btn-sm btn-outline" style="border-radius:var(--radius-pill);font-size:0.78rem">
+            <i class="fas fa-user"></i> Customer Login
+          </a>
+          <a href="/restaurant/login" class="btn btn-sm btn-outline" style="border-radius:var(--radius-pill);font-size:0.78rem">
+            <i class="fas fa-store"></i> Restaurant Login
+          </a>
+          <a href="/delivery/login" class="btn btn-sm btn-outline" style="border-radius:var(--radius-pill);font-size:0.78rem">
+            <i class="fas fa-motorcycle"></i> Rider Login
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-footer" style="text-align:center;padding:1.15rem;border-top:1px solid #99F6E4;font-size:0.9rem;background:#F0FDFA">
+      Applying for a restaurant staff role? <a href="/staff/register" style="color:#0D9488;font-weight:700">Apply for Kitchen Position</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

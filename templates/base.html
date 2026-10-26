@@ -58,62 +58,64 @@
       <div id="navSearchDropdown" class="search-suggestions" style="display:none"></div>
     </div>
 
-    <!-- Desktop Nav Links -->
+    <!-- Desktop Nav Links & Mobile Slide-in Drawer -->
     <ul class="navbar-nav" id="mainNav">
+      <!-- Mobile In-Drawer Search -->
+      <li class="mobile-nav-search">
+        <div class="search-box">
+          <input type="text" id="mobileNavSearchInput" placeholder="Search food or restaurants..." autocomplete="off">
+          <button type="button" onclick="const q=document.getElementById('mobileNavSearchInput').value; if(q) window.location='/search?q='+encodeURIComponent(q);" aria-label="Search">
+            <i class="fas fa-search"></i>
+          </button>
+        </div>
+      </li>
       <li><a class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="/">Home</a></li>
       <li><a class="nav-link {% if request.endpoint == 'main.restaurants' %}active{% endif %}" href="/restaurants">Restaurants</a></li>
       <li><a class="nav-link {% if request.endpoint == 'main.offers' %}active{% endif %}" href="/offers">Offers</a></li>
       <li><a class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}" href="/about">About</a></li>
       <li><a class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}" href="/contact">Contact</a></li>
+      <li><a class="nav-link {% if request.endpoint == 'restaurant.register' %}active{% endif %}" href="/restaurant/register" style="color:var(--primary);font-weight:600;"><i class="fas fa-handshake"></i> Partner With Us</a></li>
 
-      {% if current_user_id %}
-        <!-- Logged in -->
-        {% if current_role == 'admin' %}
-          <li><a class="nav-link" href="/admin/profile"><i class="fas fa-user-shield"></i> Profile</a></li>
-          <li><a class="btn btn-primary btn-sm" href="/admin/dashboard"><i class="fas fa-tachometer-alt"></i> Admin</a></li>
-        {% elif current_role == 'restaurant' %}
-          <li><a class="nav-link" href="/restaurant/profile"><i class="fas fa-store-alt"></i> Profile</a></li>
-          <li><a class="btn btn-primary btn-sm" href="/restaurant/dashboard"><i class="fas fa-store"></i> Dashboard</a></li>
-        {% elif current_role == 'delivery' %}
-          <li><a class="nav-link" href="/delivery/profile"><i class="fas fa-id-badge"></i> Profile</a></li>
-          <li><a class="btn btn-primary btn-sm" href="/delivery/dashboard"><i class="fas fa-motorcycle"></i> Dashboard</a></li>
-        {% else %}
-          <!-- Customer -->
-          <li>
-            <a class="cart-btn" href="/customer/cart" title="Cart">
-              <i class="fas fa-shopping-cart"></i>
-              <span class="cart-badge" {% if cart_count == 0 %}style="display:none"{% endif %}>{{ cart_count }}</span>
+      {% if customer_auth %}
+        <!-- Customer Logged In -->
+        <li>
+          <a class="cart-btn" href="/customer/cart" title="Cart">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="cart-badge" {% if cart_count == 0 %}style="display:none"{% endif %}>{{ cart_count }}</span>
+          </a>
+        </li>
+        <li>
+          <div class="d-flex align-center gap-1" style="position:relative">
+            <a class="nav-link" href="/customer/profile">
+              <i class="fas fa-user-circle"></i> {{ current_user[:12] }}
             </a>
-          </li>
-          <li>
-            <div class="d-flex align-center gap-1" style="position:relative">
-              <a class="nav-link" href="/customer/profile">
-                <i class="fas fa-user-circle"></i> {{ current_user[:12] }}
-              </a>
-            </div>
-          </li>
-        {% endif %}
+          </div>
+        </li>
         <li><a class="btn btn-outline btn-sm" href="/auth/logout">Logout</a></li>
       {% else %}
+        <!-- Customer Guest Mode -->
         <li><a class="btn btn-outline btn-sm" href="/auth/login">Login</a></li>
         <li><a class="btn btn-primary btn-sm" href="/auth/register">Register</a></li>
       {% endif %}
     </ul>
 
     <!-- Cart icon (mobile) -->
-    {% if current_role == 'customer' %}
-    <a class="cart-btn" href="/customer/cart" style="margin-left:.5rem">
+    {% if customer_auth %}
+    <a class="cart-btn" href="/customer/cart" style="margin-left:.5rem" aria-label="Cart">
       <i class="fas fa-shopping-cart"></i>
       <span class="cart-badge" {% if cart_count == 0 %}style="display:none"{% endif %}>{{ cart_count }}</span>
     </a>
     {% endif %}
 
     <!-- Hamburger -->
-    <button class="hamburger" onclick="document.getElementById('mainNav').classList.toggle('open')" aria-label="Menu">
+    <button class="hamburger" id="hamburgerBtn" aria-label="Toggle Navigation Menu" type="button">
       <span></span><span></span><span></span>
     </button>
   </div>
 </nav>
+
+<!-- Mobile Navigation Backdrop -->
+<div class="nav-backdrop" id="navBackdrop"></div>
 
 <!-- ── PAGE CONTENT ───────────────────────────────────────────────── -->
 {% block content %}{% endblock %}
@@ -160,15 +162,17 @@
           <a href="#">Blog</a>
         </div>
       </div>
-      <!-- Help -->
+      <!-- Partner Portals -->
       <div>
-        <div class="footer-heading">Help</div>
+        <div class="footer-heading">Partner Portals</div>
         <div class="footer-links">
-          <a href="#">FAQ</a>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="/contact">Report Issue</a>
-          <a href="#">Partner with Us</a>
+          <a href="/restaurant/register"><i class="fas fa-handshake"></i> Partner With Us / List Restaurant</a>
+          <a href="/restaurant/login"><i class="fas fa-store"></i> Restaurant Partner Login</a>
+          <a href="/delivery/login"><i class="fas fa-motorcycle"></i> Delivery Rider Login</a>
+          <a href="/delivery/register"><i class="fas fa-id-card"></i> Join Delivery Fleet</a>
+          <a href="/staff/login"><i class="fas fa-fire"></i> Kitchen Staff Login</a>
+          <a href="/staff/register"><i class="fas fa-user-plus"></i> Staff Onboarding</a>
+          <a href="/admin"><i class="fas fa-shield-alt"></i> Administrator Portal</a>
         </div>
       </div>
       <!-- Newsletter -->

@@ -1,86 +1,102 @@
-{% extends "base.html" %}
-{% block title %}Food Categories – Foody Hunters Admin{% endblock %}
+{% extends "ops_base.html" %}
+{% block title %}Cuisine Taxonomy & Categories – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}🏷️ Cuisine & Food Categories{% endblock %}
+{% block page_subtitle %}Manage global culinary taxonomy, homepage discovery badges, and catalog indexing{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+  <a href="/admin/food-items" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-utensils"></i> Food Dishes Catalog
+  </a>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
-  <div class="container d-flex justify-between align-center flex-wrap gap-2">
-    <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Cuisine & Food Categories</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Manage homepage food category badges and catalog taxonomy</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:1.5rem;align-items:start">
+  
+  <!-- Categories List -->
+  <div class="ops-card">
+    <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
+      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">Registered Categories</h3>
+      <span class="ops-badge info">{{ categories|length }} Categories</span>
     </div>
-    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
-      <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
+
+    {% if categories %}
+    <div class="ops-table-responsive">
+      <table class="ops-table">
+        <thead>
+          <tr>
+            <th>Icon</th>
+            <th>Category Name</th>
+            <th>Indexed Dishes</th>
+            <th>Sort Order</th>
+            <th style="text-align:right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in categories %}
+          <tr>
+            <td style="font-size:1.5rem">{{ c.icon }}</td>
+            <td>
+              <strong style="color:var(--ops-foreground)">{{ c.name }}</strong>
+            </td>
+            <td>
+              <span class="ops-badge info">{{ c.food_count }} items</span>
+            </td>
+            <td style="font-family:var(--ops-font-mono)">{{ c.sort_order }}</td>
+            <td style="text-align:right">
+              <form method="POST" action="/admin/categories/delete/{{ c.id }}" onsubmit="return confirm('Delete category {{ c.name }}?')" style="display:inline">
+                <button type="submit" class="ops-btn ops-btn-sm ops-btn-danger" title="Delete Category">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="ops-empty-state">
+      <i class="fas fa-tags ops-empty-icon"></i>
+      <div class="ops-empty-title">No Categories Found</div>
+      <div class="ops-empty-desc">No culinary categories have been created yet.</div>
+    </div>
+    {% endif %}
   </div>
-</div>
 
-<div class="container py-4">
-  <div style="display:grid;grid-template-columns:1fr 340px;gap:2rem;align-items:start">
-    
-    <!-- Categories List -->
-    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Existing Categories ({{ categories|length }})</h2>
+  <!-- Add Category Form -->
+  <div class="ops-card">
+    <div class="ops-card-header">
+      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">Create New Category</h3>
+      <small style="color:var(--ops-text-dim)">Add new taxonomy for restaurant menus</small>
+    </div>
 
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
-          <thead>
-            <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
-              <th style="padding:.75rem">Icon</th>
-              <th style="padding:.75rem">Category Name</th>
-              <th style="padding:.75rem">Menu Items Count</th>
-              <th style="padding:.75rem">Sort Order</th>
-              <th style="padding:.75rem;text-align:right">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for c in categories %}
-            <tr style="border-bottom:1px solid var(--border-light)">
-              <td style="padding:.75rem;font-size:1.5rem">{{ c.icon }}</td>
-              <td style="padding:.75rem;font-weight:700;color:var(--text-dark)">{{ c.name }}</td>
-              <td style="padding:.75rem">
-                <span class="badge" style="background:var(--border-light);color:var(--text-dark)">{{ c.food_count }} items</span>
-              </td>
-              <td style="padding:.75rem">{{ c.sort_order }}</td>
-              <td style="padding:.75rem;text-align:right">
-                <form method="POST" action="/admin/categories/delete/{{ c.id }}" onsubmit="return confirm('Delete this category?')" style="display:inline">
-                  <button type="submit" class="btn btn-outline btn-sm" style="color:#EF4444;border-color:#EF4444;border-radius:var(--radius-pill)">
-                    <i class="fas fa-trash-alt"></i>
-                  </button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <form method="POST" action="/admin/categories/add" style="display:flex;flex-direction:column;gap:1.2rem">
+      <div class="ops-form-group">
+        <label class="ops-label">Category Name *</label>
+        <input type="text" class="ops-input" name="name" required placeholder="e.g. Mexican, Italian, Desserts">
       </div>
-    </div>
 
-    <!-- Add Category Form -->
-    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-      <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:1rem;color:var(--text-dark)">Add New Category</h3>
-      
-      <form method="POST" action="/admin/categories/add">
-        <div class="form-group mb-3">
-          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Category Name *</label>
-          <input type="text" class="form-control" name="name" required placeholder="e.g. Mexican">
-        </div>
+      <div class="ops-form-group">
+        <label class="ops-label">Icon Emoji *</label>
+        <input type="text" class="ops-input" name="icon" value="🌮" required style="font-size:1.2rem">
+      </div>
 
-        <div class="form-group mb-3">
-          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Icon Emoji *</label>
-          <input type="text" class="form-control" name="icon" value="🌮" required>
-        </div>
+      <div class="ops-form-group">
+        <label class="ops-label">Display Sort Order Priority</label>
+        <input type="number" class="ops-input" name="sort_order" value="11" required>
+      </div>
 
-        <div class="form-group mb-4">
-          <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Display Priority / Sort Order</label>
-          <input type="number" class="form-control" name="sort_order" value="11" required>
-        </div>
-
-        <button type="submit" class="btn btn-primary w-100" style="justify-content:center;border-radius:var(--radius-pill);font-weight:700">
-          Save Category
-        </button>
-      </form>
-    </div>
-
+      <button type="submit" class="ops-btn ops-btn-primary" style="justify-content:center;padding:0.75rem">
+        <i class="fas fa-plus-circle"></i> Save Category
+      </button>
+    </form>
   </div>
+
 </div>
 {% endblock %}

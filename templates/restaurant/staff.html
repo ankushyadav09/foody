@@ -1,0 +1,248 @@
+{% extends "ops_base.html" %}
+{% block title %}Kitchen Staff Roster – {{ restaurant.name }}{% endblock %}
+
+{% block page_title %}👥 {{ restaurant.name }} Staff Roster{% endblock %}
+{% block page_subtitle %}Manage kitchen chefs, prep staff, and shift managers &bull; Secure staff access control{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" onclick="document.getElementById('addStaffModal').style.display='flex'">
+    <i class="fas fa-user-plus"></i> Onboard New Staff
+  </button>
+  <a href="/restaurant/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- ── STAFF SUMMARY STATS ──────────────────────────────────── -->
+<div class="ops-stats-grid mb-4">
+  <div class="ops-stat-card glow-cyan">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Total Staff Roster</span>
+      <div class="ops-stat-icon cyan"><i class="fas fa-users"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ staff_list|length }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-cyan)">Assigned to this kitchen</span>
+    </div>
+  </div>
+
+  <div class="ops-stat-card glow-orange">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Pending Approvals</span>
+      <div class="ops-stat-icon orange"><i class="fas fa-user-clock"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ pending_count }}</div>
+    <div class="ops-stat-meta">
+      {% if pending_count > 0 %}
+        <span style="color:var(--ops-rose);font-weight:700">⚡ Action required to grant kitchen access</span>
+      {% else %}
+        <span style="color:var(--ops-muted)">No applications pending</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── PENDING APPLICATIONS QUEUE ───────────────────────────── -->
+{% if pending_count > 0 %}
+<div class="ops-card mb-4" style="border:1px solid #F97316">
+  <div class="ops-card-header" style="background:rgba(249, 115, 22, 0.08)">
+    <h3 class="ops-card-title" style="color:#EA580C">
+      <i class="fas fa-exclamation-triangle"></i> Pending Staff Applications ({{ pending_count }})
+    </h3>
+    <p style="font-size:0.84rem;color:var(--ops-muted);margin-top:0.2rem">
+      These applicants requested access to your restaurant kitchen desk. Review and approve to grant operations access.
+    </p>
+  </div>
+
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Applicant Name</th>
+          <th>Contact Email</th>
+          <th>Mobile</th>
+          <th>Applied Role</th>
+          <th>Shift</th>
+          <th style="text-align:right">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in staff_list %}
+        {% if s.status == 'pending' %}
+        <tr>
+          <td style="font-weight:700;color:var(--ops-foreground)">{{ s.name }}</td>
+          <td>{{ s.email }}</td>
+          <td>{{ s.phone or '–' }}</td>
+          <td><span class="ops-badge cyan">{{ s.staff_role|replace('_', ' ')|title }}</span></td>
+          <td><span class="ops-badge outline">{{ s.shift or 'Full Time' }}</span></td>
+          <td style="text-align:right">
+            <div class="d-flex gap-1 justify-end">
+              <form method="POST" action="/restaurant/staff/approve/{{ s.id }}">
+                <button type="submit" class="ops-btn ops-btn-emerald ops-btn-sm" title="Approve Staff Application">
+                  <i class="fas fa-check"></i> Approve
+                </button>
+              </form>
+              <form method="POST" action="/restaurant/staff/reject/{{ s.id }}">
+                <button type="submit" class="ops-btn ops-btn-danger ops-btn-sm" title="Reject Application" onclick="return confirm('Are you sure you want to reject this applicant?')">
+                  <i class="fas fa-times"></i> Reject
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── ACTIVE STAFF ROSTER TABLE ────────────────────────────── -->
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h3 class="ops-card-title"><i class="fas fa-user-shield" style="color:var(--ops-primary)"></i> Authorized Staff Members</h3>
+      <p style="font-size:0.84rem;color:var(--ops-muted);margin-top:0.2rem">Staff accounts with login permissions for {{ restaurant.name }}</p>
+    </div>
+    <span class="ops-badge info">{{ staff_list|length }} Total Members</span>
+  </div>
+
+  {% if staff_list %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Staff Member</th>
+          <th>Contact</th>
+          <th>Role / Position</th>
+          <th>Shift</th>
+          <th>Status</th>
+          <th>Joined</th>
+          <th style="text-align:right">Account Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in staff_list %}
+        <tr>
+          <td>
+            <div style="font-weight:700;color:var(--ops-foreground)">{{ s.name }}</div>
+            <div style="font-size:0.8rem;color:var(--ops-muted)">{{ s.email }}</div>
+          </td>
+          <td>{{ s.phone or '–' }}</td>
+          <td>
+            <span class="ops-badge cyan">{{ s.staff_role|replace('_', ' ')|title }}</span>
+          </td>
+          <td>
+            <span class="ops-badge outline">{{ s.shift or 'Full Time' }}</span>
+          </td>
+          <td>
+            {% if s.status == 'approved' %}
+              <span class="ops-badge success"><i class="fas fa-check-circle"></i> Active</span>
+            {% elif s.status == 'pending' %}
+              <span class="ops-badge warning"><i class="fas fa-clock"></i> Pending Approval</span>
+            {% elif s.status == 'suspended' %}
+              <span class="ops-badge danger"><i class="fas fa-ban"></i> Suspended</span>
+            {% else %}
+              <span class="ops-badge outline">{{ s.status|title }}</span>
+            {% endif %}
+          </td>
+          <td style="font-size:0.82rem;color:var(--ops-muted)">{{ s.created_at|string }}</td>
+          <td style="text-align:right">
+            <div class="d-flex gap-1 justify-end">
+              {% if s.status != 'pending' %}
+              <form method="POST" action="/restaurant/staff/toggle/{{ s.id }}">
+                {% if s.status == 'approved' %}
+                  <button type="submit" class="ops-btn ops-btn-outline ops-btn-sm" title="Suspend staff login" style="color:var(--ops-rose)">
+                    <i class="fas fa-pause"></i> Suspend
+                  </button>
+                {% else %}
+                  <button type="submit" class="ops-btn ops-btn-outline ops-btn-sm" title="Reactivate staff login" style="color:var(--ops-emerald)">
+                    <i class="fas fa-play"></i> Activate
+                  </button>
+                {% endif %}
+              </form>
+              {% endif %}
+              <form method="POST" action="/restaurant/staff/delete/{{ s.id }}">
+                <button type="submit" class="ops-btn ops-btn-danger ops-btn-sm" title="Remove staff account" onclick="return confirm('Remove staff member {{ s.name }} permanently?')">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="p-5 text-center">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem">👨‍🍳</div>
+    <h4 style="color:var(--ops-foreground)">No staff accounts registered yet</h4>
+    <p style="color:var(--ops-muted);font-size:0.9rem">Click "Onboard New Staff" above to invite or directly add your kitchen team members.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── ONBOARD NEW STAFF MODAL ──────────────────────────────── -->
+<div id="addStaffModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:9999;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--ops-surface);border:1px solid var(--border);border-radius:var(--radius-lg);max-width:520px;width:100%;box-shadow:var(--shadow-xl);overflow:hidden">
+    
+    <div class="d-flex justify-between align-center p-3" style="border-bottom:1px solid var(--border-light);background:var(--ops-surface-hover)">
+      <h4 style="margin:0;font-weight:700;color:var(--ops-foreground)"><i class="fas fa-user-plus" style="color:var(--ops-primary)"></i> Add Kitchen Staff Member</h4>
+      <button type="button" onclick="document.getElementById('addStaffModal').style.display='none'" style="background:none;border:none;font-size:1.25rem;color:var(--ops-muted);cursor:pointer">&times;</button>
+    </div>
+
+    <form method="POST" action="/restaurant/staff/add" class="p-4">
+      <div class="form-group mb-3">
+        <label class="form-label" style="font-weight:600;font-size:0.85rem">Full Name *</label>
+        <input type="text" class="form-control" name="name" placeholder="e.g. Ramesh Patel" required>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="mb-3">
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:0.85rem">Staff Email *</label>
+          <input type="email" class="form-control" name="email" placeholder="ramesh@restaurant.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:0.85rem">Mobile Number *</label>
+          <input type="tel" class="form-control" name="phone" placeholder="9876543210" maxlength="10" required>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="mb-3">
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:0.85rem">Staff Role *</label>
+          <select class="form-control" name="staff_role" required>
+            <option value="kitchen_staff">🍳 Kitchen Staff (Prep / Chef)</option>
+            <option value="restaurant_manager">📋 Restaurant / Shift Manager</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;font-size:0.85rem">Shift *</label>
+          <select class="form-control" name="shift" required>
+            <option value="Full Time">Full Time</option>
+            <option value="Morning Shift (7 AM - 3 PM)">Morning (7 AM - 3 PM)</option>
+            <option value="Evening Shift (3 PM - 11 PM)">Evening (3 PM - 11 PM)</option>
+            <option value="Night Shift (11 PM - 7 AM)">Night (11 PM - 7 AM)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group mb-4">
+        <label class="form-label" style="font-weight:600;font-size:0.85rem">Temporary Password *</label>
+        <input type="password" class="form-control" name="password" placeholder="Min. 6 characters" required>
+        <small style="color:var(--ops-muted);font-size:0.75rem">Provide this password to the staff member to log in at /staff/login</small>
+      </div>
+
+      <div class="d-flex justify-end gap-2">
+        <button type="button" class="ops-btn ops-btn-outline" onclick="document.getElementById('addStaffModal').style.display='none'">Cancel</button>
+        <button type="submit" class="ops-btn ops-btn-primary"><i class="fas fa-check"></i> Onboard Staff Member</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

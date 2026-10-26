@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Admin Control Center – Foody Hunters Administrator{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper" style="background: linear-gradient(135deg, #FFFDF9 0%, #FFF5ED 100%); min-height: 85vh; display:flex; align-items:center; justify-content:center; padding: 2.5rem 1rem;">
+  <div class="auth-card" style="background:#FFFFFF; border: 1px solid #FED7AA; box-shadow: 0 20px 45px rgba(234, 88, 12, 0.10); max-width: 460px; width:100%; border-radius: var(--radius-lg); overflow:hidden;">
+    
+    <!-- Gate Header -->
+    <div style="background: linear-gradient(135deg, #FF4500, #EA580C); text-align:center; padding: 2.25rem 1.75rem; color:#fff;">
+      <div style="display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:rgba(255, 255, 255, 0.18); margin-bottom: 0.85rem; font-size:1.9rem; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
+        🛡️
+      </div>
+      <h2 style="color:#FFFFFF; font-size:1.7rem; font-weight:800; margin:0; letter-spacing:-0.02em;">
+        Admin Control Center
+      </h2>
+      <div style="color:rgba(255, 255, 255, 0.92); font-size:0.85rem; margin-top:0.4rem; font-weight:500; letter-spacing:0.04em;">
+        Master Administrator Access Portal
+      </div>
+    </div>
+
+    <!-- Gate Body -->
+    <div style="padding: 2rem 1.75rem;">
+      
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'error' else 'danger' }} mb-3" style="border-radius:var(--radius-md); font-size:0.88rem; padding:0.75rem 1rem;">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% if is_tunnel %}
+      <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:var(--radius-md); padding:0.75rem 1rem; margin-bottom:1.25rem; font-size:0.82rem; color:#92400E; display:flex; align-items:center; gap:0.5rem">
+        <i class="fas fa-shield-alt" style="color:#D97706; font-size:1rem"></i>
+        <span><strong>Public Tunnel Active:</strong> Ensure admin passkey is kept confidential during demo presentations.</span>
+      </div>
+      {% endif %}
+
+      <p style="color:#4B5563; font-size:0.92rem; text-align:center; margin-bottom: 1.5rem; line-height: 1.5;">
+        Enter your administrative security password to access the executive dashboard and platform control center.
+      </p>
+
+      {% if locked %}
+      <div class="alert alert-danger mb-4" style="background:#FEF2F2; border:1px solid #EF4444; color:#991B1B; font-size:0.88rem; border-radius:var(--radius-md); padding:1.15rem; text-align:center;">
+        <i class="fas fa-lock" style="font-size:1.5rem; display:block; margin-bottom:0.5rem; color:#DC2626;"></i>
+        <strong>Security Gate Lockout Enforced</strong>
+        <p style="margin:0.35rem 0 0; font-size:0.84rem;">Too many failed password attempts. Please wait {{ remaining }} seconds before retrying.</p>
+      </div>
+      {% else %}
+      <form method="POST" action="/admin/gate" id="adminGateForm">
+        <input type="hidden" name="next" value="{{ next_url or '' }}">
+
+        <div class="form-group mb-4">
+          <label class="form-label" for="gate_password" style="font-weight:600; font-size:0.9rem; color:#1F2937; margin-bottom:0.4rem; display:block;">
+            <i class="fas fa-key" style="color:#FF4500; margin-right:0.35rem;"></i> Master Admin Password
+          </label>
+          <div class="input-group" style="position:relative;">
+            <i class="fas fa-lock input-icon" style="position:absolute; left:1rem; top:50%; transform:translateY(-50%); color:#9CA3AF; z-index:2;"></i>
+            <input type="password" class="form-control" id="gate_password" name="gate_password"
+                   placeholder="Enter admin password" required autocomplete="current-password"
+                   style="background:#FFFFFF; border: 1.5px solid #D1D5DB; color:#111827; padding-left:2.75rem; padding-right:2.75rem; height:48px; border-radius:var(--radius-md); width:100%; font-size:0.95rem;">
+            <button type="button" class="input-suffix" onclick="togglePassword('gate_password','gatePwIcon')"
+                    aria-label="Toggle password visibility"
+                    style="position:absolute; right:0.5rem; top:50%; transform:translateY(-50%); background:none; border:none; color:#9CA3AF; cursor:pointer; padding:0.5rem; min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; z-index:2;">
+              <i class="fas fa-eye" id="gatePwIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn w-100" style="background: linear-gradient(135deg, #FF4500, #EA580C); color:#FFFFFF; border:none; justify-content:center; padding:0.9rem 1rem; font-size:1.02rem; font-weight:800; border-radius:var(--radius-md); box-shadow:0 6px 20px rgba(255, 69, 0, 0.28); cursor:pointer;">
+          <i class="fas fa-arrow-right" style="margin-right:0.4rem;"></i> Continue to Dashboard
+        </button>
+      </form>
+      {% endif %}
+
+      <div style="margin-top:1.75rem; padding-top:1.25rem; border-top:1px dashed #E5E7EB; text-align:center;">
+        <a href="/" style="color:#6B7280; font-size:0.86rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; font-weight:500;">
+          <i class="fas fa-arrow-left"></i> Return to Customer Storefront
+        </a>
+      </div>
+    </div>
+
+    <!-- Gate Footer -->
+    <div style="text-align:center; padding:0.85rem 1rem; border-top:1px solid #FED7AA; font-size:0.78rem; color:#9CA3AF; background:#FAF8F5;">
+      PROTECTED BY FOODY HUNTERS RBAC &bull; MEHSANA REGION CONTROL DESK
+    </div>
+  </div>
+</div>
+{% endblock %}

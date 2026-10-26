@@ -1,0 +1,165 @@
+{% extends "ops_base.html" %}
+{% block title %}Kitchen Operations Desk – {{ restaurant.name }}{% endblock %}
+
+{% block page_title %}🍳 {{ restaurant.name }} – Kitchen Operations{% endblock %}
+{% block page_subtitle %}{{ restaurant.cuisine or 'Multi-Cuisine' }} &bull; Shift: {{ session.get('shift', 'Full Time') }} &bull; Position: {{ session.get('staff_role', 'kitchen_staff')|replace('_', ' ')|title }}{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <span class="ops-badge {% if restaurant.is_open %}success{% else %}danger{% endif %}" style="font-size:0.8rem;padding:0.4rem 0.8rem">
+    <i class="fas fa-circle" style="font-size:0.6rem"></i> {% if restaurant.is_open %}KITCHEN ONLINE & ACCEPTING ORDERS{% else %}KITCHEN OFFLINE{% endif %}
+  </span>
+  <a href="/staff/orders" class="ops-btn ops-btn-primary ops-btn-sm">
+    <i class="fas fa-receipt"></i> Full Kitchen Queue
+  </a>
+  <a href="/staff/menu" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-toggle-on"></i> Dish Stock (86-List)
+  </a>
+  <button onclick="location.reload()" class="ops-btn ops-btn-outline ops-btn-sm" title="Reload live queue">
+    <i class="fas fa-sync-alt"></i> Refresh
+  </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- ── KITCHEN OPERATIONS TELEMETRY ──────────────────────────── -->
+<div class="ops-stats-grid mb-4">
+  <div class="ops-stat-card glow-orange">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">New / Incoming</span>
+      <div class="ops-stat-icon orange"><i class="fas fa-bell"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.new_orders }}</div>
+    <div class="ops-stat-meta">
+      {% if stats.new_orders > 0 %}
+        <span style="color:var(--ops-rose);font-weight:700">⚡ Requires immediate confirmation</span>
+      {% else %}
+        <span style="color:var(--ops-muted)">No waiting orders</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="ops-stat-card glow-cyan">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Currently Cooking</span>
+      <div class="ops-stat-icon cyan"><i class="fas fa-fire-burner"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.preparing_orders }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-cyan)">Dishes on the stove/oven</span>
+    </div>
+  </div>
+
+  <div class="ops-stat-card glow-emerald">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Ready for Pickup</span>
+      <div class="ops-stat-icon emerald"><i class="fas fa-box-open"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.ready_orders }}</div>
+    <div class="ops-stat-meta">
+      <span style="color:var(--ops-emerald)">Awaiting delivery partner</span>
+    </div>
+  </div>
+
+  <div class="ops-stat-card">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Out of Stock Items</span>
+      <div class="ops-stat-icon rose"><i class="fas fa-ban"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.out_of_stock_items }}</div>
+    <div class="ops-stat-meta">
+      <a href="/staff/menu" style="color:var(--ops-orange);font-weight:600">Review 86-List &rarr;</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── LIVE KITCHEN QUEUE ────────────────────────────────────── -->
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h3 class="ops-card-title"><i class="fas fa-utensils" style="color:var(--ops-orange)"></i> Active Kitchen Preparation Queue</h3>
+      <p style="font-size:0.84rem;color:var(--ops-muted);margin-top:0.2rem">Real-time orders being prepared at {{ restaurant.name }}</p>
+    </div>
+    <span class="ops-badge info">{{ active_orders|length }} Orders in Active Pipeline</span>
+  </div>
+
+  {% if active_orders %}
+  <div class="p-3" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));gap:1.25rem">
+    {% for o in active_orders %}
+    <div style="background:var(--ops-surface);border:1px solid {% if o.order_status == 'placed' %}#F97316{% elif o.order_status == 'preparing' %}#06B6D4{% else %}#10B981{% endif %};border-radius:var(--radius-lg);padding:1.25rem;display:flex;flex-direction:column;justify-content:space-between;box-shadow:var(--shadow-sm);position:relative">
+      
+      <!-- Top meta -->
+      <div>
+        <div class="d-flex justify-between align-center mb-2">
+          <span style="font-size:1.05rem;font-weight:800;color:var(--ops-foreground)">#{{ o.order_code }}</span>
+          <span class="ops-badge {% if o.order_status == 'placed' %}warning{% elif o.order_status == 'confirmed' %}info{% elif o.order_status == 'preparing' %}cyan{% else %}success{% endif %}">
+            {{ o.order_status|replace('_', ' ')|title }}
+          </span>
+        </div>
+
+        <!-- Timer badge -->
+        <div class="d-flex align-center gap-2 mb-3" style="font-size:0.82rem;color:var(--ops-muted)">
+          <span style="background:{% if o.elapsed_min > 30 %}#FEE2E2;color:#DC2626{% elif o.elapsed_min > 15 %}#FEF3C7;color:#D97706{% else %}#DCFCE7;color:#16A34A{% endif %};padding:0.2rem 0.55rem;border-radius:var(--radius-pill);font-weight:700">
+            <i class="fas fa-clock"></i> {{ o.elapsed_min }} mins elapsed
+          </span>
+          <span>&bull; {{ o.customer_name }}</span>
+        </div>
+
+        <!-- Itemized list -->
+        <div style="background:rgba(255,255,255,0.04);border-radius:var(--radius-md);padding:0.75rem;margin-bottom:1rem;border:1px solid var(--border-light)">
+          <div style="font-size:0.78rem;font-weight:700;color:var(--ops-muted);text-transform:uppercase;margin-bottom:0.4rem">Items to Prepare:</div>
+          <ul style="list-style:none;padding:0;margin:0;font-size:0.88rem">
+            {% for itm in o.order_items %}
+            <li class="d-flex justify-between align-center py-1" style="border-bottom:1px dashed var(--border-light)">
+              <div>
+                <span style="color:{% if itm.veg_type == 'veg' %}#16A34A{% else %}#DC2626{% endif %};font-size:0.75rem;margin-right:0.3rem">
+                  {% if itm.veg_type == 'veg' %}🟢{% else %}🔴{% endif %}
+                </span>
+                <strong style="color:var(--ops-foreground)">{{ itm.quantity }}x</strong> {{ itm.item_name }}
+              </div>
+              <span style="font-size:0.8rem;color:var(--ops-muted)">₹{{ "%.2f"|format(itm.price * itm.quantity) }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        {% if o.special_instructions %}
+        <div class="mb-3" style="font-size:0.82rem;background:#FFFBEB;color:#92400E;padding:0.5rem 0.75rem;border-radius:var(--radius-sm);border:1px solid #FDE68A">
+          <strong><i class="fas fa-comment-dots"></i> Chef Note:</strong> {{ o.special_instructions }}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Kitchen status advancement buttons -->
+      <div style="border-top:1px solid var(--border-light);padding-top:0.85rem;margin-top:0.5rem">
+        <form method="POST" action="/staff/order/update-status" class="d-flex gap-2 flex-wrap">
+          <input type="hidden" name="order_id" value="{{ o.id }}">
+          
+          {% if o.order_status in ['placed', 'confirmed'] %}
+            <button type="submit" name="status" value="preparing" class="ops-btn ops-btn-primary ops-btn-sm w-100" style="justify-content:center">
+              <i class="fas fa-fire-burner"></i> Start Cooking (Preparing)
+            </button>
+          {% elif o.order_status == 'preparing' %}
+            <button type="submit" name="status" value="ready_for_pickup" class="ops-btn ops-btn-emerald ops-btn-sm w-100" style="justify-content:center">
+              <i class="fas fa-box-open"></i> Packed & Ready for Pickup
+            </button>
+          {% elif o.order_status == 'ready_for_pickup' %}
+            <div class="w-100 text-center" style="font-size:0.84rem;color:var(--ops-emerald);font-weight:700;padding:0.4rem">
+              <i class="fas fa-motorcycle"></i> Awaiting Rider Pickup
+            </div>
+          {% endif %}
+        </form>
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="p-5 text-center">
+    <div style="font-size:3rem;margin-bottom:1rem">👨‍🍳✨</div>
+    <h4 style="color:var(--ops-foreground);margin-bottom:0.5rem">Kitchen Queue Clear!</h4>
+    <p style="color:var(--ops-muted);font-size:0.9rem">All current orders are prepped and packed. New customer orders will show up here automatically.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

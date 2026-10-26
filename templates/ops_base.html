@@ -29,7 +29,7 @@
 <!-- ── OPERATIONS HEADER ─────────────────────────────────────────── -->
 <header class="ops-header">
   <div style="display:flex;align-items:center;gap:1rem">
-    <button type="button" class="btn btn-outline btn-sm d-lg-none" onclick="toggleOpsSidebar()" style="color:#fff;border-color:var(--ops-border);padding:0.35rem 0.65rem">
+    <button type="button" class="btn btn-outline btn-sm d-lg-none" id="opsHamburger" onclick="toggleOpsSidebar()" aria-label="Toggle Operations Sidebar" style="color:var(--ops-foreground);border-color:var(--ops-border);background:#fff;padding:0.35rem 0.65rem">
       <i class="fas fa-bars"></i>
     </button>
     <a href="/ops" class="ops-brand">
@@ -46,7 +46,7 @@
   <!-- Role-Aware Operations Area Switcher -->
   <div class="ops-role-switcher">
     {% if session.get('role') == 'admin' %}
-      <a href="/admin/dashboard" class="ops-role-btn {% if request.path.startswith('/admin') %}active{% endif %}">
+      <a href="/admin/dashboard" class="ops-role-btn {% if request.path == '/admin/dashboard' or request.path == '/admin' or request.path == '/admin/' %}active{% endif %}">
         <i class="fas fa-crown"></i> Admin Control
       </a>
       <a href="/admin/restaurants" class="ops-role-btn {% if request.path.startswith('/admin/restaurants') %}active restaurant{% endif %}">
@@ -55,6 +55,9 @@
       <a href="/admin/delivery-partners" class="ops-role-btn {% if request.path.startswith('/admin/delivery-partners') %}active delivery{% endif %}">
         <i class="fas fa-motorcycle"></i> Delivery Fleet
       </a>
+      <a href="/admin/staff" class="ops-role-btn {% if request.path.startswith('/admin/staff') %}active{% endif %}">
+        <i class="fas fa-users-cog"></i> Staff Governance
+      </a>
     {% elif session.get('role') == 'restaurant' %}
       <a href="/restaurant/dashboard" class="ops-role-btn active restaurant">
         <i class="fas fa-store"></i> Restaurant Operations
@@ -62,12 +65,25 @@
       <a href="/restaurant/orders" class="ops-role-btn">
         <i class="fas fa-receipt"></i> Kitchen Orders
       </a>
+      <a href="/restaurant/staff" class="ops-role-btn {% if request.path.startswith('/restaurant/staff') %}active restaurant{% endif %}">
+        <i class="fas fa-users"></i> Staff Team
+      </a>
     {% elif session.get('role') == 'delivery' %}
       <a href="/delivery/dashboard" class="ops-role-btn active delivery">
         <i class="fas fa-motorcycle"></i> Rider Portal
       </a>
       <a href="/delivery/history" class="ops-role-btn">
         <i class="fas fa-history"></i> Trips
+      </a>
+    {% elif session.get('role') == 'staff' %}
+      <a href="/staff/dashboard" class="ops-role-btn {% if request.path == '/staff/dashboard' or request.path == '/staff/' %}active{% endif %}" style="color:var(--ops-amber)">
+        <i class="fas fa-fire"></i> Kitchen Desk
+      </a>
+      <a href="/staff/orders" class="ops-role-btn {% if request.path.startswith('/staff/orders') %}active{% endif %}">
+        <i class="fas fa-receipt"></i> Orders Queue
+      </a>
+      <a href="/staff/menu" class="ops-role-btn {% if request.path.startswith('/staff/menu') %}active{% endif %}">
+        <i class="fas fa-boxes"></i> Stock Check
       </a>
     {% endif %}
   </div>
@@ -86,11 +102,14 @@
         {{ (session.get('role') or 'user')|upper }}
       </span>
     </div>
-    <a href="/auth/logout" class="ops-btn ops-btn-outline ops-btn-sm" title="Log Out" style="color:var(--ops-rose)">
+    <a href="{{ ops_logout_url|default('/auth/logout') }}" class="ops-btn ops-btn-outline ops-btn-sm" title="Log Out" style="color:var(--ops-rose)">
       <i class="fas fa-power-off"></i>
     </a>
   </div>
 </header>
+
+<!-- Backdrop overlay for mobile sidebar -->
+<div class="ops-sidebar-backdrop" id="opsSidebarBackdrop" onclick="toggleOpsSidebar()"></div>
 
 <!-- ── MAIN OPERATIONS LAYOUT ────────────────────────────────────── -->
 <div class="ops-layout">
@@ -98,6 +117,11 @@
   <!-- Left Role-Specific Sidebar Rail -->
   <aside class="ops-sidebar" id="opsSidebar">
     <div>
+      <div class="ops-sidebar-mobile-header">
+        <span><i class="fas fa-terminal"></i> OPS DESK</span>
+        <button type="button" class="ops-sidebar-close" onclick="toggleOpsSidebar()" aria-label="Close Operations Menu">&times;</button>
+      </div>
+
       {% if session.get('role') == 'admin' %}
         <!-- ADMIN NAVIGATION -->
         <div class="ops-nav-group-title">// MASTER CONTROL</div>
@@ -129,6 +153,11 @@
           <li>
             <a href="/admin/delivery-partners" class="ops-nav-link {% if request.path.startswith('/admin/delivery-partners') %}active{% endif %}">
               <span><i class="fas fa-motorcycle"></i> Delivery Fleet</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/staff" class="ops-nav-link {% if request.path.startswith('/admin/staff') %}active{% endif %}">
+              <span><i class="fas fa-users-cog"></i> Restaurant Staff</span>
             </a>
           </li>
           <li>
@@ -181,11 +210,16 @@
           </li>
         </ul>
 
-        <div class="ops-nav-group-title">// SYSTEM</div>
+        <div class="ops-nav-group-title">// SYSTEM & SECURITY</div>
         <ul class="ops-nav-list">
           <li>
             <a href="/admin/profile" class="ops-nav-link {% if request.path.startswith('/admin/profile') %}active{% endif %}">
               <span><i class="fas fa-shield-alt"></i> Security & Profile</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/logout" class="ops-nav-link" style="color:var(--ops-rose)">
+              <span><i class="fas fa-lock"></i> Lock Console & Gate</span>
             </a>
           </li>
         </ul>
@@ -239,6 +273,15 @@
           </li>
         </ul>
 
+        <div class="ops-nav-group-title">// RESTAURANT STAFF</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/restaurant/staff" class="ops-nav-link restaurant {% if request.path.startswith('/restaurant/staff') %}active restaurant{% endif %}">
+              <span><i class="fas fa-users"></i> Staff Team & Roles</span>
+            </a>
+          </li>
+        </ul>
+
       {% elif session.get('role') == 'delivery' %}
         <!-- DELIVERY PARTNER NAVIGATION -->
         <div class="ops-nav-group-title">// RIDER PORTAL</div>
@@ -263,6 +306,36 @@
             </a>
           </li>
         </ul>
+
+      {% elif session.get('role') == 'staff' %}
+        <!-- KITCHEN STAFF NAVIGATION -->
+        <div class="ops-nav-group-title">// KITCHEN OPERATIONS</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/staff/dashboard" class="ops-nav-link {% if request.path == '/staff/dashboard' or request.path == '/staff/' %}active{% endif %}">
+              <span><i class="fas fa-fire"></i> Kitchen Desk</span>
+            </a>
+          </li>
+          <li>
+            <a href="/staff/orders" class="ops-nav-link {% if request.path.startswith('/staff/orders') %}active{% endif %}">
+              <span><i class="fas fa-receipt"></i> Order Queue</span>
+            </a>
+          </li>
+          <li>
+            <a href="/staff/menu" class="ops-nav-link {% if request.path.startswith('/staff/menu') %}active{% endif %}">
+              <span><i class="fas fa-boxes"></i> Dish Inventory & Stock</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="ops-nav-group-title">// STAFF PROFILE</div>
+        <ul class="ops-nav-list">
+          <li>
+            <a href="/staff/profile" class="ops-nav-link {% if request.path.startswith('/staff/profile') %}active{% endif %}">
+              <span><i class="fas fa-id-badge"></i> Shift & Role Info</span>
+            </a>
+          </li>
+        </ul>
       {% endif %}
     </div>
 
@@ -273,7 +346,7 @@
           <i class="fas fa-user-check"></i>
         </div>
         <div style="overflow:hidden">
-          <div style="font-size:0.82rem;font-weight:700;color:#fff;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
+          <div style="font-size:0.82rem;font-weight:700;color:var(--ops-foreground);white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
             {{ session.get('user_name', 'Operator') }}
           </div>
           <div style="font-size:0.7rem;color:var(--ops-text-dim);font-family:var(--ops-font-mono)">
@@ -291,7 +364,7 @@
     {% if messages %}
     <div style="margin-bottom:1.5rem;display:flex;flex-direction:column;gap:0.75rem">
       {% for category, message in messages %}
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.25rem;border-radius:var(--ops-radius-md);font-size:0.88rem;background:{% if category=='success' %}rgba(16,185,129,0.12){% elif category=='danger' %}rgba(239,68,68,0.12){% elif category=='warning' %}rgba(245,158,11,0.12){% else %}rgba(6,182,212,0.12){% endif %};border:1px solid {% if category=='success' %}rgba(16,185,129,0.35){% elif category=='danger' %}rgba(239,68,68,0.35){% elif category=='warning' %}rgba(245,158,11,0.35){% else %}rgba(6,182,212,0.35){% endif %};color:#fff">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.25rem;border-radius:var(--ops-radius-md);font-size:0.88rem;background:{% if category=='success' %}#ECFDF5{% elif category=='danger' %}#FEF2F2{% elif category=='warning' %}#FFFBEB{% else %}#EFF6FF{% endif %};border:1px solid {% if category=='success' %}#A7F3D0{% elif category=='danger' %}#FECACA{% elif category=='warning' %}#FDE68A{% else %}#BFDBFE{% endif %};color:var(--ops-foreground);font-weight:500">
         <div style="display:flex;align-items:center;gap:0.6rem">
           <span>
             {% if category == 'success' %}<i class="fas fa-check-circle" style="color:var(--ops-emerald)"></i>
@@ -326,8 +399,17 @@
 <script>
 function toggleOpsSidebar() {
   const sidebar = document.getElementById('opsSidebar');
-  sidebar.classList.toggle('mobile-open');
+  const backdrop = document.getElementById('opsSidebarBackdrop');
+  const isOpen = sidebar.classList.toggle('mobile-open');
+  backdrop?.classList.toggle('show', isOpen);
+  document.body.classList.toggle('ops-nav-locked', isOpen);
 }
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('opsSidebar')?.classList.contains('mobile-open')) {
+    toggleOpsSidebar();
+  }
+});
 </script>
 
 {% block extra_js %}{% endblock %}

@@ -312,6 +312,190 @@ def migrate_sqlite(conn):
     conn.commit()
     record_migration('011_ensure_dual_domain_demo_accounts', 'Ensure both @foodiehunter.com and @foodyhunters.com demo users exist for test suite and UI')
 
+    # ── Migration 012: Ensure restaurant_staff table exists and seed demo staff ──
+    if 'restaurant_staff' not in get_sqlite_tables(conn):
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS restaurant_staff (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+            restaurant_id INTEGER NOT NULL,
+            staff_role TEXT NOT NULL DEFAULT 'kitchen_staff',
+            status TEXT NOT NULL DEFAULT 'approved',
+            shift TEXT DEFAULT 'Full Time',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+        );
+        """)
+        conn.commit()
+
+    # Seed demo staff accounts if not present
+    staff_demo_pairs = [
+        ('staff@foodyhunters.com', 'Ramesh Chef (Kitchen Lead)', 'staff', '9811122233', 'Kitchen Block, Mehsana', 1, 'kitchen_staff'),
+        ('staff@foodiehunter.com', 'Ramesh Chef (Kitchen Lead)', 'staff', '9811122233', 'Kitchen Block, Mehsana', 1, 'kitchen_staff'),
+        ('manager@foodyhunters.com', 'Amit Trivedi (Restaurant Manager)', 'staff', '9822233344', 'Modhera Road, Mehsana', 1, 'restaurant_manager'),
+        ('manager@foodiehunter.com', 'Amit Trivedi (Restaurant Manager)', 'staff', '9822233344', 'Modhera Road, Mehsana', 1, 'restaurant_manager'),
+    ]
+    cur.execute("SELECT id, email FROM users")
+    user_email_map = {row[1].lower(): row[0] for row in cur.fetchall()}
+
+    for email, name, role, phone, addr, rest_id, staff_role in staff_demo_pairs:
+        if email not in user_email_map:
+            cur.execute("""
+            INSERT INTO users (name, email, phone, password_hash, role, address, city, state, pincode, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'Mehsana', 'Gujarat', '384001', 'active', CURRENT_TIMESTAMP)
+            """, (name, email, phone, pw_hash, role, addr))
+            u_id = cur.lastrowid
+            user_email_map[email] = u_id
+        else:
+            u_id = user_email_map[email]
+            cur.execute("UPDATE users SET role='staff' WHERE id=?", (u_id,))
+
+        cur.execute("SELECT id FROM restaurant_staff WHERE user_id=?", (u_id,))
+        if not cur.fetchone():
+            cur.execute("""
+            INSERT INTO restaurant_staff (user_id, restaurant_id, staff_role, status, shift, created_at, updated_at)
+            VALUES (?, ?, ?, 'approved', 'Morning & Evening Shift', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """, (u_id, rest_id, staff_role))
+
+    conn.commit()
+    record_migration('012_create_restaurant_staff_and_demo_staff', 'Create restaurant_staff table and seed demo kitchen staff and restaurant manager')
+
+    # ── Migration 013: Restaurant Onboarding & Verification Fields ─────────────
+    rest_cols = get_sqlite_columns(conn, 'restaurants')
+    if 'verification_doc' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN verification_doc TEXT DEFAULT NULL")
+    if 'fssai_number' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN fssai_number TEXT DEFAULT NULL")
+    conn.commit()
+    record_migration('013_restaurant_onboarding_fields', 'Add verification_doc and fssai_number to restaurants for partner onboarding')
+
+    # ── Migration 014: Full Delivery Workflow, Shifts, Tips, Incentives & Reviews
+    rest_cols = get_sqlite_columns(conn, 'restaurants')
+    if 'banner_image' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN banner_image TEXT DEFAULT NULL")
+    if 'logo' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN logo TEXT DEFAULT NULL")
+
+    dp_cols = get_sqlite_columns(conn, 'delivery_partners')
+    if 'verification_status' not in dp_cols:
+        cur.execute("ALTER TABLE delivery_partners ADD COLUMN verification_status TEXT DEFAULT 'approved'")
+    if 'fssai_or_doc' not in dp_cols:
+        cur.execute("ALTER TABLE delivery_partners ADD COLUMN fssai_or_doc TEXT DEFAULT NULL")
+
+    order_cols = get_sqlite_columns(conn, 'orders')
+    if 'tip_amount' not in order_cols:
+        cur.execute("ALTER TABLE orders ADD COLUMN tip_amount REAL DEFAULT 0.00")
+
+    pay_cols = get_sqlite_columns(conn, 'payments')
+    if 'tip_amount' not in pay_cols:
+        cur.execute("ALTER TABLE payments ADD COLUMN tip_amount REAL DEFAULT 0.00")
+
+    rev_cols = get_sqlite_columns(conn, 'reviews')
+    if 'delivery_rating' not in rev_cols:
+        cur.execute("ALTER TABLE reviews ADD COLUMN delivery_rating INTEGER DEFAULT NULL")
+    if 'delivery_partner_id' not in rev_cols:
+        cur.execute("ALTER TABLE reviews ADD COLUMN delivery_partner_id INTEGER DEFAULT NULL")
+
+    # Shift Management & Booking Tables
+    sqlite_tbls = get_sqlite_tables(conn)
+    if 'delivery_shifts' not in sqlite_tbls:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS delivery_shifts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            shift_date DATE NOT NULL,
+            start_time TIME NOT NULL,
+            end_time TIME NOT NULL,
+            city TEXT DEFAULT 'Mehsana',
+            zone TEXT DEFAULT 'Mehsana Central',
+            max_capacity INTEGER DEFAULT 10,
+            status TEXT DEFAULT 'open',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
+    if 'shift_bookings' not in sqlite_tbls:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS shift_bookings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shift_id INTEGER NOT NULL,
+            partner_id INTEGER NOT NULL,
+            status TEXT DEFAULT 'booked',
+            booked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            cancelled_at DATETIME DEFAULT NULL,
+            FOREIGN KEY (shift_id) REFERENCES delivery_shifts(id) ON DELETE CASCADE,
+            FOREIGN KEY (partner_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        """)
+
+    if 'delivery_incentive_rules' not in sqlite_tbls:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS delivery_incentive_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            incentive_type TEXT DEFAULT 'deliveries_milestone',
+            target_count INTEGER NOT NULL DEFAULT 5,
+            bonus_amount REAL NOT NULL DEFAULT 150.00,
+            min_shift_hours REAL DEFAULT 0.00,
+            description TEXT DEFAULT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+
+    if 'delivery_partner_incentives' not in sqlite_tbls:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS delivery_partner_incentives (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            partner_id INTEGER NOT NULL,
+            rule_id INTEGER NOT NULL,
+            shift_id INTEGER DEFAULT NULL,
+            qualifying_deliveries INTEGER DEFAULT 0,
+            earned_amount REAL NOT NULL DEFAULT 0.00,
+            status TEXT DEFAULT 'earned',
+            credited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (partner_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        """)
+
+    # Seed initial shifts for upcoming 7 days
+    from datetime import date, timedelta
+    cur.execute("SELECT COUNT(*) FROM delivery_shifts")
+    if cur.fetchone()[0] == 0:
+        base_d = date.today()
+        shift_templates = [
+            ('Morning Express Shift', '07:00', '15:00', 'Mehsana Central', 8),
+            ('Afternoon Rush Shift', '12:00', '18:00', 'Mehsana Highway Hub', 10),
+            ('Evening Dinner Peak Shift', '18:00', '23:30', 'Mehsana City & Banquets', 12),
+        ]
+        for day_offset in range(7):
+            cur_date = base_d + timedelta(days=day_offset)
+            for title, s_time, e_time, zone, cap in shift_templates:
+                cur.execute("""
+                INSERT INTO delivery_shifts (title, shift_date, start_time, end_time, city, zone, max_capacity, status, created_at)
+                VALUES (?, ?, ?, ?, 'Mehsana', ?, ?, 'open', CURRENT_TIMESTAMP)
+                """, (title, cur_date.strftime('%Y-%m-%d'), s_time, e_time, zone, cap))
+
+    # Seed standard incentive rules
+    cur.execute("SELECT COUNT(*) FROM delivery_incentive_rules")
+    if cur.fetchone()[0] == 0:
+        rules = [
+            ('Daily 5-Delivery Milestone', 'deliveries_milestone', 5, 150.00, 'Complete 5 deliveries in a single day to earn ₹150 bonus.'),
+            ('Super 10-Delivery Target', 'deliveries_milestone', 10, 350.00, 'Complete 10 deliveries in a single day to earn ₹350 bonus.'),
+            ('Full Shift Completion Reward', 'shift_completion', 3, 100.00, 'Complete a booked shift with minimum 3 deliveries for ₹100 bonus.'),
+            ('Evening Peak Hours Bonus', 'peak_hours', 4, 120.00, 'Deliver during 19:00 - 22:30 dinner peak hours for ₹120 bonus.')
+        ]
+        for title, itype, target, bonus, desc in rules:
+            cur.execute("""
+            INSERT INTO delivery_incentive_rules (title, incentive_type, target_count, bonus_amount, description, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+            """, (title, itype, target, bonus, desc))
+
+    conn.commit()
+    record_migration('014_delivery_shifts_tips_incentives_reviews', 'Add shift booking, incentives, tips, banner images and reviews to SQLite')
+
 
 def migrate_mysql(conn):
     """Execute schema initialization and migrations on MySQL connection."""
@@ -377,6 +561,230 @@ def migrate_mysql(conn):
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """)
     conn.commit()
+
+    # ── Migration 012 for MySQL: restaurant_staff table and demo staff accounts ──
+    try:
+        cur.execute("ALTER TABLE `users` MODIFY COLUMN `role` ENUM('customer', 'restaurant', 'delivery', 'admin', 'staff') NOT NULL DEFAULT 'customer'")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS `restaurant_staff` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `user_id` INT NOT NULL UNIQUE,
+            `restaurant_id` INT NOT NULL,
+            `staff_role` ENUM('kitchen_staff', 'restaurant_manager') NOT NULL DEFAULT 'kitchen_staff',
+            `status` ENUM('pending', 'approved', 'rejected', 'suspended') NOT NULL DEFAULT 'approved',
+            `shift` VARCHAR(50) DEFAULT 'Full Time',
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+            FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE CASCADE,
+            INDEX `idx_staff_rest` (`restaurant_id`),
+            INDEX `idx_staff_user` (`user_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+        conn.commit()
+
+        cur.execute("SELECT id, email FROM users")
+        mysql_users = {row[1].lower(): row[0] for row in cur.fetchall()}
+        from werkzeug.security import generate_password_hash
+        m_pw_hash = generate_password_hash('password123')
+
+        m_staff_pairs = [
+            ('staff@foodyhunters.com', 'Ramesh Chef (Kitchen Lead)', 'staff', '9811122233', 'Kitchen Block, Mehsana', 1, 'kitchen_staff'),
+            ('staff@foodiehunter.com', 'Ramesh Chef (Kitchen Lead)', 'staff', '9811122233', 'Kitchen Block, Mehsana', 1, 'kitchen_staff'),
+            ('manager@foodyhunters.com', 'Amit Trivedi (Restaurant Manager)', 'staff', '9822233344', 'Modhera Road, Mehsana', 1, 'restaurant_manager'),
+            ('manager@foodiehunter.com', 'Amit Trivedi (Restaurant Manager)', 'staff', '9822233344', 'Modhera Road, Mehsana', 1, 'restaurant_manager'),
+        ]
+        for m_email, m_name, m_role, m_phone, m_addr, m_rest_id, m_staff_role in m_staff_pairs:
+            if m_email not in mysql_users:
+                cur.execute("""
+                INSERT INTO users (name, email, phone, password_hash, role, address, city, state, pincode, status, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, 'Mehsana', 'Gujarat', '384001', 'active', NOW())
+                """, (m_name, m_email, m_phone, m_pw_hash, m_role, m_addr))
+                conn.commit()
+                cur.execute("SELECT id FROM users WHERE email=%s", (m_email,))
+                m_uid = cur.fetchone()[0]
+                mysql_users[m_email] = m_uid
+            else:
+                m_uid = mysql_users[m_email]
+                cur.execute("UPDATE users SET role='staff' WHERE id=%s", (m_uid,))
+                conn.commit()
+
+            cur.execute("SELECT id FROM restaurant_staff WHERE user_id=%s", (m_uid,))
+            if not cur.fetchone():
+                cur.execute("""
+                INSERT INTO restaurant_staff (user_id, restaurant_id, staff_role, status, shift, created_at, updated_at)
+                VALUES (%s, %s, %s, 'approved', 'Morning & Evening Shift', NOW(), NOW())
+                """, (m_uid, m_rest_id, m_staff_role))
+                conn.commit()
+
+        cur.execute("""
+        INSERT IGNORE INTO schema_migrations (version, description, applied_at)
+        VALUES ('012_create_restaurant_staff_and_demo_staff', 'Create restaurant_staff table and seed demo kitchen staff and restaurant manager', NOW())
+        """)
+        conn.commit()
+    except Exception as e:
+        print(f"[MYSQL STAFF MIGRATION NOTICE] {e}", file=sys.stderr)
+
+    # ── Migration 013 for MySQL: Restaurant Onboarding & Verification Fields ──
+    try:
+        cur.execute("SHOW COLUMNS FROM `restaurants`")
+        mysql_rest_cols = {row[0].lower() for row in cur.fetchall()}
+        if 'verification_doc' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `verification_doc` VARCHAR(255) DEFAULT NULL")
+        if 'fssai_number' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `fssai_number` VARCHAR(50) DEFAULT NULL")
+        conn.commit()
+        cur.execute("""
+        INSERT IGNORE INTO schema_migrations (version, description, applied_at)
+        VALUES ('013_restaurant_onboarding_fields', 'Add verification_doc and fssai_number to restaurants for partner onboarding', NOW())
+        """)
+        conn.commit()
+    except Exception as e:
+        print(f"[MYSQL RESTAURANT ONBOARDING MIGRATION NOTICE] {e}", file=sys.stderr)
+
+    # ── Migration 014 for MySQL: Full Delivery Workflow, Shifts, Tips, Incentives & Reviews ──
+    try:
+        cur.execute("SHOW COLUMNS FROM `restaurants`")
+        mysql_rest_cols = {row[0].lower() for row in cur.fetchall()}
+        if 'banner_image' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `banner_image` VARCHAR(255) DEFAULT NULL")
+        if 'logo' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `logo` VARCHAR(255) DEFAULT NULL")
+
+        cur.execute("SHOW COLUMNS FROM `delivery_partners`")
+        mysql_dp_cols = {row[0].lower() for row in cur.fetchall()}
+        if 'verification_status' not in mysql_dp_cols:
+            cur.execute("ALTER TABLE `delivery_partners` ADD COLUMN `verification_status` ENUM('pending','approved','rejected','suspended') DEFAULT 'approved'")
+        if 'fssai_or_doc' not in mysql_dp_cols:
+            cur.execute("ALTER TABLE `delivery_partners` ADD COLUMN `fssai_or_doc` VARCHAR(255) DEFAULT NULL")
+
+        cur.execute("SHOW COLUMNS FROM `orders`")
+        mysql_ord_cols = {row[0].lower() for row in cur.fetchall()}
+        if 'tip_amount' not in mysql_ord_cols:
+            cur.execute("ALTER TABLE `orders` ADD COLUMN `tip_amount` DECIMAL(8,2) DEFAULT 0.00")
+
+        cur.execute("SHOW COLUMNS FROM `payments`")
+        mysql_pay_cols = {row[0].lower() for row in cur.fetchall()}
+        if 'tip_amount' not in mysql_pay_cols:
+            cur.execute("ALTER TABLE `payments` ADD COLUMN `tip_amount` DECIMAL(8,2) DEFAULT 0.00")
+
+        cur.execute("SHOW COLUMNS FROM `reviews`")
+        mysql_rev_cols = {row[0].lower() for row in cur.fetchall()}
+        if 'delivery_rating' not in mysql_rev_cols:
+            cur.execute("ALTER TABLE `reviews` ADD COLUMN `delivery_rating` INT DEFAULT NULL")
+        if 'delivery_partner_id' not in mysql_rev_cols:
+            cur.execute("ALTER TABLE `reviews` ADD COLUMN `delivery_partner_id` INT DEFAULT NULL")
+
+        cur.execute("SHOW TABLES")
+        mysql_tbls = {row[0].lower() for row in cur.fetchall()}
+
+        if 'delivery_shifts' not in mysql_tbls:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS `delivery_shifts` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `title` VARCHAR(100) NOT NULL,
+                `shift_date` DATE NOT NULL,
+                `start_time` TIME NOT NULL,
+                `end_time` TIME NOT NULL,
+                `city` VARCHAR(60) DEFAULT 'Mehsana',
+                `zone` VARCHAR(100) DEFAULT 'Mehsana Central',
+                `max_capacity` INT DEFAULT 10,
+                `status` ENUM('open', 'full', 'completed', 'cancelled') DEFAULT 'open',
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX `idx_shift_date` (`shift_date`),
+                INDEX `idx_shift_city` (`city`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+
+        if 'shift_bookings' not in mysql_tbls:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS `shift_bookings` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `shift_id` INT NOT NULL,
+                `partner_id` INT NOT NULL,
+                `status` ENUM('booked', 'completed', 'cancelled') DEFAULT 'booked',
+                `booked_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                `cancelled_at` DATETIME DEFAULT NULL,
+                FOREIGN KEY (`shift_id`) REFERENCES `delivery_shifts`(`id`) ON DELETE CASCADE,
+                FOREIGN KEY (`partner_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+                INDEX `idx_sb_shift` (`shift_id`),
+                INDEX `idx_sb_partner` (`partner_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+
+        if 'delivery_incentive_rules' not in mysql_tbls:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS `delivery_incentive_rules` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `title` VARCHAR(150) NOT NULL,
+                `incentive_type` ENUM('deliveries_milestone', 'shift_completion', 'peak_hours', 'weekend_special') DEFAULT 'deliveries_milestone',
+                `target_count` INT NOT NULL DEFAULT 5,
+                `bonus_amount` DECIMAL(8,2) NOT NULL DEFAULT 150.00,
+                `min_shift_hours` DECIMAL(4,2) DEFAULT 0.00,
+                `description` VARCHAR(255) DEFAULT NULL,
+                `is_active` TINYINT(1) DEFAULT 1,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+
+        if 'delivery_partner_incentives' not in mysql_tbls:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS `delivery_partner_incentives` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `partner_id` INT NOT NULL,
+                `rule_id` INT NOT NULL,
+                `shift_id` INT DEFAULT NULL,
+                `qualifying_deliveries` INT DEFAULT 0,
+                `earned_amount` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+                `status` ENUM('in_progress', 'earned', 'paid') DEFAULT 'earned',
+                `credited_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (`partner_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+                INDEX `idx_dpi_partner` (`partner_id`),
+                INDEX `idx_dpi_rule` (`rule_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+
+        # Seed initial shifts for upcoming 7 days in MySQL if empty
+        from datetime import date, timedelta
+        cur.execute("SELECT COUNT(*) FROM `delivery_shifts`")
+        if cur.fetchone()[0] == 0:
+            base_d = date.today()
+            shift_templates = [
+                ('Morning Express Shift', '07:00:00', '15:00:00', 'Mehsana Central', 8),
+                ('Afternoon Rush Shift', '12:00:00', '18:00:00', 'Mehsana Highway Hub', 10),
+                ('Evening Dinner Peak Shift', '18:00:00', '23:30:00', 'Mehsana City & Banquets', 12),
+            ]
+            for day_offset in range(7):
+                cur_date = base_d + timedelta(days=day_offset)
+                for title, s_time, e_time, zone, cap in shift_templates:
+                    cur.execute("""
+                    INSERT INTO `delivery_shifts` (`title`, `shift_date`, `start_time`, `end_time`, `city`, `zone`, `max_capacity`, `status`, `created_at`)
+                    VALUES (%s, %s, %s, %s, 'Mehsana', %s, %s, 'open', NOW())
+                    """, (title, cur_date.strftime('%Y-%m-%d'), s_time, e_time, zone, cap))
+
+        # Seed standard incentive rules in MySQL if empty
+        cur.execute("SELECT COUNT(*) FROM `delivery_incentive_rules`")
+        if cur.fetchone()[0] == 0:
+            rules = [
+                ('Daily 5-Delivery Milestone', 'deliveries_milestone', 5, 150.00, 'Complete 5 deliveries in a single day to earn ₹150 bonus.'),
+                ('Super 10-Delivery Target', 'deliveries_milestone', 10, 350.00, 'Complete 10 deliveries in a single day to earn ₹350 bonus.'),
+                ('Full Shift Completion Reward', 'shift_completion', 3, 100.00, 'Complete a booked shift with minimum 3 deliveries for ₹100 bonus.'),
+                ('Evening Peak Hours Bonus', 'peak_hours', 4, 120.00, 'Deliver during 19:00 - 22:30 dinner peak hours for ₹120 bonus.')
+            ]
+            for title, itype, target, bonus, desc in rules:
+                cur.execute("""
+                INSERT INTO `delivery_incentive_rules` (`title`, `incentive_type`, `target_count`, `bonus_amount`, `description`, `is_active`, `created_at`)
+                VALUES (%s, %s, %s, %s, %s, 1, NOW())
+                """, (title, itype, target, bonus, desc))
+
+        conn.commit()
+        cur.execute("""
+        INSERT IGNORE INTO schema_migrations (version, description, applied_at)
+        VALUES ('014_delivery_shifts_tips_incentives_reviews', 'Add shift booking, incentives, tips, banner images and reviews to MySQL', NOW())
+        """)
+        conn.commit()
+    except Exception as e:
+        print(f"[MYSQL SHIFTS & INCENTIVES MIGRATION NOTICE] {e}", file=sys.stderr)
 
 
 def run_all_migrations(target_mode=None):

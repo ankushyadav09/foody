@@ -1,61 +1,78 @@
-{% extends "base.html" %}
-{% block title %}Payment Audits & Logs – Foody Hunters Admin{% endblock %}
+{% extends "ops_base.html" %}
+{% block title %}Payments & Transactions – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}💳 Platform Payments & Transactions{% endblock %}
+{% block page_subtitle %}Audit financial settlements, payment gateway logs, customer receipts, and GMV revenue{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <div style="background:rgba(16,185,129,0.12);padding:0.4rem 0.85rem;border-radius:var(--ops-radius-md);border:1px solid rgba(16,185,129,0.3);text-align:right">
+    <span style="font-size:0.72rem;color:var(--ops-text-dim);text-transform:uppercase;display:block">Lifetime GMV</span>
+    <div style="font-size:1.15rem;font-weight:900;color:var(--ops-emerald);font-family:var(--ops-font-mono)">₹{{ "%.2f"|format(total_revenue) }}</div>
+  </div>
+  <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
-  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
     <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Platform Payments & Transaction Logs</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Audit order transactions, payment methods, and gross volume</p>
+      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">Payment Audit Journal</h3>
+      <small style="color:var(--ops-text-dim)">Chronological log of gateway authorizations and captured funds</small>
     </div>
-    <div style="background:#1E293B;padding:.75rem 1.5rem;border-radius:var(--radius-md);border:1px solid #334155;text-align:right">
-      <span style="font-size:.8rem;color:#94A3B8;text-transform:uppercase">Lifetime Revenue</span>
-      <div style="font-size:1.6rem;font-weight:900;color:#10B981">₹{{ "%.2f"|format(total_revenue) }}</div>
-    </div>
+    <span class="ops-badge info">{{ payments|length }} Transactions</span>
   </div>
-</div>
 
-<div class="container py-4">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Transactions Log ({{ payments|length }})</h2>
-
-    {% if payments %}
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
-            <th style="padding:.75rem">Transaction ID</th>
-            <th style="padding:.75rem">Order</th>
-            <th style="padding:.75rem">Customer</th>
-            <th style="padding:.75rem">Restaurant</th>
-            <th style="padding:.75rem">Method</th>
-            <th style="padding:.75rem">Amount</th>
-            <th style="padding:.75rem">Status</th>
-            <th style="padding:.75rem">Date & Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for p in payments %}
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:.75rem"><code>{{ p.transaction_id }}</code></td>
-            <td style="padding:.75rem"><strong>#{{ p.order_code }}</strong></td>
-            <td style="padding:.75rem">{{ p.customer_name }}</td>
-            <td style="padding:.75rem">{{ p.restaurant_name }}</td>
-            <td style="padding:.75rem;text-transform:uppercase;font-weight:600">{{ p.payment_method }}</td>
-            <td style="padding:.75rem;font-weight:700;color:#10B981">₹{{ "%.2f"|format(p.amount) }}</td>
-            <td style="padding:.75rem">
-              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">{{ p.payment_status|capitalize }}</span>
-            </td>
-            <td style="padding:.75rem;color:var(--text-muted);font-size:.85rem">{{ p.payment_date }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p style="color:var(--text-muted);text-align:center;padding:3rem">No payment records logged yet.</p>
-    {% endif %}
-
+  {% if payments %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Txn ID</th>
+          <th>Order</th>
+          <th>Customer</th>
+          <th>Restaurant</th>
+          <th>Method</th>
+          <th>Amount</th>
+          <th>Gateway Status</th>
+          <th>Settlement Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td><code style="font-size:0.85rem;color:var(--ops-cyan);font-family:var(--ops-font-mono)">{{ p.transaction_id }}</code></td>
+          <td><strong style="color:var(--ops-foreground);font-family:var(--ops-font-mono)">#{{ p.order_code }}</strong></td>
+          <td>{{ p.customer_name }}</td>
+          <td><span style="color:var(--ops-amber)"><i class="fas fa-store"></i> {{ p.restaurant_name }}</span></td>
+          <td>
+            <span class="ops-badge" style="background:rgba(255,255,255,0.08);color:#fff;text-transform:uppercase">{{ p.payment_method }}</span>
+          </td>
+          <td style="font-family:var(--ops-font-mono);font-weight:700;color:var(--ops-emerald)">₹{{ "%.2f"|format(p.amount) }}</td>
+          <td>
+            {% if p.payment_status == 'completed' or p.payment_status == 'paid' %}
+            <span class="ops-badge success"><i class="fas fa-check-circle"></i> Completed</span>
+            {% elif p.payment_status == 'pending' %}
+            <span class="ops-badge warning"><i class="fas fa-clock"></i> Pending</span>
+            {% else %}
+            <span class="ops-badge danger"><i class="fas fa-times-circle"></i> {{ p.payment_status|capitalize }}</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--ops-muted);font-size:0.82rem">{{ p.payment_date or 'N/A' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+  {% else %}
+  <div class="ops-empty-state">
+    <i class="fas fa-receipt ops-empty-icon"></i>
+    <div class="ops-empty-title">No Transactions Recorded</div>
+    <div class="ops-empty-desc">No customer payment captures have been processed yet.</div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

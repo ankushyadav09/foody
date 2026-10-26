@@ -5,9 +5,146 @@ routes/delivery.py – Delivery partner dashboard, profile, and order management
 from flask import (Blueprint, render_template, request, redirect,
                    url_for, flash, session, jsonify)
 from database import execute_query
-from utils.helpers import delivery_required, save_uploaded_image
+from utils.helpers import (delivery_required, save_uploaded_image,
+                           validate_email, validate_phone, validate_password,
+                           get_delivery_auth, set_delivery_auth, clear_delivery_auth)
+from werkzeug.security import generate_password_hash, check_password_hash
 
 delivery_bp = Blueprint('delivery', __name__)
+
+
+# ─────────────────────────────────────────────
+# DELIVERY PARTNER AUTHENTICATION
+# ─────────────────────────────────────────────
+
+@delivery_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    """Separate dedicated login page for delivery partners."""
+    if get_delivery_auth():
+        return redirect(url_for('delivery.dashboard'))
+
+    if request.method == 'POST':
+        identifier = request.form.get('email', '').strip().lower()
+        password   = request.form.get('password', '')
+        remember   = request.form.get('remember_me')
+
+        if not identifier or not password:
+            flash('Email/Mobile and password are required.', 'danger')
+            return render_template('delivery/login.html')
+
+        if identifier.isdigit() and len(identifier) == 10:
+            user = execute_query("SELECT * FROM users WHERE phone=%s", (identifier,), fetchone=True)
+        else:
+            user = execute_query("SELECT * FROM users WHERE email=%s", (identifier,), fetchone=True)
+            if not user and '@' in identifier:
+                alt_domain = 'foodyhunters.com' if '@foodiehunter.com' in identifier else ('foodiehunter.com' if '@foodyhunters.com' in identifier else None)
+                if alt_domain:
+                    alt_email = identifier.split('@')[0] + '@' + alt_domain
+                    user = execute_query("SELECT * FROM users WHERE email=%s", (alt_email,), fetchone=True)
+
+        if not user or not check_password_hash(user['password_hash'], password):
+            flash('Invalid rider credentials.', 'danger')
+            return render_template('delivery/login.html')
+
+        if user['role'] not in ('delivery', 'admin'):
+            flash('This portal is reserved for delivery partners. Please use Customer Login.', 'warning')
+            return render_template('delivery/login.html')
+
+        if user['status'] == 'inactive':
+            flash('Your rider account has been deactivated. Please contact support.', 'warning')
+            return render_template('delivery/login.html')
+
+        session.permanent = bool(remember)
+        set_delivery_auth(user)
+
+        flash(f"Welcome back to Rider Portal, {user['name']}!", 'success')
+        return redirect(url_for('delivery.dashboard'))
+
+    return render_template('delivery/login.html')
+
+
+@delivery_bp.route('/logout')
+def logout():
+    """Securely log out delivery partner."""
+    clear_delivery_auth()
+    flash("Delivery partner session ended.", "info")
+    return redirect(url_for('delivery.login'))
+
+
+@delivery_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    """Separate dedicated onboarding page for delivery partners."""
+    if 'user_id' in session and session.get('role') == 'delivery':
+        return redirect(url_for('delivery.dashboard'))
+
+    if request.method == 'POST':
+        name           = request.form.get('name', '').strip()
+        email          = request.form.get('email', '').strip().lower()
+        phone          = request.form.get('phone', '').strip()
+        vehicle_type   = request.form.get('vehicle_type', 'Motorcycle').strip()
+        vehicle_number = request.form.get('vehicle_number', '').strip()
+        license_number = request.form.get('license_number', '').strip()
+        address        = request.form.get('address', '').strip()
+        city           = request.form.get('city', 'Mehsana').strip() or 'Mehsana'
+        pincode        = request.form.get('pincode', '384002').strip() or '384002'
+        password       = request.form.get('password', '')
+        confirm        = request.form.get('confirm_password', '')
+
+        # SECURITY: Strictly delivery role only!
+        role = 'delivery'
+
+        errors = []
+        if not name:
+            errors.append('Full name is required.')
+        if not validate_email(email):
+            errors.append('Enter a valid email address.')
+        if not validate_phone(phone):
+            errors.append('Enter a valid 10-digit Indian mobile number.')
+        if not vehicle_number:
+            errors.append('Vehicle registration number is required.')
+        if not license_number:
+            errors.append('Driving license number is required.')
+        if not address:
+            errors.append('Residential address is required.')
+        if not validate_password(password):
+            errors.append('Password must be at least 6 characters.')
+        if password != confirm:
+            errors.append('Passwords do not match.')
+
+        if errors:
+            for e in errors:
+                flash(e, 'danger')
+            return render_template('delivery/register.html', form=request.form)
+
+        existing = execute_query(
+            "SELECT id, email, phone FROM users WHERE email=%s OR phone=%s", (email, phone), fetchone=True
+        )
+        if existing:
+            if existing['email'] == email:
+                flash('This email is already registered. Please login.', 'warning')
+            else:
+                flash('This contact number is already registered. Please login.', 'warning')
+            return render_template('delivery/register.html', form=request.form)
+
+        pw_hash = generate_password_hash(password)
+        user_id = execute_query(
+            """INSERT INTO users (name, email, phone, password_hash, role, address, city, state, pincode, status)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, 'Gujarat', %s, 'active')""",
+            (name, email, phone, pw_hash, role, address, city, pincode),
+            commit=True
+        )
+
+        execute_query(
+            """INSERT INTO delivery_partners (user_id, vehicle_type, vehicle_number, license_number, is_available, is_online, total_deliveries, total_earnings)
+               VALUES (%s, %s, %s, %s, 1, 1, 0, 0.00)""",
+            (user_id, vehicle_type, vehicle_number, license_number),
+            commit=True
+        )
+
+        flash('Delivery partner registration successful! You can now log in.', 'success')
+        return redirect(url_for('delivery.login'))
+
+    return render_template('delivery/register.html', form={})
 
 
 # ─────────────────────────────────────────────

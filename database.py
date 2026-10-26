@@ -135,6 +135,9 @@ def _convert_query_for_sqlite(query):
     q = query.replace('%s', '?')
     # Replace DATE_SUB(NOW(), INTERVAL 7 DAY) with datetime('now', '-7 days')
     q = re.sub(r"DATE_SUB\s*\(\s*NOW\s*\(\s*\)\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)", r"datetime('now', '-\1 days')", q, flags=re.IGNORECASE)
+    # Convert ON DUPLICATE KEY UPDATE for coupons to SQLite ON CONFLICT
+    if re.search(r"INSERT\s+INTO\s+coupons", q, re.IGNORECASE) and re.search(r"ON\s+DUPLICATE\s+KEY\s+UPDATE", q, re.IGNORECASE):
+        q = re.sub(r"ON\s+DUPLICATE\s+KEY\s+UPDATE", "ON CONFLICT(code) DO UPDATE SET", q, flags=re.IGNORECASE)
     return q
 
 

@@ -1,99 +1,204 @@
-{% extends "base.html" %}
-{% block title %}Restaurant Approvals & Management – Foody Hunters Admin{% endblock %}
+{% extends "ops_base.html" %}
+{% block title %}Restaurant Fleet & Onboarding Approvals – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}🏪 Restaurant Fleet Management{% endblock %}
+{% block page_subtitle %}Review dining applications, verify KYC & FSSAI documents, and manage partner restaurant listings{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+  <a href="/admin/staff" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-users-cog"></i> Staff Governance
+  </a>
+  <button onclick="location.reload()" class="ops-btn ops-btn-primary ops-btn-sm">
+    <i class="fas fa-sync-alt"></i> Refresh
+  </button>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
-  <div class="container d-flex justify-between align-center flex-wrap gap-2">
-    <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Restaurant Partners Management</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Approve dining applications, monitor active menus, and manage partners</p>
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
+    <!-- Filter Pills with Live Counts -->
+    <div class="d-flex gap-1 flex-wrap align-center">
+      <a href="/admin/restaurants?status=all{% if q %}&q={{ q }}{% endif %}" class="ops-btn ops-btn-sm {% if status == 'all' or not status %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        All ({{ counts.all if counts else restaurants|length }})
+      </a>
+      <a href="/admin/restaurants?status=pending{% if q %}&q={{ q }}{% endif %}" class="ops-btn ops-btn-sm {% if status == 'pending' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}" style="position:relative">
+        Pending Review ({{ counts.pending if counts else 0 }})
+        {% if counts and counts.pending > 0 %}
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#EF4444; margin-left:3px;"></span>
+        {% endif %}
+      </a>
+      <a href="/admin/restaurants?status=approved{% if q %}&q={{ q }}{% endif %}" class="ops-btn ops-btn-sm {% if status == 'approved' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Approved ({{ counts.approved if counts else 0 }})
+      </a>
+      <a href="/admin/restaurants?status=rejected{% if q %}&q={{ q }}{% endif %}" class="ops-btn ops-btn-sm {% if status == 'rejected' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Rejected ({{ counts.rejected if counts else 0 }})
+      </a>
     </div>
-    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
-      <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
+
+    <!-- Search Form -->
+    <form method="GET" action="/admin/restaurants" class="d-flex gap-1 align-center">
+      {% if status and status != 'all' %}
+        <input type="hidden" name="status" value="{{ status }}">
+      {% endif %}
+      <input type="text" class="ops-form-control" name="q" value="{{ q or '' }}"
+             placeholder="Search name, city, owner..."
+             style="height:36px; padding:0.35rem 0.75rem; font-size:0.85rem; width:220px; border-radius:var(--ops-radius-md); border:1px solid var(--ops-border);">
+      <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm" style="height:36px;">
+        <i class="fas fa-search"></i>
+      </button>
+      {% if q %}
+        <a href="/admin/restaurants?status={{ status or 'all' }}" class="ops-btn ops-btn-outline ops-btn-sm" title="Clear Search" style="height:36px;">
+          <i class="fas fa-times"></i>
+        </a>
+      {% endif %}
+    </form>
   </div>
-</div>
 
-<div class="container py-4">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    
-    <!-- Filter Pills -->
-    <div class="d-flex gap-1 mb-3" style="flex-wrap:wrap">
-      <a href="/admin/restaurants?status=all" class="btn btn-sm {% if status == 'all' or not status %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">All ({{ restaurants|length }})</a>
-      <a href="/admin/restaurants?status=approved" class="btn btn-sm {% if status == 'approved' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Approved</a>
-      <a href="/admin/restaurants?status=pending" class="btn btn-sm {% if status == 'pending' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Pending Approval</a>
-      <a href="/admin/restaurants?status=rejected" class="btn btn-sm {% if status == 'rejected' %}btn-primary{% else %}btn-outline{% endif %}" style="border-radius:var(--radius-pill)">Rejected</a>
-    </div>
-
-    {% if restaurants %}
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
-            <th style="padding:.75rem">Restaurant</th>
-            <th style="padding:.75rem">Cuisine</th>
-            <th style="padding:.75rem">Owner</th>
-            <th style="padding:.75rem">Rating</th>
-            <th style="padding:.75rem">Status</th>
-            <th style="padding:.75rem;text-align:right">Approval Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in restaurants %}
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:.75rem">
-              <div style="display:flex;align-items:center;gap:.75rem">
-                <img src="{{ r.image or 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100&q=80' }}"
-                     alt="{{ r.name }}" style="width:48px;height:48px;border-radius:var(--radius-sm);object-fit:cover"
-                     onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100&q=80'">
-                <div>
-                  <strong style="color:var(--text-dark);display:block">{{ r.name }}</strong>
-                  <small style="color:var(--text-muted)">{{ r.address[:40] }}...</small>
-                </div>
+  {% if restaurants %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Restaurant Outlet</th>
+          <th>Location / City</th>
+          <th>Owner Contact</th>
+          <th>Submitted Date</th>
+          <th>KYC / Documents</th>
+          <th>Status</th>
+          <th style="text-align:right">Approval Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in restaurants %}
+        <tr>
+          <!-- Outlet & Cuisine -->
+          <td>
+            <div style="display:flex;align-items:center;gap:.75rem">
+              <img src="{{ r.image or 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100&q=80' }}"
+                   alt="{{ r.name }}" style="width:46px;height:46px;border-radius:var(--ops-radius-sm);object-fit:cover;border:1px solid var(--ops-border)"
+                   onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=100&q=80'">
+              <div>
+                <strong style="color:var(--ops-foreground);display:block;font-size:0.92rem">{{ r.name }}</strong>
+                <span style="color:var(--ops-orange);font-size:0.8rem;font-weight:600">{{ r.cuisine or 'Multi-Cuisine' }}</span>
+                {% if r.rating %}
+                  <span style="color:var(--ops-amber);font-size:0.78rem;margin-left:0.4rem">★ {{ r.rating }}</span>
+                {% endif %}
               </div>
-            </td>
-            <td style="padding:.75rem">{{ r.cuisine }}</td>
-            <td style="padding:.75rem">{{ r.owner_name or 'System Demo' }}</td>
-            <td style="padding:.75rem;font-weight:700;color:#10B981">★ {{ r.rating }}</td>
-            <td style="padding:.75rem">
-              {% if r.verification_status == 'approved' or r.status == 'approved' %}
-              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">✓ Approved</span>
-              {% elif r.verification_status == 'pending' %}
-              <span class="badge" style="background:#FEF3C7;color:#B45309;font-weight:700">Pending Review</span>
+            </div>
+          </td>
+
+          <!-- City & Area -->
+          <td>
+            <div style="font-weight:600;color:var(--ops-foreground)">{{ r.city or 'Mehsana' }}</div>
+            <div style="color:var(--ops-text-muted);font-size:0.8rem">{{ r.area or 'City Center' }}</div>
+            <small style="color:var(--ops-text-dim);font-size:0.74rem" title="{{ r.address }}">{{ (r.address or '')[:28] }}{% if (r.address or '')|length > 28 %}...{% endif %}</small>
+          </td>
+
+          <!-- Owner / Manager -->
+          <td>
+            <div style="font-weight:600;color:var(--ops-foreground)">{{ r.owner_name or 'Partner' }}</div>
+            <div style="font-size:0.8rem;color:var(--ops-text-muted)"><i class="fas fa-envelope" style="font-size:0.72rem"></i> {{ r.owner_email or r.email or '—' }}</div>
+            <div style="font-size:0.8rem;color:var(--ops-text-muted)"><i class="fas fa-phone" style="font-size:0.72rem"></i> {{ r.owner_phone or r.phone or '—' }}</div>
+          </td>
+
+          <!-- Submitted Date -->
+          <td>
+            <div style="font-size:0.84rem;color:var(--ops-foreground);font-family:var(--ops-font-mono)">
+              {{ (r.created_at or '')[:10] }}
+            </div>
+            <div style="font-size:0.75rem;color:var(--ops-text-dim)">
+              {{ (r.created_at or '')[11:16] }}
+            </div>
+          </td>
+
+          <!-- Verification Documents & FSSAI -->
+          <td>
+            {% if r.fssai_number %}
+              <div style="font-size:0.78rem;font-weight:600;color:var(--ops-foreground);margin-bottom:0.2rem">
+                FSSAI: <span style="font-family:var(--ops-font-mono)">{{ r.fssai_number }}</span>
+              </div>
+            {% endif %}
+            {% if r.verification_doc %}
+              <a href="{{ r.verification_doc }}" target="_blank" class="ops-btn ops-btn-outline ops-btn-sm" style="padding:0.2rem 0.5rem;font-size:0.75rem" title="View Document">
+                <i class="fas fa-file-pdf" style="color:var(--ops-rose)"></i> View KYC
+              </a>
+            {% else %}
+              <span class="ops-badge info" style="font-size:0.72rem">KYC On File</span>
+            {% endif %}
+          </td>
+
+          <!-- Status Badge -->
+          <td>
+            {% if r.verification_status == 'approved' or r.status == 'approved' %}
+              <span class="ops-badge success"><i class="fas fa-check-circle"></i> Approved</span>
+            {% elif r.verification_status == 'pending' %}
+              <span class="ops-badge warning"><i class="fas fa-clock"></i> Pending Review</span>
+            {% else %}
+              <span class="ops-badge danger"><i class="fas fa-times-circle"></i> Rejected</span>
+            {% endif %}
+            
+            <div style="margin-top:0.25rem">
+              {% if r.status == 'active' %}
+                <span style="font-size:0.72rem;color:var(--ops-emerald);font-weight:600"><i class="fas fa-circle" style="font-size:0.5rem"></i> Active</span>
               {% else %}
-              <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Rejected</span>
+                <span style="font-size:0.72rem;color:var(--ops-text-dim);font-weight:600"><i class="fas fa-circle" style="font-size:0.5rem"></i> Inactive</span>
               {% endif %}
-            </td>
-            <td style="padding:.75rem;text-align:right">
-              <div style="display:inline-flex;gap:.5rem">
-                {% if r.verification_status != 'approved' and r.status != 'approved' %}
-                <form method="POST" action="/admin/restaurants/approve/{{ r.id }}" style="display:inline">
-                  <button type="submit" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
-                    Approve
-                  </button>
-                </form>
-                {% endif %}
-                {% if r.verification_status != 'rejected' %}
-                <form method="POST" action="/admin/restaurants/reject/{{ r.id }}" style="display:inline">
-                  <button type="submit" class="btn btn-outline btn-sm" style="color:#EF4444;border-color:#EF4444;border-radius:var(--radius-pill)">
-                    Reject
-                  </button>
-                </form>
-                {% endif %}
-                <a href="/restaurant/{{ r.id }}" target="_blank" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)" title="Preview Public Page">
-                  <i class="fas fa-external-link-alt"></i>
-                </a>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p style="color:var(--text-muted);text-align:center;padding:3rem">No restaurants found in this category.</p>
-    {% endif %}
+            </div>
+          </td>
 
+          <!-- Action Buttons -->
+          <td style="text-align:right">
+            <div class="d-flex gap-1 justify-end flex-wrap">
+              {% if r.verification_status != 'approved' and r.status != 'approved' %}
+              <form method="POST" action="/admin/restaurants/approve/{{ r.id }}" style="display:inline">
+                <button type="submit" class="ops-btn ops-btn-emerald ops-btn-sm" title="Approve Application & List Outlet">
+                  <i class="fas fa-check"></i> Approve
+                </button>
+              </form>
+              {% endif %}
+              
+              {% if r.verification_status != 'rejected' %}
+              <form method="POST" action="/admin/restaurants/reject/{{ r.id }}" style="display:inline">
+                <button type="submit" class="ops-btn ops-btn-danger ops-btn-sm" title="Reject Application">
+                  <i class="fas fa-times"></i> Reject
+                </button>
+              </form>
+              {% endif %}
+
+              <!-- Status Toggle Active/Inactive -->
+              <form method="POST" action="/admin/restaurants/toggle/{{ r.id }}" style="display:inline">
+                <button type="submit" class="ops-btn ops-btn-outline ops-btn-sm" title="Toggle Active / Inactive Status">
+                  <i class="fas fa-power-off"></i>
+                </button>
+              </form>
+
+              <!-- View Public Menu -->
+              <a href="/restaurant/{{ r.id }}" target="_blank" class="ops-btn ops-btn-outline ops-btn-sm" title="Preview Public Menu">
+                <i class="fas fa-external-link-alt"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+  {% else %}
+  <div class="p-5 text-center">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem">🏪</div>
+    <h4 style="color:var(--ops-foreground)">No restaurant applications found</h4>
+    <p style="color:var(--ops-muted);font-size:0.9rem">No restaurant records match the current status filter or search query.</p>
+    {% if q or (status and status != 'all') %}
+      <a href="/admin/restaurants" class="ops-btn ops-btn-outline ops-btn-sm mt-2">
+        <i class="fas fa-undo"></i> Reset Filters
+      </a>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Kitchen Staff Application – Foody Hunters{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper" style="background:linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%);padding:2.5rem 1rem">
+  <div class="auth-card" style="max-width:580px;margin:auto;border:1px solid #99F6E4;box-shadow:0 12px 30px rgba(13, 148, 136, 0.12)">
+    <div class="auth-header" style="background:linear-gradient(135deg, #0D9488, #0F766E);text-align:center;padding:2rem 1.5rem">
+      <div class="auth-logo" style="color:#fff;font-size:1.8rem;font-weight:800">
+        🍳 Foody Hunters Kitchen
+      </div>
+      <div class="auth-subtitle" style="color:rgba(255,255,255,0.92);font-size:0.92rem;margin-top:0.3rem">
+        Restaurant & Hotel Staff Onboarding Application
+      </div>
+    </div>
+
+    <div class="auth-body" style="padding:1.5rem">
+      <div class="alert alert-info mb-3" style="font-size:0.85rem;background:#E0F2FE;border:1px solid #BAE6FD;color:#0369A1;padding:0.75rem 1rem;border-radius:var(--radius-md)">
+        <i class="fas fa-info-circle"></i> <strong>Note:</strong> Staff applications must be linked to a registered restaurant and require restaurant owner or administrator approval before activation.
+      </div>
+
+      <form method="POST" action="/staff/register" id="staffRegisterForm">
+        <!-- Section 1: Staff Details -->
+        <h4 style="font-size:0.92rem;font-weight:700;color:#0F766E;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.4rem">
+          <i class="fas fa-user-circle"></i> 1. Personal & Contact Information
+        </h4>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="name" style="font-weight:600;font-size:0.85rem">Full Name *</label>
+          <div class="input-group">
+            <i class="fas fa-user input-icon"></i>
+            <input type="text" class="form-control" name="name" id="name"
+                   placeholder="e.g. Rahul Sharma" required
+                   value="{{ form.get('name','') }}">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="mb-3">
+          <div class="form-group">
+            <label class="form-label" for="email" style="font-weight:600;font-size:0.85rem">Email Address *</label>
+            <div class="input-group">
+              <i class="fas fa-envelope input-icon"></i>
+              <input type="email" class="form-control" name="email" id="email"
+                     placeholder="rahul@example.com" required
+                     value="{{ form.get('email','') }}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="phone" style="font-weight:600;font-size:0.85rem">Mobile Number *</label>
+            <div class="input-group">
+              <i class="fas fa-phone input-icon"></i>
+              <input type="tel" class="form-control" name="phone" id="phone"
+                     placeholder="9876543210" maxlength="10" required
+                     value="{{ form.get('phone','') }}">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Restaurant & Role Assignment -->
+        <h4 style="font-size:0.92rem;font-weight:700;color:#0F766E;margin:1.25rem 0 0.75rem;padding-top:0.75rem;border-top:1px dashed #99F6E4;display:flex;align-items:center;gap:0.4rem">
+          <i class="fas fa-utensils"></i> 2. Restaurant & Role Assignment
+        </h4>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="restaurant_id" style="font-weight:600;font-size:0.85rem">Select Assigned Restaurant *</label>
+          <div class="input-group">
+            <i class="fas fa-store input-icon" style="color:#0D9488"></i>
+            <select class="form-control" name="restaurant_id" id="restaurant_id" required>
+              <option value="">-- Choose your working restaurant --</option>
+              {% for r in restaurants %}
+              <option value="{{ r.id }}" {% if form.get('restaurant_id')|string == r.id|string %}selected{% endif %}>
+                {{ r.name }} ({{ r.area or 'Mehsana' }} &bull; {{ r.cuisine or 'Multi-Cuisine' }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="mb-3">
+          <div class="form-group">
+            <label class="form-label" for="staff_role" style="font-weight:600;font-size:0.85rem">Staff Position *</label>
+            <select class="form-control" name="staff_role" id="staff_role" required>
+              <option value="kitchen_staff" {% if form.get('staff_role') == 'kitchen_staff' %}selected{% endif %}>🍳 Kitchen Staff (Prep & Cooking)</option>
+              <option value="restaurant_manager" {% if form.get('staff_role') == 'restaurant_manager' %}selected{% endif %}>📋 Restaurant / Shift Manager</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="shift" style="font-weight:600;font-size:0.85rem">Assigned Shift *</label>
+            <select class="form-control" name="shift" id="shift" required>
+              <option value="Full Time" {% if form.get('shift') == 'Full Time' %}selected{% endif %}>Full Time</option>
+              <option value="Morning Shift (7 AM - 3 PM)" {% if form.get('shift') == 'Morning Shift (7 AM - 3 PM)' %}selected{% endif %}>Morning (7 AM - 3 PM)</option>
+              <option value="Evening Shift (3 PM - 11 PM)" {% if form.get('shift') == 'Evening Shift (3 PM - 11 PM)' %}selected{% endif %}>Evening (3 PM - 11 PM)</option>
+              <option value="Night Shift (11 PM - 7 AM)" {% if form.get('shift') == 'Night Shift (11 PM - 7 AM)' %}selected{% endif %}>Night (11 PM - 7 AM)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Section 3: Credentials -->
+        <h4 style="font-size:0.92rem;font-weight:700;color:#0F766E;margin:1.25rem 0 0.75rem;padding-top:0.75rem;border-top:1px dashed #99F6E4;display:flex;align-items:center;gap:0.4rem">
+          <i class="fas fa-lock"></i> 3. Security Credentials
+        </h4>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" class="mb-3">
+          <div class="form-group">
+            <label class="form-label" for="password" style="font-weight:600;font-size:0.85rem">Create Password *</label>
+            <div class="input-group">
+              <i class="fas fa-lock input-icon"></i>
+              <input type="password" class="form-control" name="password" id="password"
+                     placeholder="Min. 6 characters" required autocomplete="new-password">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="confirm_password" style="font-weight:600;font-size:0.85rem">Confirm Password *</label>
+            <div class="input-group">
+              <i class="fas fa-lock input-icon"></i>
+              <input type="password" class="form-control" name="confirm_password" id="confirm_password"
+                     placeholder="Repeat password" required autocomplete="new-password">
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn w-100" style="background:#0D9488;color:#fff;border:none;justify-content:center;padding:0.85rem 1rem;font-size:1rem;font-weight:700;border-radius:var(--radius-md);box-shadow:0 4px 12px rgba(13, 148, 136, 0.25)">
+          <i class="fas fa-paper-plane"></i> Submit Staff Application
+        </button>
+      </form>
+    </div>
+
+    <div class="auth-footer" style="text-align:center;padding:1.15rem;border-top:1px solid #99F6E4;font-size:0.9rem;background:#F0FDFA">
+      Already have an approved kitchen staff account? <a href="/staff/login" style="color:#0D9488;font-weight:700">Login to Kitchen Desk</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

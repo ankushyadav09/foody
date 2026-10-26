@@ -1,0 +1,191 @@
+{% extends "ops_base.html" %}
+{% block title %}Kitchen Staff Governance – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}👥 Kitchen Staff Governance{% endblock %}
+{% block page_subtitle %}Centralized management of restaurant and hotel staff &bull; Roles, verification, and outlet assignments{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+  <a href="/admin/restaurants" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-store"></i> Restaurant Fleet
+  </a>
+  <button onclick="location.reload()" class="ops-btn ops-btn-primary ops-btn-sm">
+    <i class="fas fa-sync-alt"></i> Refresh
+  </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
+    <!-- Filter and Search Bar -->
+    <form method="GET" action="/admin/staff" class="d-flex justify-between align-center flex-wrap gap-2 w-100">
+      <div class="d-flex gap-1 flex-wrap">
+        <a href="/admin/staff?status=all&restaurant_id={{ rest_id }}&q={{ q }}" class="ops-btn ops-btn-sm {% if status == 'all' or not status %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">All Statuses</a>
+        <a href="/admin/staff?status=approved&restaurant_id={{ rest_id }}&q={{ q }}" class="ops-btn ops-btn-sm {% if status == 'approved' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">Approved</a>
+        <a href="/admin/staff?status=pending&restaurant_id={{ rest_id }}&q={{ q }}" class="ops-btn ops-btn-sm {% if status == 'pending' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+          Pending {% if pending_count > 0 %}<span class="ops-badge danger" style="margin-left:0.3rem">{{ pending_count }}</span>{% endif %}
+        </a>
+        <a href="/admin/staff?status=suspended&restaurant_id={{ rest_id }}&q={{ q }}" class="ops-btn ops-btn-sm {% if status == 'suspended' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">Suspended</a>
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <select name="restaurant_id" class="form-control" style="width:200px" onchange="this.form.submit()">
+          <option value="all">All Restaurants</option>
+          {% for r in restaurants %}
+          <option value="{{ r.id }}" {% if rest_id|string == r.id|string %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+        <div class="d-flex gap-1">
+          <input type="text" class="form-control" name="q" value="{{ q or '' }}" placeholder="Search name, email, restaurant..." style="width:220px">
+          <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm"><i class="fas fa-search"></i></button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  {% if staff_members %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Staff Member</th>
+          <th>Assigned Restaurant</th>
+          <th>Position</th>
+          <th>Shift</th>
+          <th>Status</th>
+          <th>Joined</th>
+          <th style="text-align:right">Governance Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in staff_members %}
+        <tr>
+          <td>
+            <div style="font-weight:700;color:var(--ops-foreground)">{{ s.name }}</div>
+            <div style="font-size:0.8rem;color:var(--ops-muted)">{{ s.email }} &bull; {{ s.phone or '–' }}</div>
+          </td>
+          <td>
+            <div style="font-weight:600;color:var(--ops-foreground)"><i class="fas fa-store" style="color:var(--ops-orange);margin-right:0.3rem"></i> {{ s.restaurant_name }}</div>
+          </td>
+          <td>
+            <span class="ops-badge cyan">
+              {{ s.staff_role|replace('_', ' ')|title }}
+            </span>
+          </td>
+          <td>
+            <span class="ops-badge outline">{{ s.shift or 'Full Time' }}</span>
+          </td>
+          <td>
+            {% if s.status == 'approved' %}
+              <span class="ops-badge success"><i class="fas fa-check-circle"></i> Approved</span>
+            {% elif s.status == 'pending' %}
+              <span class="ops-badge warning"><i class="fas fa-clock"></i> Pending Review</span>
+            {% elif s.status == 'suspended' %}
+              <span class="ops-badge danger"><i class="fas fa-ban"></i> Suspended</span>
+            {% else %}
+              <span class="ops-badge outline">{{ s.status|title }}</span>
+            {% endif %}
+          </td>
+          <td style="font-size:0.82rem;color:var(--ops-muted)">
+            {{ s.created_at|string }}
+          </td>
+          <td style="text-align:right">
+            <div class="d-flex gap-1 justify-end flex-wrap">
+              {% if s.status == 'pending' %}
+                <form method="POST" action="/admin/staff/verify/{{ s.id }}/approved" style="display:inline">
+                  <button type="submit" class="ops-btn ops-btn-emerald ops-btn-sm" title="Approve Staff Member">
+                    <i class="fas fa-check"></i> Approve
+                  </button>
+                </form>
+                <form method="POST" action="/admin/staff/verify/{{ s.id }}/rejected" style="display:inline">
+                  <button type="submit" class="ops-btn ops-btn-danger ops-btn-sm" title="Reject Staff Application">
+                    <i class="fas fa-times"></i> Reject
+                  </button>
+                </form>
+              {% else %}
+                <form method="POST" action="/admin/staff/toggle/{{ s.id }}" style="display:inline">
+                  {% if s.status == 'approved' %}
+                    <button type="submit" class="ops-btn ops-btn-outline ops-btn-sm" title="Suspend staff account" style="color:var(--ops-rose)">
+                      <i class="fas fa-pause"></i> Suspend
+                    </button>
+                  {% else %}
+                    <button type="submit" class="ops-btn ops-btn-emerald ops-btn-sm" title="Activate staff account">
+                      <i class="fas fa-play"></i> Activate
+                    </button>
+                  {% endif %}
+                </form>
+              {% endif %}
+
+              <!-- Reassign Button & Modal Trigger -->
+              <button type="button" class="ops-btn ops-btn-outline ops-btn-sm" title="Reassign Restaurant Outlet" onclick="openReassignModal({{ s.id }}, '{{ s.name|escape }}', '{{ s.restaurant_name|escape }}')">
+                <i class="fas fa-exchange-alt"></i> Reassign
+              </button>
+
+              <!-- Delete Staff Button -->
+              <form method="POST" action="/admin/staff/delete/{{ s.id }}" style="display:inline" onsubmit="return confirm('Permanently remove staff account {{ s.name }}?')">
+                <button type="submit" class="ops-btn ops-btn-danger ops-btn-sm" title="Delete Staff Account">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="p-5 text-center">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem">👨‍🍳</div>
+    <h4 style="color:var(--ops-foreground)">No Staff Members Found</h4>
+    <p style="color:var(--ops-muted);font-size:0.9rem">No restaurant staff records match your selected filter criteria.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── REASSIGN RESTAURANT MODAL ────────────────────────────── -->
+<div id="reassignModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--ops-surface);border:1px solid var(--ops-border);border-radius:var(--radius-lg);max-width:480px;width:100%;box-shadow:var(--shadow-xl);overflow:hidden">
+    <div class="d-flex justify-between align-center p-3" style="border-bottom:1px solid var(--border-light);background:var(--ops-surface-hover)">
+      <h4 style="margin:0;font-weight:700;color:var(--ops-foreground)"><i class="fas fa-exchange-alt" style="color:var(--ops-cyan)"></i> Reassign Restaurant Outlet</h4>
+      <button type="button" onclick="closeReassignModal()" style="background:none;border:none;font-size:1.25rem;color:var(--ops-muted);cursor:pointer">&times;</button>
+    </div>
+    <form id="reassignForm" method="POST" action="" class="p-4">
+      <p style="font-size:0.9rem;color:var(--ops-muted);margin-bottom:1.25rem">
+        Reassigning <strong id="reassignStaffName" style="color:var(--ops-foreground)"></strong> from <strong id="reassignCurrentRest" style="color:var(--ops-orange)"></strong> to a new restaurant outlet.
+      </p>
+
+      <div class="form-group mb-4">
+        <label class="form-label" style="font-weight:600;font-size:0.85rem">Select Destination Restaurant *</label>
+        <select name="restaurant_id" class="form-control" required>
+          <option value="">-- Choose destination restaurant --</option>
+          {% for r in restaurants %}
+          <option value="{{ r.id }}">{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="d-flex justify-end gap-2">
+        <button type="button" class="ops-btn ops-btn-outline" onclick="closeReassignModal()">Cancel</button>
+        <button type="submit" class="ops-btn ops-btn-primary"><i class="fas fa-check"></i> Confirm Reassignment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openReassignModal(staffId, staffName, currentRest) {
+  document.getElementById('reassignForm').action = '/admin/staff/reassign/' + staffId;
+  document.getElementById('reassignStaffName').innerText = staffName;
+  document.getElementById('reassignCurrentRest').innerText = currentRest;
+  document.getElementById('reassignModal').style.display = 'flex';
+}
+function closeReassignModal() {
+  document.getElementById('reassignModal').style.display = 'none';
+}
+</script>
+{% endblock %}

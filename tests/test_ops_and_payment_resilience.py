@@ -102,7 +102,7 @@ class TestOpsAndPaymentResilience(unittest.TestCase):
         # 3. Customer directly accessing privileged admin dashboard -> denied
         res = self.client.get('/admin/dashboard', follow_redirects=False)
         self.assertEqual(res.status_code, 302)
-        self.assertEqual(res.headers['Location'], '/')
+        self.assertTrue('/admin/gate' in res.headers['Location'] or res.headers['Location'] == '/')
 
         # 4. Customer directly accessing privileged restaurant dashboard -> denied
         res = self.client.get('/restaurant/dashboard', follow_redirects=False)
@@ -119,6 +119,7 @@ class TestOpsAndPaymentResilience(unittest.TestCase):
         with self.client.session_transaction() as sess:
             sess['user_id'] = admin_user['id']
             sess['role'] = 'admin'
+            sess['admin_gate_passed'] = True
         res = self.client.get('/ops', follow_redirects=False)
         self.assertEqual(res.status_code, 302)
         self.assertIn('/admin/dashboard', res.headers['Location'])
@@ -148,6 +149,7 @@ class TestOpsAndPaymentResilience(unittest.TestCase):
             sess['user_id'] = admin_user['id']
             sess['role'] = 'admin'
             sess['user_name'] = 'Super Admin'
+            sess['admin_gate_passed'] = True
 
         # Record a test audit log
         from utils.helpers import log_activity

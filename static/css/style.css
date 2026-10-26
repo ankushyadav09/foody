@@ -788,37 +788,502 @@ input, select, textarea { font-family: inherit; }
 .card-number-input { letter-spacing: .15em; font-size: 1.1rem; }
 .upi-qr { border: 2px dashed var(--primary); border-radius: var(--radius-lg); padding: 2rem; text-align: center; }
 
-/* ── RESPONSIVE ────────────────────────────────────────────── */
+/* ── COMPREHENSIVE RESPONSIVE ENGINE (MOBILE-FIRST ARCHITECTURE) ── */
+
+/* Global Viewport Containment & Touch Safeguards */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body.nav-locked {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Touch Target Standards (min 44px) */
+button, input, select, textarea, .btn, .nav-link, .category-card, .cart-btn, .hamburger {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent automatic input zoom on iOS Safari */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Responsive Containers & Utilities */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+.responsive-table-container,
+[style*="overflow-x:auto"],
+[style*="overflow-x: auto"] {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-table-container table,
+[style*="overflow-x:auto"] table,
+[style*="overflow-x: auto"] table,
+.data-table {
+  min-width: 580px;
+}
+
+.d-none { display: none !important; }
+.d-block { display: block !important; }
+.d-flex { display: flex !important; }
+
+/* Backdrop Overlay for Mobile Navigation Drawer */
+.nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 998;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nav-backdrop.show {
+  display: block;
+  opacity: 1;
+}
+
+/* Animated Hamburger Transformation */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 1001;
+}
+.hamburger span {
+  display: block;
+  width: 24px;
+  height: 2.5px;
+  background: var(--text-dark);
+  border-radius: 2px;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+  transform-origin: center;
+}
+.hamburger.open span:nth-child(1) {
+  transform: translateY(7.5px) rotate(45deg);
+}
+.hamburger.open span:nth-child(2) {
+  opacity: 0;
+}
+.hamburger.open span:nth-child(3) {
+  transform: translateY(-7.5px) rotate(-45deg);
+}
+
+/* Mobile Search Drawer Input */
+.mobile-nav-search {
+  display: none;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+}
+.mobile-nav-search .search-box {
+  display: flex;
+  align-items: center;
+  background: var(--border-light);
+  border-radius: var(--radius-pill);
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+}
+.mobile-nav-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 16px;
+  min-width: 0;
+}
+.mobile-nav-search button {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── TABLET & SMALL LAPTOP BREAKPOINT (<= 1024px) ─────────────── */
 @media (max-width: 1024px) {
-  .hero-inner      { grid-template-columns: 1fr; text-align: center; }
-  .hero-img-wrap   { display: none; }
-  .hero-subtitle   { max-width: 100%; }
-  .menu-layout     { grid-template-columns: 1fr; }
-  .menu-sidebar    { display: none; }
-  .cart-layout     { grid-template-columns: 1fr; }
+  .hero-inner {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 2rem;
+  }
+  .hero-img-wrap { display: none; }
+  .hero-subtitle { max-width: 100%; margin-inline: auto; }
+  .hero-search-box { max-width: 600px; margin-inline: auto; }
+  .hero-inner .d-flex.gap-3 { justify-content: center; }
+
+  /* 2-column layouts fallback to 1-column */
+  .menu-layout { grid-template-columns: 1fr; }
+  .cart-layout { grid-template-columns: 1fr; }
   .checkout-layout { grid-template-columns: 1fr; }
-  .footer-grid     { grid-template-columns: 1fr 1fr; gap: 2rem; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+
+  /* Universal inline grid column collapses */
+  [style*="grid-template-columns:1fr 380px"],
+  [style*="grid-template-columns: 1fr 380px"],
+  [style*="grid-template-columns:1fr 400px"],
+  [style*="grid-template-columns: 1fr 400px"],
+  [style*="grid-template-columns:250px 1fr"],
+  [style*="grid-template-columns: 250px 1fr"],
+  .tracking-layout,
+  .profile-layout,
+  .cart-grid-layout,
+  .checkout-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
+
+/* ── STANDARD MOBILE & TABLET PORTRAIT BREAKPOINT (<= 768px) ── */
 @media (max-width: 768px) {
-  .navbar-nav { display: none; position: fixed; top: 70px; inset-inline: 0; background: #fff; flex-direction: column; border-bottom: 1px solid var(--border); padding: 1rem; box-shadow: var(--shadow-md); }
-  .navbar-nav.open { display: flex; }
-  .hamburger { display: flex; }
-  .navbar-search { max-width: 200px; }
-  .hero-title { font-size: 1.8rem; }
-  .hero-search-row { flex-direction: column; }
-  .section-py { padding: 3rem 0; }
-  .stats-grid { grid-template-columns: 1fr 1fr; }
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: none; }
-  .dashboard-main { margin-left: 0; }
-  .footer-grid { grid-template-columns: 1fr; }
-  .order-details-grid { grid-template-columns: 1fr; }
-  .restaurant-grid { grid-template-columns: 1fr; }
-  .category-grid   { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
-  .data-table { display: block; overflow-x: auto; }
+  .navbar-inner {
+    height: 64px;
+    padding-inline: 1rem;
+    gap: 0.75rem;
+  }
+  .navbar-brand {
+    font-size: 1.35rem;
+  }
+  .hamburger {
+    display: flex;
+  }
+
+  /* Slide-in Mobile Drawer */
+  .navbar-nav {
+    display: flex;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: -320px;
+    width: min(320px, 86vw);
+    height: 100vh;
+    background: #ffffff;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.35rem;
+    padding: 4.75rem 1.25rem 2rem;
+    box-shadow: -8px 0 32px rgba(15, 23, 42, 0.25);
+    z-index: 1000;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transition: right 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .navbar-nav.open {
+    right: 0 !important;
+  }
+  .navbar-nav li {
+    width: 100%;
+  }
+  .nav-link {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.98rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .navbar-nav .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
+  .mobile-nav-search {
+    display: block;
+  }
+
+  /* Swiggy/Zomato Horizontal Category Carousel */
+  .category-grid {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0.85rem;
+    padding-bottom: 0.5rem;
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+  }
+  .category-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .category-card {
+    flex: 0 0 94px !important;
+    min-width: 94px !important;
+    padding: 1rem 0.5rem;
+    scroll-snap-align: start;
+  }
+  .category-icon { font-size: 1.75rem; }
+  .category-name { font-size: 0.78rem; }
+
+  /* Restaurant Cards on Mobile */
+  .restaurant-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .restaurant-img-wrap {
+    height: 175px;
+  }
+
+  /* Swiggy/Zomato Style Mobile Food Cards */
+  .food-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .food-card {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    justify-content: space-between !important;
+    padding: 1rem !important;
+    gap: 0.85rem !important;
+  }
+
+  /* Cart Items Mobile Stacking */
+  .cart-item-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+    padding: 1rem 0 !important;
+  }
+  .cart-item-row > div:last-child {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border-light);
+  }
+
+  /* Sticky Category Pill Bar on Restaurant Detail */
+  .menu-nav-bar {
+    top: 64px;
+    padding: 0.5rem 0;
+  }
+  .menu-nav-bar .container {
+    gap: 0.5rem;
+    padding-inline: 0.75rem;
+  }
+
+  /* Hero & Headings */
+  .hero {
+    margin-top: 64px;
+    min-height: auto;
+    padding: 3rem 0;
+  }
+  .hero-title {
+    font-size: 1.9rem;
+    line-height: 1.25;
+  }
+  .hero-search-row {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .section-py {
+    padding: 2.5rem 0;
+  }
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+  .data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Inputs minimum 16px font-size to prevent iOS Safari auto-zoom */
+  input, select, textarea, .form-control {
+    font-size: 16px !important;
+  }
+
+  /* Forms and Multi-Column Grids */
+  [style*="grid-template-columns:1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr 1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr 1fr 1fr"],
+  [style*="grid-template-columns:2.2fr 1fr"],
+  [style*="grid-template-columns: 2.2fr 1fr"],
+  [style*="grid-template-columns:2.3fr 1fr"],
+  [style*="grid-template-columns: 2.3fr 1fr"],
+  [style*="grid-template-columns:2fr 1fr"],
+  [style*="grid-template-columns: 2fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Modals */
+  .modal-box {
+    width: 92% !important;
+    max-width: 92% !important;
+    margin: 1rem auto !important;
+    padding: 1.25rem !important;
+  }
+
+  /* Toast Notifications */
+  .toast-container {
+    right: 12px;
+    left: 12px;
+    bottom: 16px;
+    max-width: calc(100% - 24px);
+  }
+  .toast {
+    width: 100%;
+    max-width: 100%;
+  }
 }
+
+/* ── NARROW MOBILE PHONES BREAKPOINT (<= 640px) ──────────────── */
+@media (max-width: 640px) {
+  /* Hide Desktop Navbar Search Bar to prevent header crowding */
+  .navbar-search {
+    display: none !important;
+  }
+
+  /* Overrides for minmax cards */
+  [style*="minmax(320px"],
+  [style*="minmax(280px"],
+  [style*="minmax(260px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .page-header {
+    padding: 1.75rem 0 !important;
+  }
+  .page-header h1 {
+    font-size: 1.5rem !important;
+  }
+
+  /* GPS Tracking Visual Route Line */
+  #fallbackCanvas {
+    padding: 1rem !important;
+  }
+  #fallbackCanvas > div:nth-child(2) {
+    padding: 0 0.5rem !important;
+  }
+  #fallbackCanvas #routeProgressFill {
+    left: 2rem !important;
+    right: 2rem !important;
+  }
+}
+
+/* ── SMALL MOBILE PHONES (320px–375px) ───────────────────────── */
 @media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  .food-grid  { grid-template-columns: 1fr; }
-  .hero-search-box { padding: 1rem; }
+  .container {
+    padding-inline: 0.85rem;
+  }
+  .hero-title {
+    font-size: 1.6rem;
+  }
+  .hero-search-box {
+    padding: 0.85rem;
+  }
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .restaurant-img-wrap {
+    height: 155px;
+  }
+  .payment-body {
+    padding: 1.25rem;
+  }
+  .auth-wrapper {
+    padding: 1.25rem 0.75rem;
+  }
+  .auth-body {
+    padding: 1.25rem 1rem !important;
+  }
+  .auth-header {
+    padding: 1.75rem 1rem !important;
+  }
+  .role-tabs-wrap {
+    margin: 0 0.5rem 1.25rem !important;
+  }
+  .role-tab-btn {
+    font-size: 0.75rem !important;
+    padding: 0.5rem 0.25rem !important;
+  }
 }
+
+@media (max-width: 360px) {
+  .container {
+    padding-inline: 0.65rem;
+  }
+  .navbar-inner {
+    padding-inline: 0.65rem;
+  }
+  .navbar-brand {
+    font-size: 1.15rem;
+  }
+  .btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  .food-card {
+    padding: 0.75rem !important;
+    gap: 0.6rem !important;
+  }
+  .food-card > div:last-child {
+    width: 90px !important;
+  }
+  .food-card > div:last-child > div:first-child {
+    width: 90px !important;
+    height: 80px !important;
+  }
+  .role-tab-btn {
+    font-size: 0.7rem !important;
+    padding: 0.45rem 0.15rem !important;
+  }
+}
+

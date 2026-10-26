@@ -1,89 +1,105 @@
-{% extends "base.html" %}
-{% block title %}System Analytics & Reports – Foody Hunters Admin{% endblock %}
+{% extends "ops_base.html" %}
+{% block title %}Business Intelligence & Reports – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}📊 Business Intelligence & Analytics{% endblock %}
+{% block page_subtitle %}Ecosystem analytics, GMV trends, top performing restaurant partners, and order velocity{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+  <button onclick="window.print()" class="ops-btn ops-btn-primary ops-btn-sm">
+    <i class="fas fa-file-pdf"></i> Export Report
+  </button>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
-  <div class="container d-flex justify-between align-center flex-wrap gap-2">
-    <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Business Intelligence & Reports</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Academic demonstration reporting on sales volume, top partners, and dishes</p>
-    </div>
-    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
-      <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
-  </div>
-</div>
-
-<div class="container py-4">
+<!-- Top Level Grids: Top Restaurants & Top Foods -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:1.5rem;margin-bottom:1.5rem">
   
-  <!-- Top Level Grids: Top Restaurants & Top Foods -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2rem">
-    
-    <!-- Top Restaurants by Sales -->
-    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem">
-        <i class="fas fa-trophy text-primary"></i> Top Restaurants by Delivered Revenue
-      </h2>
-      
-      {% if top_restaurants %}
-      <div style="display:flex;flex-direction:column;gap:.75rem">
-        {% for r in top_restaurants %}
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border-light)">
-          <div>
-            <strong style="color:var(--text-dark)">{{ loop.index }}. {{ r.name }}</strong>
-            <small style="color:var(--text-muted);display:block">{{ r.orders }} orders completed</small>
-          </div>
-          <div style="font-weight:800;color:#10B981;font-size:1.05rem">
-            ₹{{ "%.2f"|format(r.revenue) }}
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <p style="color:var(--text-muted);padding:1rem 0">No delivered revenue records yet.</p>
-      {% endif %}
+  <!-- Top Restaurants by Sales -->
+  <div class="ops-card">
+    <div class="ops-card-header">
+      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff;display:flex;align-items:center;gap:0.5rem">
+        <i class="fas fa-trophy" style="color:var(--ops-amber)"></i> Top Partner Kitchens by Revenue
+      </h3>
+      <small style="color:var(--ops-text-dim)">Aggregated delivered order GMV</small>
     </div>
-
-    <!-- Most Popular Dishes -->
-    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem">
-        <i class="fas fa-fire text-primary"></i> Top Selling Dishes by Order Quantity
-      </h2>
-
-      {% if popular_foods %}
-      <div style="display:flex;flex-direction:column;gap:.75rem">
-        {% for f in popular_foods %}
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--border-light)">
-          <div>
-            <strong style="color:var(--text-dark)">{{ loop.index }}. {{ f.name }}</strong>
-          </div>
-          <span class="badge badge-primary" style="font-size:.85rem;font-weight:700">
-            {{ f.total_qty }} Sold
-          </span>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <p style="color:var(--text-muted);padding:1rem 0">No items sold yet.</p>
-      {% endif %}
-    </div>
-
-  </div>
-
-  <!-- Status Distribution Breakdown -->
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm);margin-bottom:2rem">
-    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Order Status Distribution</h2>
     
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:1rem">
-      {% for s in by_status %}
-      <div style="background:#FAFAFA;border-radius:var(--radius-md);padding:1.25rem;border:1px solid var(--border-light);text-align:center">
-        <div style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">{{ s.order_status }}</div>
-        <div style="font-size:1.8rem;font-weight:900;color:var(--primary);margin:.2rem 0">{{ s.cnt }}</div>
-        <span style="font-size:.78rem;color:var(--text-muted)">Orders in state</span>
+    {% if top_restaurants %}
+    <div style="display:flex;flex-direction:column;gap:0.75rem;padding-top:0.5rem">
+      {% for r in top_restaurants %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div>
+          <strong style="color:var(--ops-foreground);display:block">{{ loop.index }}. {{ r.name }}</strong>
+          <small style="color:var(--ops-muted)"><i class="fas fa-receipt"></i> {{ r.orders }} orders completed</small>
+        </div>
+        <div style="font-weight:800;color:var(--ops-emerald);font-size:1.05rem;font-family:var(--ops-font-mono)">
+          ₹{{ "%.2f"|format(r.revenue) }}
+        </div>
       </div>
       {% endfor %}
     </div>
+    {% else %}
+    <div class="ops-empty-state">
+      <i class="fas fa-chart-line ops-empty-icon"></i>
+      <div class="ops-empty-title">No Revenue Data Yet</div>
+      <div class="ops-empty-desc">Completed orders will populate the top partner leaderboards.</div>
+    </div>
+    {% endif %}
   </div>
 
+  <!-- Most Popular Dishes -->
+  <div class="ops-card">
+    <div class="ops-card-header">
+      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff;display:flex;align-items:center;gap:0.5rem">
+        <i class="fas fa-fire" style="color:var(--ops-rose)"></i> Top Selling Menu Items
+      </h3>
+      <small style="color:var(--ops-text-dim)">Ranked by total units purchased</small>
+    </div>
+
+    {% if popular_foods %}
+    <div style="display:flex;flex-direction:column;gap:0.75rem;padding-top:0.5rem">
+      {% for f in popular_foods %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div>
+          <strong style="color:var(--ops-foreground);display:block">{{ loop.index }}. {{ f.name }}</strong>
+          <small style="color:var(--ops-muted)">Dish ID #{{ f.id or loop.index }}</small>
+        </div>
+        <span class="ops-badge" style="background:rgba(255,107,0,0.18);color:var(--ops-primary);font-weight:700;border:1px solid rgba(255,107,0,0.3)">
+          {{ f.total_qty }} Sold
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="ops-empty-state">
+      <i class="fas fa-utensils ops-empty-icon"></i>
+      <div class="ops-empty-title">No Dish Sales Yet</div>
+      <div class="ops-empty-desc">Customer order line items will display bestsellers here.</div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Status Distribution Breakdown -->
+<div class="ops-card mb-4">
+  <div class="ops-card-header">
+    <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">Order Pipeline & State Distribution</h3>
+    <small style="color:var(--ops-text-dim)">Total system orders partitioned by current operational phase</small>
+  </div>
+  
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:1rem;margin-top:1rem">
+    {% for s in by_status %}
+    <div style="background:rgba(255,255,255,0.03);border-radius:var(--ops-radius-md);padding:1.25rem;border:1px solid rgba(255,255,255,0.08);text-align:center">
+      <div style="font-size:0.78rem;color:var(--ops-text-dim);text-transform:uppercase;font-weight:700">{{ s.order_status }}</div>
+      <div style="font-size:1.8rem;font-weight:900;color:var(--ops-primary);margin:0.25rem 0;font-family:var(--ops-font-mono)">{{ s.cnt }}</div>
+      <span style="font-size:0.75rem;color:var(--ops-muted)">Orders in pipeline</span>
+    </div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}

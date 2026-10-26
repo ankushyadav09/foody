@@ -1,44 +1,48 @@
-{% extends "base.html" %}
-{% block title %}Register Delivery Rider – Foody Hunters Admin{% endblock %}
+{% extends "ops_base.html" %}
+{% block title %}Register Courier Rider – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}🛵 Onboard New Courier Rider{% endblock %}
+{% block page_subtitle %}Provision a delivery partner account with direct fleet authorization credentials{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/delivery-partners" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Back to Fleet
+  </a>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
-  <div class="container d-flex justify-between align-center flex-wrap gap-2">
-    <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Add New Delivery Partner</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Register a fleet driver account with login credentials</p>
+<div style="max-width:620px;margin:0 auto">
+  <div class="ops-card mb-4">
+    <div class="ops-card-header">
+      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">Courier Onboarding Profile</h3>
+      <small style="color:var(--ops-text-dim)">Fill in credentials to generate active courier login</small>
     </div>
-    <a href="/admin/delivery-partners" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
-      <i class="fas fa-arrow-left"></i> Back to Fleet
-    </a>
-  </div>
-</div>
 
-<div class="container py-4" style="max-width:600px">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    <form method="POST" action="/admin/delivery-partners/add">
-      <div class="form-group mb-3">
-        <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Rider Full Name *</label>
-        <input type="text" class="form-control" name="name" required placeholder="e.g. Vikram Singh">
+    <form method="POST" action="/admin/delivery-partners/add" style="display:flex;flex-direction:column;gap:1.2rem">
+      <div class="ops-form-group">
+        <label class="ops-label">Rider Full Name *</label>
+        <input type="text" class="ops-input" name="name" required placeholder="e.g. Vikram Singh">
       </div>
 
-      <div class="form-group mb-3">
-        <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Email Address (Login ID) *</label>
-        <input type="email" class="form-control" name="email" required placeholder="e.g. rider@foodyhunters.com">
+      <div class="ops-form-group">
+        <label class="ops-label">Email Address (Login ID) *</label>
+        <input type="email" class="ops-input" name="email" required placeholder="e.g. rider@foodyhunters.com">
       </div>
 
-      <div class="form-group mb-3">
-        <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Mobile Phone Number *</label>
-        <input type="text" class="form-control" name="phone" required placeholder="e.g. 9812345678">
+      <div class="ops-form-group">
+        <label class="ops-label">Mobile Phone Number *</label>
+        <input type="text" class="ops-input" name="phone" required placeholder="e.g. 9812345678">
       </div>
 
-      <div class="form-group mb-4">
-        <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Temporary Password</label>
-        <input type="text" class="form-control" name="password" value="password123" required>
+      <div class="ops-form-group">
+        <label class="ops-label">Initial Access Password *</label>
+        <input type="text" class="ops-input" name="password" value="password123" required>
       </div>
 
-      <button type="submit" class="btn btn-primary btn-lg w-100" style="justify-content:center;border-radius:var(--radius-pill);font-weight:700">
-        Register Delivery Partner
+      <button type="submit" class="ops-btn ops-btn-primary" style="justify-content:center;padding:0.75rem;font-weight:700">
+        <i class="fas fa-user-check"></i> Register Delivery Partner
       </button>
     </form>
   </div>

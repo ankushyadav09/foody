@@ -1,0 +1,101 @@
+{% extends "ops_base.html" %}
+{% block title %}Kitchen Dish Stock (86-List) – {{ restaurant.name }}{% endblock %}
+
+{% block page_title %}🥘 Kitchen Stock & Dish Availability{% endblock %}
+{% block page_subtitle %}Manage live dish stock for {{ restaurant.name }} &bull; Instantly 86 items when ingredients run out{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/staff/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Kitchen Desk
+  </a>
+  <a href="/staff/orders" class="ops-btn ops-btn-primary ops-btn-sm">
+    <i class="fas fa-receipt"></i> Kitchen Queue
+  </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h3 class="ops-card-title"><i class="fas fa-toggle-on" style="color:var(--ops-cyan)"></i> Menu Items Availability (86-List)</h3>
+      <p style="font-size:0.84rem;color:var(--ops-muted);margin-top:0.2rem">Toggling a dish to "Out of Stock" immediately prevents customers from ordering it.</p>
+    </div>
+    <span class="ops-badge info">{{ food_items|length }} Total Dishes</span>
+  </div>
+
+  {% if food_items %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Dish Name</th>
+          <th>Category</th>
+          <th>Type</th>
+          <th>Price</th>
+          <th>Prep Time</th>
+          <th>Live Status</th>
+          <th style="text-align:right">Stock Toggle</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in food_items %}
+        <tr>
+          <td>
+            <div style="font-weight:700;color:var(--ops-foreground)">{{ item.name }}</div>
+            {% if item.description %}
+            <div style="font-size:0.78rem;color:var(--ops-muted);max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              {{ item.description }}
+            </div>
+            {% endif %}
+          </td>
+          <td>
+            <span class="ops-badge outline">{{ item.category_name or 'General' }}</span>
+          </td>
+          <td>
+            {% if item.veg_type == 'veg' %}
+              <span class="ops-badge success"><i class="fas fa-leaf"></i> Veg</span>
+            {% else %}
+              <span class="ops-badge danger"><i class="fas fa-drumstick-bite"></i> Non-Veg</span>
+            {% endif %}
+          </td>
+          <td style="font-weight:700">₹{{ "%.2f"|format(item.price) }}</td>
+          <td>
+            <span style="font-size:0.84rem;color:var(--ops-muted)"><i class="fas fa-clock"></i> {{ item.preparation_time or 20 }} mins</span>
+          </td>
+          <td>
+            {% if item.availability == 1 %}
+              <span class="ops-badge success"><i class="fas fa-check-circle"></i> In Stock</span>
+            {% else %}
+              <span class="ops-badge danger"><i class="fas fa-ban"></i> Out of Stock (86'd)</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right">
+            <form method="POST" action="/staff/menu/toggle-availability" style="display:inline-block">
+              <input type="hidden" name="food_item_id" value="{{ item.id }}">
+              {% if item.availability == 1 %}
+                <button type="submit" class="ops-btn ops-btn-danger ops-btn-sm" title="Mark Out of Stock">
+                  <i class="fas fa-ban"></i> Mark 86'd
+                </button>
+              {% else %}
+                <button type="submit" class="ops-btn ops-btn-emerald ops-btn-sm" title="Restore to Available">
+                  <i class="fas fa-check"></i> Restore Stock
+                </button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="p-5 text-center">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem">🍽️</div>
+    <h4 style="color:var(--ops-foreground)">No dishes listed yet</h4>
+    <p style="color:var(--ops-muted);font-size:0.9rem">Your restaurant owner has not added any dishes to the menu yet.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

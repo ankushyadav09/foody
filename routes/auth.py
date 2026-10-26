@@ -6,22 +6,24 @@ Handles: Register, Login, Logout, Password reset
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import execute_query
-from utils.helpers import validate_email, validate_phone, validate_password
+from utils.helpers import (validate_email, validate_phone, validate_password,
+                           get_customer_auth, set_customer_auth, clear_customer_auth,
+                           set_restaurant_auth, set_delivery_auth, set_staff_auth,
+                           clear_restaurant_auth, clear_delivery_auth, clear_staff_auth)
 
 auth_bp = Blueprint('auth', __name__)
 
 
 # ─────────────────────────────────────────────
-# REGISTER (Multi-Role: Customer, Restaurant Owner, Delivery Partner)
+# CUSTOMER REGISTER
 # ─────────────────────────────────────────────
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    """Multi-role registration page."""
-    if 'user_id' in session:
-        return _redirect_by_role(session.get('role'))
-
-    role_param = request.args.get('role', 'customer')
+    """Customer registration only. Partner onboarding is separated."""
+    # Only redirect if ALREADY authenticated as a customer
+    if get_customer_auth():
+        return redirect(url_for('main.index'))
 
     if request.method == 'POST':
         name     = request.form.get('name', '').strip()
@@ -29,20 +31,13 @@ def register():
         phone    = request.form.get('phone', '').strip()
         password = request.form.get('password', '')
         confirm  = request.form.get('confirm_password', '')
-        role     = request.form.get('role', 'customer').strip().lower()
         address  = request.form.get('address', '').strip()
-        city     = request.form.get('city', 'Mehsana').strip()
-        pincode  = request.form.get('pincode', '384002').strip()
+        city     = request.form.get('city', 'Mehsana').strip() or 'Mehsana'
+        pincode  = request.form.get('pincode', '384002').strip() or '384002'
 
-        # Extra fields for restaurant
-        restaurant_name = request.form.get('restaurant_name', '').strip()
-        cuisine         = request.form.get('cuisine', '').strip()
-        restaurant_area = request.form.get('restaurant_area', 'Mehsana City').strip()
-
-        # Extra fields for delivery partner
-        vehicle_type   = request.form.get('vehicle_type', 'Motorcycle').strip()
-        vehicle_number = request.form.get('vehicle_number', '').strip()
-        license_number = request.form.get('license_number', '').strip()
+        # SECURITY: Strictly customer role only. Never trust any role passed from browser!
+        # Reject/ignore any injected admin or partner role
+        role = 'customer'
 
         # ── Validation ────────────────────────────────────────────────────────
         errors = []
@@ -56,24 +51,11 @@ def register():
             errors.append('Password must be at least 6 characters.')
         if password != confirm:
             errors.append('Passwords do not match.')
-        if role not in ('customer', 'restaurant', 'delivery'):
-            role = 'customer'
-
-        if role == 'restaurant':
-            if not restaurant_name:
-                errors.append('Restaurant name is required.')
-            if not cuisine:
-                errors.append('Cuisine types are required.')
-        elif role == 'delivery':
-            if not vehicle_number:
-                errors.append('Vehicle registration number is required.')
-            if not license_number:
-                errors.append('Driving license number is required.')
 
         if errors:
             for e in errors:
                 flash(e, 'danger')
-            return render_template('register.html', form=request.form, selected_role=role)
+            return render_template('register.html', form=request.form)
 
         # ── Check duplicate email or phone ──────────────────────────────────
         existing = execute_query(
@@ -84,9 +66,9 @@ def register():
                 flash('This email is already registered. Please login.', 'warning')
             else:
                 flash('This mobile number is already registered. Please login.', 'warning')
-            return render_template('register.html', form=request.form, selected_role=role)
+            return render_template('register.html', form=request.form)
 
-        # ── Hash password and store user ─────────────────────────────────────
+        # ── Hash password and store customer ─────────────────────────────────
         pw_hash = generate_password_hash(password)
         user_id = execute_query(
             """INSERT INTO users (name, email, phone, password_hash, role, address, city, state, pincode, status)
@@ -95,70 +77,54 @@ def register():
             commit=True
         )
 
-        # ── Role-specific secondary record creation ──────────────────────────
-        if role == 'restaurant':
+        if address:
             execute_query(
-                """INSERT INTO restaurants (owner_id, name, description, cuisine, address, area, city, state, pincode, phone, email, rating, verification_status, status, is_open)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, 'Gujarat', %s, %s, %s, 4.50, 'pending', 'active', 1)""",
-                (user_id, restaurant_name, f"Authentic {cuisine} in Mehsana", cuisine, address or f"Shop on {restaurant_area}, Mehsana", restaurant_area, city, pincode, phone, email),
+                """INSERT INTO addresses (user_id, label, address, area, city, state, pincode, is_default)
+                   VALUES (%s, 'Home', %s, %s, %s, 'Gujarat', %s, 1)""",
+                (user_id, address, 'Mehsana City', city, pincode),
                 commit=True
             )
-            flash('Restaurant registration submitted! Pending administrator approval.', 'info')
-        elif role == 'delivery':
-            execute_query(
-                """INSERT INTO delivery_partners (user_id, vehicle_type, vehicle_number, license_number, is_available, is_online, total_deliveries, total_earnings)
-                   VALUES (%s, %s, %s, %s, 1, 1, 0, 0.00)""",
-                (user_id, vehicle_type, vehicle_number, license_number),
-                commit=True
-            )
-            flash('Delivery partner registration successful! You can now log in.', 'success')
-        else:
-            if address:
-                execute_query(
-                    """INSERT INTO addresses (user_id, label, address, area, city, state, pincode, is_default)
-                       VALUES (%s, 'Home', %s, %s, %s, 'Gujarat', %s, 1)""",
-                    (user_id, address, 'Mehsana City', city, pincode),
-                    commit=True
-                )
-            flash('Registration successful! Please login to start ordering.', 'success')
 
+        flash('Customer registration successful! Please login to start ordering.', 'success')
         return redirect(url_for('auth.login'))
 
-    return render_template('register.html', form={}, selected_role=role_param)
+    return render_template('register.html', form={})
 
 
 # ─────────────────────────────────────────────
-# LOGIN
+# CUSTOMER LOGIN
 # ─────────────────────────────────────────────
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    """Unified login page for all user roles."""
-    if 'user_id' in session:
-        return _redirect_by_role(session.get('role'))
+    """Customer login page."""
+    # Only redirect if ALREADY authenticated as a customer
+    if get_customer_auth():
+        return redirect(url_for('main.index'))
 
     if request.method == 'POST':
-        email    = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
-        remember = request.form.get('remember_me')
+        identifier = request.form.get('email', '').strip().lower()
+        password   = request.form.get('password', '')
+        remember   = request.form.get('remember_me')
 
-        if not email or not password:
-            flash('Email and password are required.', 'danger')
+        if not identifier or not password:
+            flash('Email/Mobile and password are required.', 'danger')
             return render_template('login.html')
 
-        # ── Fetch user ────────────────────────────────────────────────────────
-        user = execute_query(
-            "SELECT * FROM users WHERE email=%s", (email,), fetchone=True
-        )
-        if not user and '@' in email:
-            # Check domain alias (@foodiehunter.com <-> @foodyhunters.com)
-            alt_domain = 'foodyhunters.com' if '@foodiehunter.com' in email else ('foodiehunter.com' if '@foodyhunters.com' in email else None)
-            if alt_domain:
-                alt_email = email.split('@')[0] + '@' + alt_domain
-                user = execute_query("SELECT * FROM users WHERE email=%s", (alt_email,), fetchone=True)
+        # Check if login identifier is phone or email
+        if identifier.isdigit() and len(identifier) == 10:
+            user = execute_query("SELECT * FROM users WHERE phone=%s", (identifier,), fetchone=True)
+        else:
+            user = execute_query("SELECT * FROM users WHERE email=%s", (identifier,), fetchone=True)
+            if not user and '@' in identifier:
+                # Check domain alias (@foodiehunter.com <-> @foodyhunters.com)
+                alt_domain = 'foodyhunters.com' if '@foodiehunter.com' in identifier else ('foodiehunter.com' if '@foodyhunters.com' in identifier else None)
+                if alt_domain:
+                    alt_email = identifier.split('@')[0] + '@' + alt_domain
+                    user = execute_query("SELECT * FROM users WHERE email=%s", (alt_email,), fetchone=True)
 
         if not user:
-            flash('Invalid email or password.', 'danger')
+            flash('Invalid email/mobile or password.', 'danger')
             return render_template('login.html')
 
         if user['status'] == 'inactive':
@@ -166,18 +132,48 @@ def login():
             return render_template('login.html')
 
         if not check_password_hash(user['password_hash'], password):
-            flash('Invalid email or password.', 'danger')
+            flash('Invalid email/mobile or password.', 'danger')
             return render_template('login.html')
 
-        # ── Set session ───────────────────────────────────────────────────────
-        session.permanent = bool(remember)
-        session['user_id']   = user['id']
-        session['user_name'] = user['name']
-        session['user_email']= user['email']
-        session['role']      = user['role']
+        # ── Strict Role Segregation on Customer Login ─────────────────────────
+        if user['role'] == 'admin':
+            # Strictly reject administrator login on customer portal
+            flash('Administrator accounts cannot be authenticated via Customer Login. Please use the Admin Portal at /admin.', 'danger')
+            return render_template('login.html')
 
-        flash(f"Welcome back, {user['name']}!", 'success')
-        return _redirect_by_role(user['role'])
+        session.permanent = bool(remember)
+
+        if user['role'] == 'customer':
+            set_customer_auth(user)
+            flash(f"Welcome back, {user['name']}!", 'success')
+            next_url = request.args.get('next') or request.form.get('next')
+            # Security: Prevent open redirects and NEVER redirect customer to /admin
+            if next_url and next_url.startswith('/') and not next_url.startswith('//') and not next_url.startswith('/admin'):
+                return redirect(next_url)
+            return redirect(url_for('main.index'))
+
+        elif user['role'] == 'restaurant':
+            rest = execute_query("SELECT id FROM restaurants WHERE owner_id=%s", (user['id'],), fetchone=True)
+            set_restaurant_auth(user, restaurant_id=rest['id'] if rest else None)
+            flash(f"Welcome back, {user['name']}! Redirecting to Kitchen Operations.", 'success')
+            return redirect(url_for('restaurant.dashboard'))
+
+        elif user['role'] == 'delivery':
+            set_delivery_auth(user)
+            flash(f"Welcome back, {user['name']}! Redirecting to Delivery Portal.", 'success')
+            return redirect(url_for('delivery.dashboard'))
+
+        elif user['role'] == 'staff':
+            staff_rec = execute_query("SELECT restaurant_id, staff_role FROM restaurant_staff WHERE user_id=%s", (user['id'],), fetchone=True)
+            set_staff_auth(user, restaurant_id=staff_rec['restaurant_id'] if staff_rec else None,
+                           staff_role=staff_rec['staff_role'] if staff_rec else None)
+            flash(f"Welcome back, {user['name']}! Redirecting to Staff Operations.", 'success')
+            return redirect(url_for('staff.dashboard'))
+
+        else:
+            set_customer_auth(user)
+            flash(f"Welcome back, {user['name']}!", 'success')
+            return redirect(url_for('main.index'))
 
     return render_template('login.html')
 
@@ -188,8 +184,12 @@ def login():
 
 @auth_bp.route('/logout')
 def logout():
-    """Clear session and redirect to home."""
-    session.clear()
+    """Clear customer session (and partner session if active) and redirect to home."""
+    clear_customer_auth()
+    if not session.get('admin_auth'):
+        clear_delivery_auth()
+        clear_restaurant_auth()
+        clear_staff_auth()
     flash('You have been logged out successfully.', 'info')
     return redirect(url_for('main.index'))
 
@@ -222,5 +222,7 @@ def _redirect_by_role(role):
         return redirect(url_for('restaurant.dashboard'))
     elif role == 'delivery':
         return redirect(url_for('delivery.dashboard'))
+    elif role == 'staff':
+        return redirect(url_for('staff.dashboard'))
     else:
         return redirect(url_for('main.index'))

@@ -80,8 +80,9 @@ class TestDeliveryAndAdminModules(unittest.TestCase):
         self.assertEqual(final_row['is_online'], orig_val)
 
     def test_03_admin_login_and_profile_persistence(self):
-        # 1. Login as admin
-        res = self.client.post('/auth/login', data={
+        # 1. Clear gate and login as admin via dedicated admin desk
+        self.client.post('/admin/gate', data={'gate_password': 'food@1234'}, follow_redirects=True)
+        res = self.client.post('/admin/login', data={
             'email': 'admin@foodiehunter.com',
             'password': 'password123'
         }, follow_redirects=True)
@@ -90,7 +91,7 @@ class TestDeliveryAndAdminModules(unittest.TestCase):
         # 2. View profile
         res = self.client.get('/admin/profile')
         self.assertEqual(res.status_code, 200)
-        self.assertIn(b'System Administrator Profile', res.data)
+        self.assertIn(b'Administrator Profile', res.data)
 
         # 3. Update admin profile
         new_admin_name = "Super Admin Mehsana"
@@ -119,7 +120,8 @@ class TestDeliveryAndAdminModules(unittest.TestCase):
         self.assertIn(new_admin_name.encode('utf-8'), res_refresh.data)
 
     def test_04_admin_management_features(self):
-        self.client.post('/auth/login', data={
+        self.client.post('/admin/gate', data={'gate_password': 'food@1234'}, follow_redirects=True)
+        self.client.post('/admin/login', data={
             'email': 'admin@foodiehunter.com',
             'password': 'password123'
         }, follow_redirects=True)

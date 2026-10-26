@@ -1,116 +1,107 @@
-{% extends "base.html" %}
-{% block title %}Administrator Profile – FOODIE HUNTER{% endblock %}
+{% extends "ops_base.html" %}
+{% block title %}Administrator Profile – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}🛡️ Executive Administrator Profile{% endblock %}
+{% block page_subtitle %}Manage administrative identity, security credentials, and platform governance coordinates{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+  <a href="/admin/reports" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-chart-line"></i> Analytics
+  </a>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
-  <div class="container d-flex justify-between align-center flex-wrap gap-3">
-    <div class="d-flex align-center gap-3">
-      {% if user and user.profile_pic %}
-      <img src="{{ user.profile_pic }}" alt="{{ user.name }}"
-           style="width:75px;height:75px;border-radius:50%;object-fit:cover;border:3px solid #818CF8">
-      {% else %}
-      <div style="width:75px;height:75px;background:#6366F1;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800">
-        <i class="fas fa-user-shield"></i>
-      </div>
-      {% endif %}
-      <div>
-        <div class="d-flex align-center gap-2">
-          <h1 style="font-size:1.8rem;font-weight:800;color:#fff;margin:0">{{ user.name }}</h1>
-          <span class="badge" style="background:#4F46E5;color:#fff;font-size:.78rem">
-            SUPER ADMIN
-          </span>
-          <span class="badge" style="background:#10B981;color:#fff;font-size:.78rem">
-            ● SYSTEM ACTIVE
-          </span>
+<div style="max-width:880px;margin:0 auto">
+  <div class="ops-card mb-4">
+    <!-- Header banner in card -->
+    <div class="d-flex justify-between align-center flex-wrap gap-3 mb-4" style="border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:1.5rem">
+      <div class="d-flex align-center gap-3">
+        {% if user and user.profile_pic %}
+        <img src="{{ user.profile_pic }}" alt="{{ user.name }}"
+             style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--ops-primary)">
+        {% else %}
+        <div style="width:72px;height:72px;background:rgba(255,107,0,0.15);color:var(--ops-primary);border:2px solid var(--ops-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800">
+          <i class="fas fa-user-shield"></i>
         </div>
-        <p style="color:#94A3B8;font-size:.88rem;margin-top:.25rem">
-          Admin Email: <strong>{{ user.email }}</strong> &bull;
-          Platform Orders: <strong>{{ stats.total_orders }}</strong> &bull;
-          Managed Restaurants: <strong>{{ stats.total_restaurants }}</strong>
-        </p>
+        {% endif %}
+        <div>
+          <div class="d-flex align-center gap-2 flex-wrap">
+            <h2 style="font-size:1.4rem;font-weight:800;color:#fff;margin:0">{{ user.name }}</h2>
+            <span class="ops-badge" style="background:rgba(239,68,68,0.2);color:var(--ops-rose);border:1px solid rgba(239,68,68,0.4)">SUPER ADMIN</span>
+            <span class="ops-badge success">● ACTIVE</span>
+          </div>
+          <p style="color:var(--ops-text-dim);font-size:0.85rem;margin-top:0.3rem">
+            Admin Account: <strong style="color:#fff">{{ user.email }}</strong> &bull;
+            Orders: <strong style="color:var(--ops-cyan)">{{ stats.total_orders if stats else 0 }}</strong> &bull;
+            Partner Kitchens: <strong style="color:var(--ops-amber)">{{ stats.total_restaurants if stats else 0 }}</strong>
+          </p>
+        </div>
       </div>
-    </div>
-    <div style="display:flex;gap:.75rem">
-      <a href="/admin/dashboard" class="btn btn-primary" style="font-size:.85rem">
-        <i class="fas fa-tachometer-alt"></i> Control Panel
-      </a>
-      <a href="/admin/reports" class="btn btn-outline" style="color:#fff;border-color:#334155;font-size:.85rem">
-        <i class="fas fa-chart-pie"></i> System Analytics
-      </a>
-    </div>
-  </div>
-</div>
-
-<div class="container py-4" style="max-width:850px">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    
-    <div class="d-flex justify-between align-center mb-3">
-      <div>
-        <h2 style="font-size:1.3rem;font-weight:700;color:var(--text-dark);margin:0">System Administrator Profile</h2>
-        <p style="font-size:.85rem;color:var(--text-muted);margin-top:.2rem">
-          Manage administrative contact credentials, headquarter coordinates, and security information.
-        </p>
-      </div>
-      <span class="badge" style="background:#F1F5F9;color:var(--text-muted);font-size:.75rem">
+      <span class="ops-badge" style="background:rgba(255,255,255,0.06);color:var(--ops-muted);font-family:var(--ops-font-mono)">
         Last Sync: {{ (user.updated_at|string)[:19] if user and user.updated_at else 'Live' }}
       </span>
     </div>
 
     <!-- Read-Only View Panel -->
     <div id="viewPanel">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1.5rem;margin-bottom:1.5rem">
         <div>
-          <label style="font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;display:block">Administrator Name</label>
-          <div style="font-size:1rem;font-weight:600;color:var(--text-dark);margin-top:.2rem" id="viewName">{{ user.name }}</div>
+          <label class="ops-label">Administrator Full Name</label>
+          <div style="font-size:1rem;font-weight:600;color:var(--ops-foreground)" id="viewName">{{ user.name }}</div>
         </div>
         <div>
-          <label style="font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;display:block">System Email</label>
-          <div style="font-size:1rem;color:var(--text-dark);margin-top:.2rem">{{ user.email }}</div>
+          <label class="ops-label">System Account Email</label>
+          <div style="font-size:1rem;color:var(--ops-cyan)">{{ user.email }}</div>
         </div>
         <div>
-          <label style="font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;display:block">Direct Hotline / Mobile</label>
-          <div style="font-size:1rem;color:var(--text-dark);margin-top:.2rem" id="viewPhone">{{ user.phone }}</div>
+          <label class="ops-label">Hotline Phone</label>
+          <div style="font-size:1rem;color:var(--ops-foreground)" id="viewPhone">{{ user.phone or 'Not configured' }}</div>
         </div>
         <div>
-          <label style="font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;display:block">Gender & Date of Birth</label>
-          <div style="font-size:1rem;color:var(--text-dark);margin-top:.2rem">
+          <label class="ops-label">Gender & Date of Birth</label>
+          <div style="font-size:0.95rem;color:var(--ops-text-dim)">
             {{ user.gender|capitalize if user.gender else 'Not specified' }} &bull; {{ (user.dob|string)[:10] if user.dob else 'Not set' }}
           </div>
         </div>
       </div>
 
-      <div style="background:#F8FAFC;border-radius:var(--radius-md);padding:1.25rem;margin-bottom:1.5rem;border:1px solid #E2E8F0">
-        <h4 style="font-size:.9rem;font-weight:700;color:#0F172A;margin-bottom:.75rem;text-transform:uppercase">
-          <i class="fas fa-shield-alt" style="color:var(--primary)"></i> System Privileges & Clearance
+      <div style="background:rgba(255,255,255,0.03);border-radius:var(--ops-radius-md);padding:1.25rem;margin-bottom:1.5rem;border:1px solid rgba(255,255,255,0.08)">
+        <h4 style="font-size:0.85rem;font-weight:700;color:#fff;margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.05em">
+          <i class="fas fa-shield-alt" style="color:var(--ops-primary)"></i> System Privileges & Clearance
         </h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem">
           <div>
-            <label style="font-size:.75rem;color:var(--text-muted);font-weight:700;display:block">Role Scope</label>
-            <div style="font-size:.95rem;font-weight:600;color:var(--text-dark);margin-top:.2rem">
-              Full Administrative Authority (RBAC: Admin)
+            <label class="ops-label">Access Authority</label>
+            <div style="font-size:0.9rem;font-weight:600;color:var(--ops-foreground)">
+              Full Enterprise Control (RBAC: Admin)
             </div>
           </div>
           <div>
-            <label style="font-size:.75rem;color:var(--text-muted);font-weight:700;display:block">Database Security</label>
-            <div style="font-size:.95rem;font-weight:600;color:#10B981;margin-top:.2rem">
-              Direct MySQL Connection (foody_hunters)
+            <label class="ops-label">Entry Passkey Protocol</label>
+            <div style="font-size:0.9rem;font-weight:600;color:var(--ops-emerald)">
+              <i class="fas fa-lock"></i> Gate Protected (Config.ADMIN_GATE_PASSWORD)
             </div>
           </div>
         </div>
       </div>
 
       <div style="margin-bottom:1.5rem">
-        <label style="font-size:.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;display:block">Headquarters / Operational Location</label>
-        <div style="font-size:.95rem;color:var(--text-dark);margin-top:.2rem" id="viewAddress">
-          {{ user.address if user.address else 'Foodie Hunter HQ, Radhanpur Road' }}, {{ user.city }}, {{ user.state }} - {{ user.pincode }}
+        <label class="ops-label">Headquarters / Operations Location</label>
+        <div style="font-size:0.95rem;color:var(--ops-foreground)" id="viewAddress">
+          {{ user.address if user.address else 'Foody Hunters Headquarters' }}, {{ user.city or 'Mehsana' }}, {{ user.state or 'Gujarat' }} - {{ user.pincode or '384001' }}
         </div>
       </div>
 
       <div class="d-flex gap-2">
-        <button type="button" class="btn btn-primary" id="btnEditProfile" onclick="toggleEditMode(true)" style="border-radius:var(--radius-pill)">
+        <button type="button" class="ops-btn ops-btn-primary" id="btnEditProfile" onclick="toggleEditMode(true)">
           <i class="fas fa-edit"></i> Edit Admin Profile
         </button>
-        <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill)">
+        <a href="/admin/dashboard" class="ops-btn ops-btn-outline">
           <i class="fas fa-arrow-left"></i> Return to Dashboard
         </a>
       </div>
@@ -118,74 +109,74 @@
 
     <!-- Edit Form Panel (Hidden by default) -->
     <div id="editPanel" style="display:none">
-      <form method="POST" action="/admin/profile/update" enctype="multipart/form-data">
+      <form method="POST" action="/admin/profile/update" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:1.2rem">
         
-        <h4 style="font-size:.95rem;font-weight:700;color:var(--primary);margin-bottom:1rem;border-bottom:1px solid var(--border-light);padding-bottom:.5rem">
-          <i class="fas fa-user-edit"></i> Administrator Information
+        <h4 style="font-size:0.95rem;font-weight:700;color:var(--ops-primary);margin:0;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:0.5rem">
+          <i class="fas fa-user-edit"></i> Administrator Details
         </h4>
 
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-          <div class="form-group">
-            <label class="form-label">Full Name *</label>
-            <input type="text" name="name" class="form-control" value="{{ user.name }}" required>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem">
+          <div class="ops-form-group">
+            <label class="ops-label">Full Name *</label>
+            <input type="text" name="name" class="ops-input" value="{{ user.name }}" required>
           </div>
-          <div class="form-group">
-            <label class="form-label">Contact Phone *</label>
-            <input type="text" name="phone" class="form-control" value="{{ user.phone }}" required>
+          <div class="ops-form-group">
+            <label class="ops-label">Contact Phone *</label>
+            <input type="text" name="phone" class="ops-input" value="{{ user.phone or '' }}" required>
           </div>
         </div>
 
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-          <div class="form-group">
-            <label class="form-label">Gender</label>
-            <select name="gender" class="form-control">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem">
+          <div class="ops-form-group">
+            <label class="ops-label">Gender</label>
+            <select name="gender" class="ops-select">
               <option value="">Select Gender</option>
               <option value="male" {% if user.gender=='male' %}selected{% endif %}>Male</option>
               <option value="female" {% if user.gender=='female' %}selected{% endif %}>Female</option>
               <option value="other" {% if user.gender=='other' %}selected{% endif %}>Other</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label">Date of Birth</label>
-            <input type="date" name="dob" class="form-control" value="{{ (user.dob|string)[:10] if user.dob else '' }}">
+          <div class="ops-form-group">
+            <label class="ops-label">Date of Birth</label>
+            <input type="date" name="dob" class="ops-input" value="{{ (user.dob|string)[:10] if user.dob else '' }}">
           </div>
         </div>
 
-        <h4 style="font-size:.95rem;font-weight:700;color:var(--primary);margin:1.5rem 0 1rem;border-bottom:1px solid var(--border-light);padding-bottom:.5rem">
+        <h4 style="font-size:0.95rem;font-weight:700;color:var(--ops-primary);margin:0.5rem 0 0;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:0.5rem">
           <i class="fas fa-map-marker-alt"></i> Headquarters Office Address
         </h4>
 
-        <div class="form-group mb-3">
-          <label class="form-label">Office / Commercial Address</label>
-          <textarea name="address" class="form-control" rows="2" placeholder="HQ Building / Suite">{{ user.address or '' }}</textarea>
+        <div class="ops-form-group">
+          <label class="ops-label">Office Address</label>
+          <textarea name="address" class="ops-textarea" rows="2" placeholder="HQ Complex / Floor">{{ user.address or '' }}</textarea>
         </div>
 
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem">
-          <div class="form-group">
-            <label class="form-label">City</label>
-            <input type="text" name="city" class="form-control" value="{{ user.city or 'Mehsana' }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:1rem">
+          <div class="ops-form-group">
+            <label class="ops-label">City</label>
+            <input type="text" name="city" class="ops-input" value="{{ user.city or 'Mehsana' }}">
           </div>
-          <div class="form-group">
-            <label class="form-label">State</label>
-            <input type="text" name="state" class="form-control" value="{{ user.state or 'Gujarat' }}">
+          <div class="ops-form-group">
+            <label class="ops-label">State</label>
+            <input type="text" name="state" class="ops-input" value="{{ user.state or 'Gujarat' }}">
           </div>
-          <div class="form-group">
-            <label class="form-label">Pincode</label>
-            <input type="text" name="pincode" class="form-control" value="{{ user.pincode or '384001' }}">
+          <div class="ops-form-group">
+            <label class="ops-label">Pincode</label>
+            <input type="text" name="pincode" class="ops-input" value="{{ user.pincode or '384001' }}">
           </div>
         </div>
 
-        <div class="form-group mb-4">
-          <label class="form-label">Update Profile Photo</label>
-          <input type="file" name="profile_pic" class="form-control" accept="image/*">
-          <small style="color:var(--text-muted)">Formats: JPG, PNG, WEBP. Max 5MB.</small>
+        <div class="ops-form-group">
+          <label class="ops-label">Update Profile Photo</label>
+          <input type="file" name="profile_pic" class="ops-input" accept="image/*">
+          <small style="color:var(--ops-muted)">Formats: JPG, PNG, WEBP. Max 5MB.</small>
         </div>
 
         <div class="d-flex gap-2">
-          <button type="submit" class="btn btn-primary" style="border-radius:var(--radius-pill)">
+          <button type="submit" class="ops-btn ops-btn-primary">
             <i class="fas fa-save"></i> Save Changes
           </button>
-          <button type="button" class="btn btn-outline" onclick="toggleEditMode(false)" style="border-radius:var(--radius-pill)">
+          <button type="button" class="ops-btn ops-btn-outline" onclick="toggleEditMode(false)">
             <i class="fas fa-times"></i> Cancel
           </button>
         </div>

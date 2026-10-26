@@ -67,7 +67,7 @@
           <span class="badge" style="background:var(--border-light);color:var(--text-muted);font-weight:600">{{ cat_data['items']|length }} items</span>
         </div>
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:1.25rem">
+        <div class="food-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:1.25rem">
           {% for item in cat_data['items'] %}
           <div class="food-card" style="background:#fff;border-radius:var(--radius-md);border:1px solid var(--border);padding:1.25rem;display:flex;justify-content:space-between;gap:1rem;position:relative;box-shadow:var(--shadow-sm);transition:var(--transition)">
             

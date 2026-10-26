@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Restaurant Application Status – Foody Hunters Partner Fleet{% endblock %}
+
+{% block content %}
+<div class="section-py" style="background: linear-gradient(135deg, #FFFDF9 0%, #FFF5ED 100%); min-height: 80vh; display:flex; align-items:center;">
+  <div class="container" style="max-width: 760px;">
+    
+    <!-- Top Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'error' else 'danger' }} mb-4" style="border-radius:var(--radius-md); padding:1rem 1.25rem; font-size:0.95rem;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card" style="background:#FFFFFF; border: 1px solid #FED7AA; border-radius: var(--radius-lg); box-shadow: 0 16px 40px rgba(234, 88, 12, 0.08); overflow:hidden;">
+      
+      <!-- Card Header -->
+      <div style="background: linear-gradient(135deg, #FF4500, #EA580C); padding: 2rem 1.5rem; text-align:center; color:#fff;">
+        <div style="font-size:2.5rem; margin-bottom:0.5rem">🏪</div>
+        <h2 style="font-size:1.75rem; font-weight:800; margin:0; letter-spacing:-0.02em">
+          Restaurant Partner Onboarding
+        </h2>
+        <p style="margin:0.4rem 0 0; opacity:0.9; font-size:0.95rem">
+          Application Tracking & Onboarding Verification Desk
+        </p>
+      </div>
+
+      <!-- Card Body -->
+      <div style="padding: 2rem 1.75rem;">
+        {% if restaurant %}
+          <!-- Status Banner -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; padding:1.25rem; border-radius:var(--radius-md); margin-bottom:2rem;
+            {% if restaurant.verification_status == 'approved' %}
+              background: #ECFDF5; border: 1px solid #A7F3D0;
+            {% elif restaurant.verification_status == 'rejected' %}
+              background: #FEF2F2; border: 1px solid #FECACA;
+            {% else %}
+              background: #FFFBEB; border: 1px solid #FDE68A;
+            {% endif %}">
+            
+            <div>
+              <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+                {% if restaurant.verification_status == 'approved' %}color:#065F46;
+                {% elif restaurant.verification_status == 'rejected' %}color:#991B1B;
+                {% else %}color:#92400E;{% endif %}">
+                Application Review Status
+              </div>
+              <div style="font-size:1.4rem; font-weight:800; margin-top:0.2rem;
+                {% if restaurant.verification_status == 'approved' %}color:#047857;
+                {% elif restaurant.verification_status == 'rejected' %}color:#DC2626;
+                {% else %}color:#D97706;{% endif %}">
+                {% if restaurant.verification_status == 'approved' %}
+                  <i class="fas fa-check-circle"></i> Approved & Active
+                {% elif restaurant.verification_status == 'rejected' %}
+                  <i class="fas fa-times-circle"></i> Application Not Approved
+                {% else %}
+                  <i class="fas fa-clock"></i> Pending Administrator Verification
+                {% endif %}
+              </div>
+            </div>
+
+            <div>
+              <span class="badge" style="padding:0.4rem 0.9rem; font-size:0.85rem; font-weight:700; border-radius:var(--radius-pill);
+                {% if restaurant.verification_status == 'approved' %}background:#10B981; color:#fff;
+                {% elif restaurant.verification_status == 'rejected' %}background:#EF4444; color:#fff;
+                {% else %}background:#F59E0B; color:#111;{% endif %}">
+                Ref #APP-{{ restaurant.id }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Application Details Grid -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem; margin-bottom:2rem;">
+            <div style="background:#FAFAFA; border:1px solid #E5E7EB; border-radius:var(--radius-md); padding:1rem 1.25rem;">
+              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.25rem">
+                Restaurant Outlet
+              </div>
+              <div style="font-size:1.1rem; font-weight:700; color:var(--text-dark)">
+                {{ restaurant.name }}
+              </div>
+              <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem">
+                <i class="fas fa-utensils text-primary"></i> {{ restaurant.cuisine or 'Multi-Cuisine' }}
+              </div>
+            </div>
+
+            <div style="background:#FAFAFA; border:1px solid #E5E7EB; border-radius:var(--radius-md); padding:1rem 1.25rem;">
+              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.25rem">
+                Owner / Manager
+              </div>
+              <div style="font-size:1.1rem; font-weight:700; color:var(--text-dark)">
+                {{ restaurant.owner_name or 'Registered Partner' }}
+              </div>
+              <div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem">
+                <i class="fas fa-phone text-primary"></i> {{ restaurant.phone or restaurant.owner_phone or '—' }}
+              </div>
+            </div>
+
+            <div style="background:#FAFAFA; border:1px solid #E5E7EB; border-radius:var(--radius-md); padding:1rem 1.25rem;">
+              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.25rem">
+                Operating Location
+              </div>
+              <div style="font-size:0.95rem; font-weight:600; color:var(--text-dark)">
+                {{ restaurant.area or 'City Center' }}, {{ restaurant.city or 'Mehsana' }}
+              </div>
+              <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.2rem">
+                PIN: {{ restaurant.pincode or '384002' }} &bull; {{ restaurant.address or 'Address on file' }}
+              </div>
+            </div>
+
+            <div style="background:#FAFAFA; border:1px solid #E5E7EB; border-radius:var(--radius-md); padding:1rem 1.25rem;">
+              <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted); margin-bottom:0.25rem">
+                Timings & Documentation
+              </div>
+              <div style="font-size:0.95rem; font-weight:600; color:var(--text-dark)">
+                Hours: {{ restaurant.open_time or '09:00' }} – {{ restaurant.close_time or '23:00' }}
+              </div>
+              <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.2rem">
+                {% if restaurant.fssai_number %}
+                  FSSAI: <strong>{{ restaurant.fssai_number }}</strong> &bull;
+                {% endif %}
+                {% if restaurant.verification_doc %}
+                  <a href="{{ restaurant.verification_doc }}" target="_blank" style="color:var(--primary); font-weight:600;">
+                    <i class="fas fa-file-alt"></i> View KYC Document
+                  </a>
+                {% else %}
+                  KYC: Self-Declared
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Workflow Instructions -->
+          <div style="background:#FFF7ED; border-left:4px solid #EA580C; border-radius:0 var(--radius-md) var(--radius-md) 0; padding:1.25rem; margin-bottom:2rem;">
+            <h4 style="color:#C2410C; font-size:0.98rem; font-weight:700; margin:0 0 0.5rem; display:flex; align-items:center; gap:0.5rem">
+              <i class="fas fa-info-circle"></i>
+              {% if restaurant.verification_status == 'approved' %}
+                Ready to take customer orders!
+              {% elif restaurant.verification_status == 'rejected' %}
+                Application Notice
+              {% else %}
+                What happens next?
+              {% endif %}
+            </h4>
+            <p style="margin:0; font-size:0.88rem; color:#4B5563; line-height:1.6">
+              {% if restaurant.verification_status == 'approved' %}
+                Your restaurant is fully approved. You can log in using your registered credentials to configure menus, set item availability, and manage live incoming kitchen orders.
+              {% elif restaurant.verification_status == 'rejected' %}
+                Unfortunately, your application did not meet our onboarding criteria. For clarification or to submit additional business proof, please reach out to our administration team.
+              {% else %}
+                Our operations team in Mehsana verifies food hygiene standards, outlet KYC, and operating hours. Once approved by the administrator, your outlet will immediately appear on the FOODY HUNTERS storefront, and you can access your kitchen dashboard.
+              {% endif %}
+            </p>
+          </div>
+
+          <!-- Actions -->
+          <div class="d-flex justify-between align-center flex-wrap gap-2">
+            <a href="/" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)">
+              <i class="fas fa-arrow-left"></i> Return to Storefront
+            </a>
+            
+            {% if restaurant.verification_status == 'approved' %}
+              <a href="/restaurant/login" class="btn btn-primary" style="border-radius:var(--radius-pill)">
+                <i class="fas fa-sign-in-alt"></i> Sign In to Kitchen Dashboard
+              </a>
+            {% else %}
+              <a href="/restaurant/register" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)">
+                <i class="fas fa-plus"></i> Submit Another Outlet
+              </a>
+            {% endif %}
+          </div>
+
+        {% else %}
+          <!-- No application state -->
+          <div style="text-align:center; padding:2rem 1rem;">
+            <div style="font-size:3rem; margin-bottom:1rem">📋</div>
+            <h3 style="font-size:1.3rem; font-weight:700; color:var(--text-dark)">No Application Found</h3>
+            <p style="color:var(--text-muted); font-size:0.95rem; max-width:440px; margin:0.5rem auto 1.5rem">
+              We couldn't locate an active restaurant application for this session. Apply now to list your restaurant in Mehsana and expand your orders!
+            </p>
+            <a href="/restaurant/register" class="btn btn-primary" style="border-radius:var(--radius-pill); padding:0.75rem 1.75rem">
+              <i class="fas fa-store-alt"></i> Apply to Partner With Us
+            </a>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Card Footer -->
+      <div style="background:#FAF8F5; border-top:1px solid #FED7AA; padding:1rem; text-align:center; font-size:0.82rem; color:var(--text-muted)">
+        Foody Hunters Restaurant Network &bull; Need help? Contact partner-support@foodyhunters.com
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

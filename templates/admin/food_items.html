@@ -1,85 +1,93 @@
-{% extends "base.html" %}
-{% block title %}Menu Inventory – Foody Hunters Admin{% endblock %}
+{% extends "ops_base.html" %}
+{% block title %}Menu Inventory & Catalog – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}🍱 Master Menu & Dish Catalog{% endblock %}
+{% block page_subtitle %}Global menu catalog oversight across all registered restaurant partner kitchens{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> Dashboard
+  </a>
+  <a href="/admin/categories" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-tags"></i> Categories
+  </a>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
-  <div class="container d-flex justify-between align-center flex-wrap gap-2">
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
     <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Platform Food Item Directory</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Inventory oversight across all registered restaurant partner kitchens</p>
+      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">All Listed Food Dishes</h3>
+      <small style="color:var(--ops-text-dim)">Total dishes across verified restaurants</small>
     </div>
-    <a href="/admin/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
-      <i class="fas fa-arrow-left"></i> Dashboard
-    </a>
-  </div>
-</div>
 
-<div class="container py-4">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    
-    <!-- Search Bar -->
-    <form method="GET" action="/admin/food-items" class="d-flex justify-between align-center mb-3">
-      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark)">All Listed Dishes ({{ items|length }})</h2>
-      <div class="d-flex gap-1">
-        <input type="text" class="form-control" name="q" value="{{ q or '' }}" placeholder="Search dish or restaurant..." style="width:240px">
-        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
-      </div>
+    <form method="GET" action="/admin/food-items" class="d-flex gap-1">
+      <input type="text" class="ops-input" name="q" value="{{ q or '' }}" placeholder="Search dish or restaurant..." style="width:230px;padding:0.4rem 0.75rem;font-size:0.85rem">
+      <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm"><i class="fas fa-search"></i></button>
     </form>
-
-    {% if items %}
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
-            <th style="padding:.75rem">Dish Name</th>
-            <th style="padding:.75rem">Restaurant</th>
-            <th style="padding:.75rem">Category</th>
-            <th style="padding:.75rem">Type</th>
-            <th style="padding:.75rem">Price</th>
-            <th style="padding:.75rem">Status</th>
-            <th style="padding:.75rem">Rating</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in items %}
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:.75rem">
-              <div style="display:flex;align-items:center;gap:.75rem">
-                <img src="{{ item.image or 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&q=80' }}"
-                     alt="{{ item.name }}" style="width:42px;height:42px;border-radius:var(--radius-sm);object-fit:cover"
-                     onerror="this.src='https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&q=80'">
-                <div>
-                  <strong style="color:var(--text-dark);display:block">{{ item.name }}</strong>
-                </div>
-              </div>
-            </td>
-            <td style="padding:.75rem;font-weight:600">{{ item.restaurant_name }}</td>
-            <td style="padding:.75rem">{{ item.category_name }}</td>
-            <td style="padding:.75rem">
-              {% if item.veg_type == 'veg' %}
-              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">VEG</span>
-              {% else %}
-              <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">NON-VEG</span>
-              {% endif %}
-            </td>
-            <td style="padding:.75rem;font-weight:700">₹{{ "%.2f"|format(item.price) }}</td>
-            <td style="padding:.75rem">
-              {% if item.availability == 1 %}
-              <span class="badge" style="background:#D1FAE5;color:#047857">In Stock</span>
-              {% else %}
-              <span class="badge" style="background:#FEE2E2;color:#B91C1C">Unavailable</span>
-              {% endif %}
-            </td>
-            <td style="padding:.75rem;color:#F59E0B;font-weight:700">★ {{ item.rating }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p style="color:var(--text-muted);text-align:center;padding:3rem">No items found matching search.</p>
-    {% endif %}
-
   </div>
+
+  {% if items %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Dish</th>
+          <th>Restaurant Outlet</th>
+          <th>Cuisine Category</th>
+          <th>Dietary</th>
+          <th>Unit Price</th>
+          <th>Inventory Status</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:0.75rem">
+              <img src="{{ item.image or 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&q=80' }}"
+                   alt="{{ item.name }}" style="width:42px;height:42px;border-radius:var(--ops-radius-sm);object-fit:cover"
+                   onerror="this.src='https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&q=80'">
+              <div>
+                <strong style="color:var(--ops-foreground);display:block">{{ item.name }}</strong>
+                <small style="color:var(--ops-muted);font-family:var(--ops-font-mono)">ID #{{ item.id }}</small>
+              </div>
+            </div>
+          </td>
+          <td>
+            <strong style="color:var(--ops-amber)"><i class="fas fa-store"></i> {{ item.restaurant_name }}</strong>
+          </td>
+          <td>{{ item.category_name }}</td>
+          <td>
+            {% if item.veg_type == 'veg' %}
+            <span class="ops-badge success"><i class="fas fa-leaf"></i> VEG</span>
+            {% else %}
+            <span class="ops-badge danger"><i class="fas fa-drumstick-bite"></i> NON-VEG</span>
+            {% endif %}
+          </td>
+          <td style="font-family:var(--ops-font-mono);font-weight:700;color:var(--ops-emerald)">₹{{ "%.2f"|format(item.price) }}</td>
+          <td>
+            {% if item.availability == 1 %}
+            <span class="ops-badge success"><i class="fas fa-check"></i> Available</span>
+            {% else %}
+            <span class="ops-badge danger"><i class="fas fa-times"></i> Sold Out</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--ops-amber);font-weight:700">★ {{ item.rating }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="ops-empty-state">
+    <i class="fas fa-utensils ops-empty-icon"></i>
+    <div class="ops-empty-title">No Dishes Found</div>
+    <div class="ops-empty-desc">No menu items matched your search criteria.</div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

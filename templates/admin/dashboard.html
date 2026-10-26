@@ -82,6 +82,22 @@
     </div>
   </div>
 
+  <!-- Restaurant Staff Fleet -->
+  <div class="ops-stat-card glow-cyan">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Restaurant Staff Fleet</span>
+      <div class="ops-stat-icon cyan"><i class="fas fa-users-cog"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.total_staff }}</div>
+    <div class="ops-stat-meta">
+      {% if stats.pending_staff > 0 %}
+        <a href="/admin/staff?status=pending" style="color:var(--ops-rose);font-weight:700">⚠️ {{ stats.pending_staff }} Pending Approval &rarr;</a>
+      {% else %}
+        <a href="/admin/staff" style="color:var(--ops-cyan);font-weight:600">{{ stats.approved_staff }} Verified Staff &bull; Manage &rarr;</a>
+      {% endif %}
+    </div>
+  </div>
+
   <!-- Customers -->
   <div class="ops-stat-card">
     <div class="ops-stat-header">
@@ -90,7 +106,31 @@
     </div>
     <div class="ops-stat-val">{{ stats.total_users }}</div>
     <div class="ops-stat-meta">
-      <span style="color:var(--ops-emerald)">{{ stats.active_customers }} Active Accounts</span>
+      <a href="/admin/users?role=customer" style="color:var(--ops-emerald);font-weight:600">{{ stats.active_customers }} Active Accounts &rarr;</a>
+    </div>
+  </div>
+
+  <!-- Food Catalog & Dishes -->
+  <div class="ops-stat-card">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Menu Catalog</span>
+      <div class="ops-stat-icon orange"><i class="fas fa-utensils"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.total_food_items }}</div>
+    <div class="ops-stat-meta">
+      <a href="/admin/categories" style="color:var(--ops-amber);font-weight:600">{{ stats.total_categories }} Categories Cataloged &rarr;</a>
+    </div>
+  </div>
+
+  <!-- Promotional Coupons -->
+  <div class="ops-stat-card">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Active Coupons</span>
+      <div class="ops-stat-icon emerald"><i class="fas fa-tags"></i></div>
+    </div>
+    <div class="ops-stat-val">{{ stats.total_coupons }}</div>
+    <div class="ops-stat-meta">
+      <a href="/admin/coupons" style="color:var(--ops-emerald);font-weight:600">Discounts & Offers &rarr;</a>
     </div>
   </div>
 
@@ -103,13 +143,67 @@
     <div class="ops-stat-val">{{ stats.open_complaints }}</div>
     <div class="ops-stat-meta">
       {% if stats.open_complaints > 0 %}
-        <a href="/admin/complaints" style="color:var(--ops-rose);font-weight:600">Action Required &rarr;</a>
+        <a href="/admin/complaints" style="color:var(--ops-rose);font-weight:600">⚠️ {{ stats.open_complaints }} Tickets Need Action &rarr;</a>
       {% else %}
-        <span style="color:var(--ops-emerald)">All tickets clear</span>
+        <a href="/admin/complaints" style="color:var(--ops-emerald);font-weight:600">All tickets clear &rarr;</a>
       {% endif %}
     </div>
   </div>
 
+</div>
+
+<!-- ── QUICK MANAGEMENT CONTROL HUB ──────────────────────────────── -->
+<div class="ops-card mb-4" style="background:var(--ops-surface-2);border:1px solid var(--ops-border)">
+  <div class="d-flex justify-between align-center mb-3 flex-wrap gap-2">
+    <div>
+      <h3 style="margin:0;font-size:1.1rem;font-weight:700;color:var(--ops-foreground)"><i class="fas fa-compass" style="color:var(--ops-orange)"></i> Central Management Control Hub</h3>
+      <p style="margin:0;font-size:0.8rem;color:var(--ops-muted)">Direct executive access to all platform management modules</p>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:0.75rem">
+    <a href="/admin/orders" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-receipt" style="color:var(--ops-orange);width:20px"></i> Global Orders
+    </a>
+    <a href="/admin/restaurants" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-store" style="color:var(--ops-emerald);width:20px"></i> Restaurant Fleet
+    </a>
+    <a href="/admin/delivery-partners" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-motorcycle" style="color:var(--ops-cyan);width:20px"></i> Delivery Fleet
+    </a>
+    <a href="/admin/staff" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-users-cog" style="color:#A855F7;width:20px"></i> Staff Governance
+    </a>
+    <a href="/admin/users" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-users" style="color:var(--ops-amber);width:20px"></i> Customer Accounts
+    </a>
+    <a href="/admin/categories" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-th-large" style="color:var(--ops-orange);width:20px"></i> Food Categories
+    </a>
+    <a href="/admin/food-items" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-utensils" style="color:var(--ops-cyan);width:20px"></i> Dishes Catalog
+    </a>
+    <a href="/admin/coupons" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-tags" style="color:var(--ops-emerald);width:20px"></i> Coupons & Promos
+    </a>
+    <a href="/admin/payments" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-credit-card" style="color:var(--ops-emerald);width:20px"></i> Payments & Revenue
+    </a>
+    <a href="/admin/reports" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-chart-pie" style="color:#A855F7;width:20px"></i> Analytics Reports
+    </a>
+    <a href="/admin/activity" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-history" style="color:var(--ops-cyan);width:20px"></i> Operations Audit Log
+    </a>
+    <a href="/admin/complaints" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-headset" style="color:var(--ops-rose);width:20px"></i> Support Complaints
+    </a>
+    <a href="/admin/reviews" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-star" style="color:var(--ops-amber);width:20px"></i> Customer Reviews
+    </a>
+    <a href="/admin/profile" class="ops-btn ops-btn-outline" style="justify-content:flex-start;padding:0.7rem 0.9rem">
+      <i class="fas fa-shield-alt" style="color:var(--ops-cyan);width:20px"></i> Admin Settings
+    </a>
+  </div>
 </div>
 
 <!-- ── REVENUE TREND CHART ────────────────────────────────────────── -->
@@ -129,7 +223,7 @@
 </div>
 
 <!-- ── TWO-COLUMN OPERATIONAL STREAM ─────────────────────────────── -->
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start">
+<div class="ops-dashboard-grid" style="display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start">
   
   <!-- Live Orders Stream -->
   <div class="ops-card">
@@ -265,8 +359,8 @@ document.addEventListener('DOMContentLoaded', () => {
           fill: true,
           tension: 0.35,
           borderWidth: 3,
-          pointBackgroundColor: '#06B6D4',
-          pointBorderColor: '#0B0F19',
+          pointBackgroundColor: '#FF4500',
+          pointBorderColor: '#FFFFFF',
           pointBorderWidth: 2,
           pointRadius: 5
         }]
@@ -277,11 +371,11 @@ document.addEventListener('DOMContentLoaded', () => {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#1E293B',
-            borderColor: '#334155',
+            backgroundColor: '#0F172A',
+            borderColor: '#E2E8F0',
             borderWidth: 1,
-            titleColor: '#F8FAFC',
-            bodyColor: '#38BDF8',
+            titleColor: '#FFFFFF',
+            bodyColor: '#FED7AA',
             callbacks: {
               label: (context) => ' ₹' + Number(context.parsed.y).toFixed(2)
             }
@@ -289,14 +383,14 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         scales: {
           x: {
-            grid: { color: 'rgba(51, 65, 85, 0.3)' },
-            ticks: { color: '#94A3B8' }
+            grid: { color: 'rgba(226, 232, 240, 0.7)' },
+            ticks: { color: '#64748B' }
           },
           y: {
             beginAtZero: true,
-            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+            grid: { color: 'rgba(226, 232, 240, 0.7)' },
             ticks: {
-              color: '#94A3B8',
+              color: '#64748B',
               callback: function(val) { return '₹' + val; }
             }
           }

@@ -9,7 +9,7 @@ from datetime import datetime, date
 from werkzeug.utils import secure_filename
 from config import Config
 from functools import wraps
-from flask import session, redirect, url_for, flash
+from flask import session, redirect, url_for, flash, request
 
 
 # ─────────────────────────────────────────────
@@ -35,6 +35,26 @@ def save_uploaded_image(file, subfolder='uploads'):
         filepath = os.path.join(save_dir, unique_name)
         file.save(filepath)
         return f"/static/uploads/{unique_name}"
+def allowed_doc_file(filename):
+    """Check if uploaded document has an allowed extension."""
+    doc_exts = getattr(Config, 'ALLOWED_DOC_EXTENSIONS', {'png', 'jpg', 'jpeg', 'pdf', 'webp'})
+    return ('.' in filename and
+            filename.rsplit('.', 1)[1].lower() in doc_exts)
+
+
+def save_uploaded_document(file, subfolder='documents'):
+    """
+    Save an uploaded verification document (PDF, PNG, JPG) to static/uploads/documents.
+    Returns the relative URL path for use in templates and DB.
+    """
+    if file and file.filename and allowed_doc_file(file.filename):
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        unique_name = f"doc_{uuid.uuid4().hex}.{ext}"
+        save_dir = os.path.join(Config.UPLOAD_FOLDER, subfolder)
+        os.makedirs(save_dir, exist_ok=True)
+        filepath = os.path.join(save_dir, unique_name)
+        file.save(filepath)
+        return f"/static/uploads/{subfolder}/{unique_name}"
     return None
 
 
@@ -89,44 +109,308 @@ def generate_transaction_id():
 
 
 # ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# ROLE-SCOPED SESSION CONTEXT HELPERS
+# ─────────────────────────────────────────────
+
+def get_customer_auth():
+    """Retrieve validated customer authentication context."""
+    auth = session.get('customer_auth')
+    if auth and isinstance(auth, dict) and auth.get('user_id') and auth.get('role') == 'customer':
+        return auth
+    # Backward compatibility with legacy direct session assignment
+    if session.get('role') == 'customer' and session.get('user_id'):
+        return {
+            'user_id': session.get('user_id'),
+            'user_name': session.get('user_name', 'Customer'),
+            'user_email': session.get('user_email', ''),
+            'role': 'customer'
+        }
+    return None
+
+
+def set_customer_auth(user):
+    """Establish customer-specific authentication context."""
+    session['customer_auth'] = {
+        'user_id': user['id'],
+        'user_name': user['name'],
+        'user_email': user['email'],
+        'role': 'customer'
+    }
+    session['user_id'] = user['id']
+    session['user_name'] = user['name']
+    session['user_email'] = user['email']
+    session['role'] = 'customer'
+
+
+def clear_customer_auth():
+    """Clear only the customer-specific authentication context."""
+    session.pop('customer_auth', None)
+    if session.get('role') == 'customer':
+        session.pop('user_id', None)
+        session.pop('user_name', None)
+        session.pop('user_email', None)
+        session.pop('role', None)
+
+
+def get_admin_auth():
+    """Retrieve validated admin authentication context."""
+    auth = session.get('admin_auth')
+    if auth and isinstance(auth, dict) and auth.get('user_id') and auth.get('role') == 'admin':
+        return auth
+    # Backward compatibility
+    if session.get('role') == 'admin' and session.get('user_id'):
+        return {
+            'user_id': session.get('user_id'),
+            'user_name': session.get('user_name', 'Administrator'),
+            'user_email': session.get('user_email', ''),
+            'role': 'admin'
+        }
+    return None
+
+
+def set_admin_auth(user):
+    """Establish administrator-specific authentication context."""
+    session['admin_auth'] = {
+        'user_id': user['id'],
+        'user_name': user['name'],
+        'user_email': user['email'],
+        'role': 'admin'
+    }
+    session['admin_gate_passed'] = True
+    session['user_id'] = user['id']
+    session['user_name'] = user['name']
+    session['user_email'] = user['email']
+    session['role'] = 'admin'
+
+
+def clear_admin_auth():
+    """Clear only administrator-specific authentication context and gate access."""
+    session.pop('admin_auth', None)
+    session.pop('admin_gate_passed', None)
+    if session.get('role') == 'admin':
+        session.pop('user_id', None)
+        session.pop('user_name', None)
+        session.pop('user_email', None)
+        session.pop('role', None)
+
+
+def get_restaurant_auth():
+    """Retrieve validated restaurant owner authentication context."""
+    auth = session.get('restaurant_auth')
+    if auth and isinstance(auth, dict) and auth.get('user_id') and auth.get('role') == 'restaurant':
+        return auth
+    if session.get('role') == 'restaurant' and session.get('user_id'):
+        return {
+            'user_id': session.get('user_id'),
+            'user_name': session.get('user_name', ''),
+            'user_email': session.get('user_email', ''),
+            'role': 'restaurant',
+            'restaurant_id': session.get('restaurant_id')
+        }
+    return None
+
+
+def set_restaurant_auth(user, restaurant_id=None):
+    """Establish restaurant-specific authentication context."""
+    session['restaurant_auth'] = {
+        'user_id': user['id'],
+        'user_name': user['name'],
+        'user_email': user['email'],
+        'role': 'restaurant',
+        'restaurant_id': restaurant_id
+    }
+    session['user_id'] = user['id']
+    session['user_name'] = user['name']
+    session['user_email'] = user['email']
+    session['role'] = 'restaurant'
+    if restaurant_id:
+        session['restaurant_id'] = restaurant_id
+
+
+def clear_restaurant_auth():
+    """Clear only restaurant-specific authentication context."""
+    session.pop('restaurant_auth', None)
+    if session.get('role') == 'restaurant':
+        session.pop('user_id', None)
+        session.pop('user_name', None)
+        session.pop('user_email', None)
+        session.pop('role', None)
+        session.pop('restaurant_id', None)
+
+
+def get_delivery_auth():
+    """Retrieve validated delivery partner authentication context."""
+    auth = session.get('delivery_auth')
+    if auth and isinstance(auth, dict) and auth.get('user_id') and auth.get('role') == 'delivery':
+        return auth
+    if session.get('role') == 'delivery' and session.get('user_id'):
+        return {
+            'user_id': session.get('user_id'),
+            'user_name': session.get('user_name', ''),
+            'user_email': session.get('user_email', ''),
+            'role': 'delivery'
+        }
+    return None
+
+
+def set_delivery_auth(user):
+    """Establish delivery-specific authentication context."""
+    session['delivery_auth'] = {
+        'user_id': user['id'],
+        'user_name': user['name'],
+        'user_email': user['email'],
+        'role': 'delivery'
+    }
+    session['user_id'] = user['id']
+    session['user_name'] = user['name']
+    session['user_email'] = user['email']
+    session['role'] = 'delivery'
+
+
+def clear_delivery_auth():
+    """Clear only delivery-specific authentication context."""
+    session.pop('delivery_auth', None)
+    if session.get('role') == 'delivery':
+        session.pop('user_id', None)
+        session.pop('user_name', None)
+        session.pop('user_email', None)
+        session.pop('role', None)
+
+
+def get_staff_auth():
+    """Retrieve validated kitchen staff authentication context."""
+    auth = session.get('staff_auth')
+    if auth and isinstance(auth, dict) and auth.get('user_id') and auth.get('role') == 'staff':
+        return auth
+    if session.get('role') == 'staff' and session.get('user_id'):
+        return {
+            'user_id': session.get('user_id'),
+            'user_name': session.get('user_name', ''),
+            'user_email': session.get('user_email', ''),
+            'role': 'staff',
+            'restaurant_id': session.get('restaurant_id'),
+            'staff_role': session.get('staff_role'),
+            'restaurant_name': session.get('restaurant_name'),
+            'shift': session.get('shift')
+        }
+    return None
+
+
+def set_staff_auth(user, restaurant_id=None, staff_role=None, restaurant_name=None, shift=None):
+    """Establish staff-specific authentication context."""
+    session['staff_auth'] = {
+        'user_id': user['id'],
+        'user_name': user['name'],
+        'user_email': user['email'],
+        'role': 'staff',
+        'restaurant_id': restaurant_id,
+        'staff_role': staff_role,
+        'restaurant_name': restaurant_name,
+        'shift': shift
+    }
+    session['user_id'] = user['id']
+    session['user_name'] = user['name']
+    session['user_email'] = user['email']
+    session['role'] = 'staff'
+    if restaurant_id:
+        session['restaurant_id'] = restaurant_id
+    if staff_role:
+        session['staff_role'] = staff_role
+    if restaurant_name:
+        session['restaurant_name'] = restaurant_name
+    if shift:
+        session['shift'] = shift
+
+
+def clear_staff_auth():
+    """Clear only staff-specific authentication context."""
+    session.pop('staff_auth', None)
+    if session.get('role') == 'staff':
+        session.pop('user_id', None)
+        session.pop('user_name', None)
+        session.pop('user_email', None)
+        session.pop('role', None)
+        session.pop('restaurant_id', None)
+        session.pop('staff_role', None)
+        session.pop('restaurant_name', None)
+        session.pop('shift', None)
+
+
+# ─────────────────────────────────────────────
 # AUTH DECORATORS (Role-based access control)
 # ─────────────────────────────────────────────
 
 def login_required(f):
-    """Redirect to login if user is not authenticated."""
+    """Redirect to customer login if visitor has no customer session."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user_id' not in session:
+        auth = get_customer_auth()
+        if not auth:
             flash('Please login to continue.', 'warning')
-            return redirect(url_for('auth.login'))
+            return redirect(url_for('auth.login', next=request.path))
+        session['user_id'] = auth['user_id']
+        session['role'] = auth.get('role', 'customer')
         return f(*args, **kwargs)
     return decorated
 
 
 def customer_required(f):
-    """Allow only customers."""
+    """Allow only authenticated customers."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user_id' not in session:
+        auth = get_customer_auth()
+        if not auth:
             flash('Please login to continue.', 'warning')
-            return redirect(url_for('auth.login'))
-        if session.get('role') != 'customer':
+            return redirect(url_for('auth.login', next=request.path))
+        if auth.get('role') != 'customer':
             flash('Access denied. Customers only.', 'danger')
             return redirect(url_for('main.index'))
+        session['user_id'] = auth['user_id']
+        session['user_name'] = auth.get('user_name', '')
+        session['user_email'] = auth.get('user_email', '')
+        session['role'] = 'customer'
         return f(*args, **kwargs)
     return decorated
 
 
 def restaurant_required(f):
-    """Allow only restaurant owners."""
+    """Allow only approved restaurant owners."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Please login to continue.', 'warning')
-            return redirect(url_for('auth.login'))
-        if session.get('role') != 'restaurant':
+        # Reject active non-restaurant role sessions immediately
+        if session.get('role') and session.get('role') != 'restaurant':
             flash('Access denied. Restaurant owners only.', 'danger')
             return redirect(url_for('main.index'))
+
+        auth = get_restaurant_auth()
+        if not auth:
+            flash('Please login to continue.', 'warning')
+            return redirect(url_for('restaurant.login'))
+        if auth.get('role') != 'restaurant':
+            flash('Access denied. Restaurant owners only.', 'danger')
+            return redirect(url_for('main.index'))
+
+        session['user_id'] = auth['user_id']
+        session['role'] = 'restaurant'
+        session['user_name'] = auth.get('user_name', '')
+        session['user_email'] = auth.get('user_email', '')
+
+        from database import execute_query
+        rest = execute_query(
+            "SELECT id, verification_status, status FROM restaurants WHERE owner_id=%s",
+            (auth['user_id'],), fetchone=True
+        )
+        if rest:
+            session['restaurant_id'] = rest['id']
+            auth['restaurant_id'] = rest['id']
+            v_status = rest.get('verification_status')
+            if v_status == 'pending':
+                flash('Your restaurant application is currently pending admin approval.', 'warning')
+                return redirect(url_for('restaurant.application_status'))
+            elif v_status in ('rejected', 'suspended'):
+                flash('Your restaurant partner account has been suspended or rejected.', 'danger')
+                return redirect(url_for('restaurant.application_status'))
         return f(*args, **kwargs)
     return decorated
 
@@ -135,28 +419,141 @@ def delivery_required(f):
     """Allow only delivery partners."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Please login to continue.', 'warning')
-            return redirect(url_for('auth.login'))
-        if session.get('role') != 'delivery':
+        # Reject active non-delivery role sessions immediately
+        if session.get('role') and session.get('role') != 'delivery':
             flash('Access denied. Delivery partners only.', 'danger')
             return redirect(url_for('main.index'))
+
+        auth = get_delivery_auth()
+        if not auth:
+            flash('Please login to continue.', 'warning')
+            return redirect(url_for('delivery.login'))
+        if auth.get('role') != 'delivery':
+            flash('Access denied. Delivery partners only.', 'danger')
+            return redirect(url_for('main.index'))
+
+        session['user_id'] = auth['user_id']
+        session['role'] = 'delivery'
+        session['user_name'] = auth.get('user_name', '')
+        session['user_email'] = auth.get('user_email', '')
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_gate_required(f):
+    """Enforce that visitor has successfully passed the Admin Security Gate passkey."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('admin_gate_passed'):
+            flash('Admin security passkey required to access administrator portal.', 'warning')
+            return redirect(url_for('admin.gate', next=request.path))
         return f(*args, **kwargs)
     return decorated
 
 
 def admin_required(f):
-    """Allow only admins."""
+    """Allow only authenticated admins who have cleared entry security."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Please login to continue.', 'warning')
-            return redirect(url_for('auth.login'))
-        if session.get('role') != 'admin':
-            flash('Access denied. Admins only.', 'danger')
+        # 1. Reject active non-admin role sessions immediately
+        if session.get('role') and session.get('role') != 'admin':
+            flash('Access denied: System administrator privileges required.', 'danger')
             return redirect(url_for('main.index'))
+
+        auth = get_admin_auth()
+
+        # 2. Gate & Authentication Check
+        if not session.get('admin_gate_passed') or not auth:
+            if getattr(Config, 'ADMIN_DIRECT_LOGIN_ENABLED', True):
+                flash('Admin security passkey required to access administrator portal.', 'warning')
+                return redirect(url_for('admin.gate', next=request.path))
+            if not session.get('admin_gate_passed'):
+                flash('Admin security gate passkey required to access administrator portal.', 'warning')
+                return redirect(url_for('admin.gate', next=request.path))
+            flash('Please sign in with administrator credentials.', 'warning')
+            return redirect(url_for('admin.login', next=request.path))
+
+        # 3. Role Authorization Check
+        if auth.get('role') != 'admin':
+            flash('Access denied: System administrator privileges required.', 'danger')
+            return redirect(url_for('main.index'))
+
+        session['user_id'] = auth['user_id']
+        session['user_name'] = auth.get('user_name', 'Administrator')
+        session['user_email'] = auth.get('user_email', '')
+        session['role'] = 'admin'
         return f(*args, **kwargs)
     return decorated
+
+
+def staff_required(f):
+    """Allow only approved restaurant staff members."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # Reject active non-staff role sessions immediately
+        if session.get('role') and session.get('role') != 'staff':
+            flash('Access denied. Restaurant staff only.', 'danger')
+            return redirect(url_for('main.index'))
+
+        auth = get_staff_auth()
+        if not auth:
+            flash('Please login to continue.', 'warning')
+            return redirect(url_for('staff.login'))
+        if auth.get('role') != 'staff':
+            flash('Access denied. Restaurant staff only.', 'danger')
+            return redirect(url_for('main.index'))
+        
+        session['user_id'] = auth['user_id']
+        session['role'] = 'staff'
+        session['user_name'] = auth.get('user_name', '')
+        session['user_email'] = auth.get('user_email', '')
+
+        # Verify approval status and assigned restaurant
+        from database import execute_query
+        staff_rec = execute_query(
+            "SELECT s.*, r.name as restaurant_name, r.is_open FROM restaurant_staff s "
+            "JOIN restaurants r ON s.restaurant_id=r.id WHERE s.user_id=%s",
+            (auth['user_id'],), fetchone=True
+        )
+        if not staff_rec:
+            flash('No restaurant assignment found for this staff account.', 'danger')
+            return redirect(url_for('staff.login'))
+        if staff_rec['status'] != 'approved':
+            flash(f"Staff account status: {staff_rec['status'].title()}. Approval required to access kitchen desk.", 'warning')
+            return redirect(url_for('staff.login'))
+            
+        session['restaurant_id'] = staff_rec['restaurant_id']
+        session['restaurant_name'] = staff_rec['restaurant_name']
+        session['staff_role'] = staff_rec['staff_role']
+        return f(*args, **kwargs)
+    return decorated
+
+
+def staff_or_restaurant_required(f):
+    """Allow either restaurant owner, approved restaurant staff, or admin."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        rest_auth = get_restaurant_auth()
+        staff_auth = get_staff_auth()
+        admin_auth = get_admin_auth()
+
+        if rest_auth:
+            session['user_id'] = rest_auth['user_id']
+            session['role'] = 'restaurant'
+            return f(*args, **kwargs)
+        elif staff_auth:
+            session['user_id'] = staff_auth['user_id']
+            session['role'] = 'staff'
+            return f(*args, **kwargs)
+        elif admin_auth and session.get('admin_gate_passed'):
+            session['user_id'] = admin_auth['user_id']
+            session['role'] = 'admin'
+            return f(*args, **kwargs)
+
+        flash('Please login to continue.', 'warning')
+        return redirect(url_for('restaurant.login'))
+    return decorated
+
 
 
 # ─────────────────────────────────────────────
