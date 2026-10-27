@@ -74,7 +74,7 @@
       <li><a class="nav-link {% if request.endpoint == 'main.offers' %}active{% endif %}" href="/offers">Offers</a></li>
       <li><a class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}" href="/about">About</a></li>
       <li><a class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}" href="/contact">Contact</a></li>
-      <li><a class="nav-link {% if request.endpoint == 'restaurant.register' %}active{% endif %}" href="/restaurant/register" style="color:var(--primary);font-weight:600;"><i class="fas fa-handshake"></i> Partner With Us</a></li>
+      <li><a class="nav-link {% if request.endpoint in ('main.portals', 'restaurant.register') %}active{% endif %}" href="/portals" style="color:var(--primary);font-weight:600;white-space:nowrap;"><i class="fas fa-handshake"></i> Partner With Us</a></li>
 
       {% if customer_auth %}
         <!-- Customer Logged In -->
@@ -166,6 +166,7 @@
       <div>
         <div class="footer-heading">Partner Portals</div>
         <div class="footer-links">
+          <a href="/portals" style="color:var(--primary);font-weight:600;"><i class="fas fa-th-large"></i> All Partner Portals Hub</a>
           <a href="/restaurant/register"><i class="fas fa-handshake"></i> Partner With Us / List Restaurant</a>
           <a href="/restaurant/login"><i class="fas fa-store"></i> Restaurant Partner Login</a>
           <a href="/delivery/login"><i class="fas fa-motorcycle"></i> Delivery Rider Login</a>

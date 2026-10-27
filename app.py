@@ -27,6 +27,7 @@ from routes.delivery import delivery_bp
 from routes.admin import admin_bp
 from routes.staff import staff_bp
 from routes.api import api_bp
+from utils.helpers import get_role_display_name
 
 
 def create_app():
@@ -139,7 +140,7 @@ def create_app():
                     if staff_role := staff_auth.get('staff_role'):
                         session['staff_role'] = staff_role
 
-        elif path.startswith('/customer') or path.startswith('/auth') or path in ('/', '/restaurants', '/offers', '/about', '/contact', '/search') or path.startswith(('/restaurant/view', '/restaurant/review')):
+        elif path.startswith('/customer') or path.startswith('/auth') or path in ('/', '/portals', '/restaurants', '/offers', '/about', '/contact', '/search') or path.startswith(('/restaurant/view', '/restaurant/review')):
             cust_auth = session.get('customer_auth')
             if cust_auth and isinstance(cust_auth, dict) and cust_auth.get('role') == 'customer':
                 session['user_id'] = cust_auth['user_id']
@@ -238,17 +239,23 @@ def create_app():
             cur_user = ''
             cur_uid = None
 
+        cur_role_display = get_role_display_name(cur_role, session.get('staff_role'))
+        ops_role_display = get_role_display_name(ops_role or session.get('role'), session.get('staff_role'))
+
         return {
             'cart_count': cart_count,
             'customer_auth': customer_auth,
             'current_user': cur_user,
             'current_role': cur_role,
+            'current_role_display': cur_role_display,
             'current_user_id': cur_uid,
             'current_restaurant_id': session.get('restaurant_id', None),
             'current_staff_role': session.get('staff_role', None),
             'ops_role': ops_role or session.get('role'),
+            'ops_role_display': ops_role_display,
             'ops_user_name': ops_user_name or session.get('user_name'),
             'ops_logout_url': ops_logout_url,
+            'get_role_display_name': get_role_display_name,
         }
 
     # ── Error Handlers ────────────────────────────────────────────────────────

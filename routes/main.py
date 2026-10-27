@@ -229,6 +229,24 @@ def offers():
 
 
 # ─────────────────────────────────────────────
+# COMMON PARTNER PORTAL GATEWAY
+# ─────────────────────────────────────────────
+
+@main_bp.route('/portals')
+def portals():
+    """
+    Common Partner Portal Navigation Hub.
+    Displays clear, professional entry points for:
+      1. Admin Control Center (/admin)
+      2. Restaurant Owner (/restaurant/login, /restaurant/register)
+      3. Delivery Partner (/delivery/login, /delivery/register)
+      4. Hotel/Restaurant Staff (/staff/login, /staff/register)
+    Provides navigation only without altering sessions or elevating privileges.
+    """
+    return render_template('portals.html')
+
+
+# ─────────────────────────────────────────────
 # UNIFIED OPERATIONS CENTER ENTRY
 # ─────────────────────────────────────────────
 
@@ -254,4 +272,5 @@ def operations_center():
         # Customer or unrecognized role attempting internal operations access
         flash('Access Denied: The Operations Center is strictly reserved for authorized operating personnel.', 'danger')
         return redirect(url_for('main.index'))
+
 

@@ -27,8 +27,8 @@
         </div>
         <div>
           <h4 style="margin:0;font-size:1.2rem;color:var(--ops-foreground)">{{ user.name }}</h4>
-          <span class="ops-badge cyan" style="margin-top:0.25rem;display:inline-block">
-            {{ staff.staff_role|replace('_', ' ')|title }}
+          <span class="ops-badge cyan" style="margin-top:0.25rem;display:inline-block" id="staffRoleBadge">
+            <i class="fas fa-kitchen-set"></i> {{ get_role_display_name('staff', staff.staff_role) }}
           </span>
         </div>
       </div>
@@ -50,7 +50,9 @@
         </div>
         <div class="d-flex justify-between py-2">
           <span style="color:var(--ops-muted)">System Role</span>
-          <span style="font-weight:600;color:var(--ops-foreground)">Restricted Staff Portal</span>
+          <span style="font-weight:600;color:var(--ops-foreground)" id="staffSystemRole">
+            {{ get_role_display_name('staff', staff.staff_role) }}
+          </span>
         </div>
       </div>
     </div>

@@ -126,7 +126,7 @@
           </form>
           {% endif %}
 
-          <a href="/restaurant/order/{{ o.id }}" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)">
+          <a href="{{ url_for('restaurant.order_detail', order_id=o.id) }}" class="btn btn-outline btn-sm" style="border-radius:var(--radius-pill)">
             View Items
           </a>
         </div>

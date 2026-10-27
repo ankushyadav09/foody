@@ -8,7 +8,7 @@
       <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Add New Food Item</h1>
       <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">List a new dish on your online menu with pricing and photo</p>
     </div>
-    <a href="/restaurant/menu" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#475569">
+    <a href="{{ url_for('restaurant.menu') }}" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#475569">
       <i class="fas fa-arrow-left"></i> Back to Menu
     </a>
   </div>
@@ -16,11 +16,11 @@
 
 <div class="container py-4" style="max-width:700px">
   <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    <form method="POST" action="/restaurant/add-food" enctype="multipart/form-data">
+    <form method="POST" action="{{ url_for('restaurant.add_food') }}" enctype="multipart/form-data">
       
       <div class="form-group mb-3">
         <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Dish Name *</label>
-        <input type="text" class="form-control" name="name" required placeholder="e.g. Paneer Butter Masala">
+        <input type="text" class="form-control" name="name" required placeholder="e.g. Paneer Butter Masala" value="{{ form_data.name if form_data else '' }}">
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
@@ -28,15 +28,15 @@
           <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Category *</label>
           <select class="form-control" name="category_id" required>
             {% for c in categories %}
-            <option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>
+            <option value="{{ c.id }}" {% if form_data and form_data.category_id|string == c.id|string %}selected{% endif %}>{{ c.icon }} {{ c.name }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="form-group">
           <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Food Type *</label>
           <select class="form-control" name="veg_type" required>
-            <option value="veg">🟢 Pure Veg</option>
-            <option value="non_veg">🔴 Non-Veg</option>
+            <option value="veg" {% if form_data and form_data.veg_type == 'veg' %}selected{% endif %}>🟢 Pure Veg</option>
+            <option value="non_veg" {% if form_data and form_data.veg_type == 'non_veg' %}selected{% endif %}>🔴 Non-Veg</option>
           </select>
         </div>
       </div>
@@ -44,13 +44,13 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
         <div class="form-group">
           <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Price in ₹ *</label>
-          <input type="number" step="0.01" class="form-control" name="price" required placeholder="e.g. 249.00">
+          <input type="number" step="0.01" class="form-control" name="price" required placeholder="e.g. 249.00" value="{{ form_data.price if form_data else '' }}">
         </div>
         <div class="form-group">
           <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Initial Availability</label>
           <div style="margin-top:.6rem">
             <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-              <input type="checkbox" name="availability" value="1" checked> In Stock & Ready to Order
+              <input type="checkbox" name="availability" value="1" {% if not form_data or form_data.availability %}checked{% endif %}> In Stock & Ready to Order
             </label>
           </div>
         </div>
@@ -58,18 +58,24 @@
 
       <div class="form-group mb-3">
         <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Description</label>
-        <textarea class="form-control" name="description" rows="3" placeholder="Describe the ingredients, spices, and portion size..."></textarea>
+        <textarea class="form-control" name="description" rows="3" placeholder="Describe the ingredients, spices, and portion size...">{{ form_data.description if form_data else '' }}</textarea>
       </div>
 
       <div class="form-group mb-3">
         <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Food Image URL (Unsplash / Web URL)</label>
-        <input type="url" class="form-control" name="image_url" placeholder="https://images.unsplash.com/photo-...">
+        <input type="url" class="form-control" name="image_url" placeholder="https://images.unsplash.com/photo-..." value="{{ form_data.image_url if form_data else '' }}">
         <small style="color:var(--text-muted)">Or choose a local file below</small>
       </div>
 
       <div class="form-group mb-4">
         <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Upload Local Food Photo</label>
-        <input type="file" class="form-control" name="image" accept="image/*">
+        <input type="file" class="form-control" id="foodImageInput" name="image" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif">
+        <small style="color:var(--text-muted);display:block;margin-top:.2rem">Supported formats: JPG, JPEG, PNG, WEBP, GIF (Max 16MB)</small>
+        
+        <div id="imagePreviewBox" style="display:none;margin-top:.8rem;padding:.8rem;border:1px dashed var(--border);border-radius:var(--radius-md);background:#f8fafc;text-align:center">
+          <img id="imagePreviewImg" src="" alt="Selected Preview" style="max-height:160px;max-width:100%;border-radius:var(--radius-sm);object-fit:cover;box-shadow:var(--shadow-sm)">
+          <div style="margin-top:.4rem;font-size:.8rem;color:var(--text-muted)" id="imagePreviewMeta"></div>
+        </div>
       </div>
 
       <button type="submit" class="btn btn-primary btn-lg w-100" style="justify-content:center;border-radius:var(--radius-pill);font-weight:700">
@@ -79,4 +85,37 @@
     </form>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const fileInput = document.getElementById('foodImageInput');
+  const previewBox = document.getElementById('imagePreviewBox');
+  const previewImg = document.getElementById('imagePreviewImg');
+  const previewMeta = document.getElementById('imagePreviewMeta');
+
+  if (fileInput && previewBox && previewImg) {
+    fileInput.addEventListener('change', function() {
+      const file = this.files && this.files[0];
+      if (file) {
+        if (!file.type.startsWith('image/')) {
+          alert('Please select an image file (PNG, JPG, JPEG, WEBP, GIF)');
+          this.value = '';
+          previewBox.style.display = 'none';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          previewImg.src = e.target.result;
+          previewMeta.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+          previewBox.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        previewBox.style.display = 'none';
+        previewImg.src = '';
+      }
+    });
+  }
+});
+</script>
 {% endblock %}

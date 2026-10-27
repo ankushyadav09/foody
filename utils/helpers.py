@@ -16,25 +16,73 @@ from flask import session, redirect, url_for, flash, request
 # FILE UPLOAD HELPERS
 # ─────────────────────────────────────────────
 
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
+
 def allowed_file(filename):
-    """Check if uploaded file has an allowed extension."""
-    return ('.' in filename and
-            filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_EXTENSIONS)
+    """Check if uploaded file has an allowed image extension."""
+    if not filename or '.' not in filename:
+        return False
+    ext = filename.rsplit('.', 1)[1].lower()
+    return ext in ALLOWED_IMAGE_EXTENSIONS
 
 
 def save_uploaded_image(file, subfolder='uploads'):
     """
     Save an uploaded image to static/uploads (or subfolder).
-    Returns the relative URL path for use in templates.
+    Validates file extension, sanitizes filename, verifies genuine image content with Pillow,
+    and returns the relative URL path for use in templates and DB.
+    Returns None if validation or saving fails.
     """
-    if file and allowed_file(file.filename):
-        ext = file.filename.rsplit('.', 1)[1].lower()
-        unique_name = f"{uuid.uuid4().hex}.{ext}"
-        save_dir = os.path.join(Config.UPLOAD_FOLDER)
+    if not file or not file.filename:
+        return None
+
+    # 1. Sanitize filename and verify allowed image extension
+    clean_name = secure_filename(file.filename)
+    if not allowed_file(clean_name):
+        return None
+
+    ext = clean_name.rsplit('.', 1)[1].lower()
+
+    # 2. Validate file size and content integrity using Pillow
+    try:
+        from PIL import Image
+        file.stream.seek(0, os.SEEK_END)
+        size = file.stream.tell()
+        file.stream.seek(0)
+
+        # Reject empty files or files exceeding maximum content length (16MB)
+        max_size = getattr(Config, 'MAX_CONTENT_LENGTH', 16 * 1024 * 1024)
+        if size == 0 or size > max_size:
+            return None
+
+        # Verify image content and format
+        img = Image.open(file.stream)
+        img.verify()
+        file.stream.seek(0)
+    except Exception:
+        return None
+
+    # 3. Generate unique random filename to prevent collision & traversal
+    unique_name = f"{uuid.uuid4().hex}.{ext}"
+
+    # 4. Resolve destination directory safely
+    if subfolder and subfolder != 'uploads':
+        safe_subfolder = secure_filename(subfolder)
+        save_dir = os.path.join(Config.UPLOAD_FOLDER, safe_subfolder)
+        url_path = f"/static/uploads/{safe_subfolder}/{unique_name}"
+    else:
+        save_dir = Config.UPLOAD_FOLDER
+        url_path = f"/static/uploads/{unique_name}"
+
+    try:
         os.makedirs(save_dir, exist_ok=True)
         filepath = os.path.join(save_dir, unique_name)
         file.save(filepath)
-        return f"/static/uploads/{unique_name}"
+        return url_path
+    except Exception as e:
+        print(f"[IMAGE SAVE ERROR] {e}", file=sys.stderr)
+        return None
+
 def allowed_doc_file(filename):
     """Check if uploaded document has an allowed extension."""
     doc_exts = getattr(Config, 'ALLOWED_DOC_EXTENSIONS', {'png', 'jpg', 'jpeg', 'pdf', 'webp'})
@@ -109,6 +157,67 @@ def generate_transaction_id():
 
 
 # ─────────────────────────────────────────────
+# AUTHORITATIVE ROLE IDENTITIES & DISPLAY LABELS
+# ─────────────────────────────────────────────
+
+ROLE_DISPLAY_NAMES = {
+    'customer': 'Customer',
+    'admin': 'Administrator',
+    'restaurant': 'Restaurant Owner',
+    'delivery': 'Delivery Partner',
+    'staff': 'Restaurant / Hotel Staff',
+}
+
+STAFF_ROLE_DISPLAY_NAMES = {
+    'kitchen_staff': 'Kitchen Staff',
+    'restaurant_manager': 'Restaurant Manager',
+    'head_chef': 'Head Chef',
+    'sous_chef': 'Sous Chef',
+    'waiter': 'Waitstaff',
+    'cashier': 'Cashier',
+}
+
+def get_role_display_name(role, staff_role=None):
+    """
+    Centralized, server-side role normalization and authoritative display mapping.
+    Ensures consistent, unambiguous identity labels across all portals:
+    - customer -> 'Customer'
+    - admin -> 'Administrator'
+    - restaurant -> 'Restaurant Owner'
+    - delivery -> 'Delivery Partner'
+    - staff -> 'Restaurant / Hotel Staff — <Position>' (e.g., 'Restaurant / Hotel Staff — Kitchen Staff')
+    Returns 'Guest' for missing or unknown roles without privilege escalation.
+    """
+    if not role:
+        return 'Guest'
+    role_key = str(role).strip().lower()
+    base_label = ROLE_DISPLAY_NAMES.get(role_key)
+    if not base_label:
+        return 'Guest'
+    if role_key == 'staff' and staff_role:
+        clean_pos = str(staff_role).strip().lower()
+        pos_title = STAFF_ROLE_DISPLAY_NAMES.get(clean_pos, clean_pos.replace('_', ' ').title())
+        return f"{base_label} — {pos_title}"
+    return base_label
+
+
+def get_authoritative_account_role(user_id):
+    """
+    Query the authoritative role from the database for a given user_id.
+    Guarantees server-side verification and prevents session or URL role spoofing.
+    """
+    if not user_id:
+        return None
+    try:
+        from database import execute_query
+        user = execute_query("SELECT role FROM users WHERE id=%s", (user_id,), fetchone=True)
+        if user and user.get('role'):
+            return str(user['role']).strip().lower()
+    except Exception:
+        pass
+    return None
+
+
 # ─────────────────────────────────────────────
 # ROLE-SCOPED SESSION CONTEXT HELPERS
 # ─────────────────────────────────────────────

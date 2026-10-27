@@ -880,3 +880,34 @@ def simulate_order_step(order_id):
         'eta_minutes': eta_mins
     })
 
+
+@api_bp.route('/auth/status', methods=['GET'])
+def auth_status():
+    """
+    Return current session authentication status and authoritative role information.
+    Guarantees that client-side components can query and verify the authentic account identity.
+    """
+    user_id = session.get('user_id')
+    raw_role = session.get('role')
+    staff_role = session.get('staff_role')
+
+    db_role = None
+    if user_id:
+        from utils.helpers import get_authoritative_account_role, get_role_display_name
+        db_role = get_authoritative_account_role(user_id)
+        role_label = get_role_display_name(db_role or raw_role, staff_role)
+    else:
+        from utils.helpers import get_role_display_name
+        role_label = get_role_display_name(None)
+
+    return jsonify({
+        'authenticated': bool(user_id),
+        'user_id': user_id,
+        'user_name': session.get('user_name'),
+        'role': db_role or raw_role or None,
+        'role_display': role_label,
+        'staff_role': staff_role,
+        'restaurant_id': session.get('restaurant_id')
+    })
+
+

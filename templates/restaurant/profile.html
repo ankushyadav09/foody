@@ -14,8 +14,11 @@
       </div>
       {% endif %}
       <div>
-        <div class="d-flex align-center gap-2">
+        <div class="d-flex align-center gap-2 flex-wrap">
           <h1 style="font-size:1.8rem;font-weight:800;color:#fff;margin:0">{{ restaurant.name if restaurant else 'My Restaurant' }}</h1>
+          <span class="badge" style="background:#FF8C00;color:#fff;font-size:.78rem;font-weight:700" id="restaurantRoleBadge">
+            <i class="fas fa-store"></i> {{ get_role_display_name('restaurant') }}
+          </span>
           {% if restaurant %}
           <span class="badge" style="background:{% if restaurant.verification_status=='approved' %}#10B981{% else %}#F59E0B{% endif %};color:#fff;font-size:.78rem">
             {{ restaurant.verification_status|upper }}

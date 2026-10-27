@@ -8,7 +8,7 @@
       <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Edit Food Item: {{ item.name }}</h1>
       <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Update dish information, category, and pricing</p>
     </div>
-    <a href="/restaurant/menu" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#475569">
+    <a href="{{ url_for('restaurant.menu') }}" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#475569">
       <i class="fas fa-arrow-left"></i> Back to Menu
     </a>
   </div>
@@ -16,7 +16,7 @@
 
 <div class="container py-4" style="max-width:700px">
   <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    <form method="POST" action="/restaurant/food/edit/{{ item.id }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ url_for('restaurant.edit_food', item_id=item.id) }}" enctype="multipart/form-data">
       
       <div class="form-group mb-3">
         <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Dish Name *</label>
@@ -65,15 +65,21 @@
         <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Current Image</label>
         <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.5rem">
           <img src="{{ item.image or 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&q=80' }}"
-               alt="{{ item.name }}" style="width:60px;height:60px;border-radius:var(--radius-sm);object-fit:cover"
+               alt="{{ item.name }}" style="width:64px;height:64px;border-radius:var(--radius-sm);object-fit:cover;box-shadow:var(--shadow-sm)"
                onerror="this.src='https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&q=80'">
           <input type="url" class="form-control" name="image_url" value="{{ item.image or '' }}" placeholder="Image URL">
         </div>
       </div>
 
       <div class="form-group mb-4">
-        <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Upload New Image File (Optional)</label>
-        <input type="file" class="form-control" name="image" accept="image/*">
+        <label class="form-label" style="font-weight:600;font-size:.9rem;display:block;margin-bottom:.3rem">Upload Replacement Image File (Optional)</label>
+        <input type="file" class="form-control" id="foodImageInputEdit" name="image" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif">
+        <small style="color:var(--text-muted);display:block;margin-top:.2rem">Leave empty to keep existing dish image. Max 16MB.</small>
+        
+        <div id="imagePreviewBoxEdit" style="display:none;margin-top:.8rem;padding:.8rem;border:1px dashed var(--border);border-radius:var(--radius-md);background:#f8fafc;text-align:center">
+          <img id="imagePreviewImgEdit" src="" alt="New Selected Preview" style="max-height:160px;max-width:100%;border-radius:var(--radius-sm);object-fit:cover;box-shadow:var(--shadow-sm)">
+          <div style="margin-top:.4rem;font-size:.8rem;color:var(--text-muted)" id="imagePreviewMetaEdit"></div>
+        </div>
       </div>
 
       <button type="submit" class="btn btn-primary btn-lg w-100" style="justify-content:center;border-radius:var(--radius-pill);font-weight:700">
@@ -83,4 +89,37 @@
     </form>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const fileInput = document.getElementById('foodImageInputEdit');
+  const previewBox = document.getElementById('imagePreviewBoxEdit');
+  const previewImg = document.getElementById('imagePreviewImgEdit');
+  const previewMeta = document.getElementById('imagePreviewMetaEdit');
+
+  if (fileInput && previewBox && previewImg) {
+    fileInput.addEventListener('change', function() {
+      const file = this.files && this.files[0];
+      if (file) {
+        if (!file.type.startsWith('image/')) {
+          alert('Please select an image file (PNG, JPG, JPEG, WEBP, GIF)');
+          this.value = '';
+          previewBox.style.display = 'none';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          previewImg.src = e.target.result;
+          previewMeta.textContent = 'Replacement: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+          previewBox.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        previewBox.style.display = 'none';
+        previewImg.src = '';
+      }
+    });
+  }
+});
+</script>
 {% endblock %}

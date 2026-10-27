@@ -32,7 +32,9 @@
         <div>
           <div class="d-flex align-center gap-2 flex-wrap">
             <h2 style="font-size:1.4rem;font-weight:800;color:#fff;margin:0">{{ user.name }}</h2>
-            <span class="ops-badge" style="background:rgba(239,68,68,0.2);color:var(--ops-rose);border:1px solid rgba(239,68,68,0.4)">SUPER ADMIN</span>
+            <span class="ops-badge" style="background:rgba(239,68,68,0.2);color:var(--ops-rose);border:1px solid rgba(239,68,68,0.4)" id="adminRoleBadge">
+              <i class="fas fa-shield-alt"></i> {{ get_role_display_name('admin') }}
+            </span>
             <span class="ops-badge success">● ACTIVE</span>
           </div>
           <p style="color:var(--ops-text-dim);font-size:0.85rem;margin-top:0.3rem">

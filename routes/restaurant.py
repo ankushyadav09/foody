@@ -386,41 +386,72 @@ def menu():
 
 @restaurant_bp.route('/menu/add', methods=['GET', 'POST'])
 @restaurant_bp.route('/food/add', methods=['GET', 'POST'])
+@restaurant_bp.route('/add-food', methods=['GET', 'POST'])
 @restaurant_required
 def add_food():
     rest = _get_restaurant(session['user_id'])
+    if not rest:
+        flash('Restaurant profile not found. Please complete your profile first.', 'warning')
+        return redirect(url_for('restaurant.profile'))
+
+    if rest.get('verification_status') != 'approved':
+        flash('Your restaurant application is currently under review. Food items can be added after administrator approval.', 'warning')
+        return redirect(url_for('restaurant.application_status', id=rest['id']))
+
     categories = execute_query("SELECT * FROM food_categories ORDER BY name", fetchall=True)
 
     if request.method == 'POST':
         name        = request.form.get('name', '').strip()
         category_id = request.form.get('category_id') or 1
         description = request.form.get('description', '').strip()
-        price       = float(request.form.get('price', 0) or 0)
+        price_val   = request.form.get('price', '').strip()
         discount    = float(request.form.get('discount', 0) or 0)
-        final_price = price - (price * discount / 100.0) if discount > 0 else price
-        veg_type    = request.form.get('veg_type', 'veg')
+        veg_type    = request.form.get('veg_type', 'veg').strip()
         prep_time   = int(request.form.get('preparation_time', 20) or 20)
         availability= 1 if request.form.get('availability') in ('1', 'on', True) else 0
         is_bestseller = 1 if request.form.get('is_bestseller') in ('1', 'on', True) else 0
 
+        # Validate required fields
+        if not name:
+            flash('Dish name is required.', 'danger')
+            return render_template('restaurant/add_food.html',
+                                   restaurant=rest, categories=categories, form_data=request.form)
+
+        try:
+            price = float(price_val)
+            if price <= 0:
+                raise ValueError("Price must be positive.")
+        except (ValueError, TypeError):
+            flash('Please enter a valid price greater than zero.', 'danger')
+            return render_template('restaurant/add_food.html',
+                                   restaurant=rest, categories=categories, form_data=request.form)
+
+        final_price = round(price - (price * discount / 100.0), 2) if discount > 0 else price
+
+        # Handle image upload with strict validation
         image_url = 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&q=80'
         if 'image' in request.files and request.files['image'].filename:
-            image_url = save_uploaded_image(request.files['image']) or image_url
+            uploaded_img = save_uploaded_image(request.files['image'])
+            if uploaded_img:
+                image_url = uploaded_img
+            else:
+                flash('Invalid image file. Please upload a valid image (JPG, JPEG, PNG, WEBP, GIF) under 16MB.', 'danger')
+                return render_template('restaurant/add_food.html',
+                                       restaurant=rest, categories=categories, form_data=request.form)
+        elif request.form.get('image_url', '').strip():
+            image_url = request.form.get('image_url').strip()
 
-        if not name or not price:
-            flash('Name and price are required.', 'danger')
-        else:
-            execute_query(
-                """INSERT INTO food_items
-                   (restaurant_id, category_id, name, description, price, discount, final_price,
-                    image, veg_type, preparation_time, availability, is_bestseller)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (rest['id'], category_id, name, description, price, discount, final_price,
-                 image_url, veg_type, prep_time, availability, is_bestseller),
-                commit=True
-            )
-            flash(f"'{name}' added to menu successfully!", 'success')
-            return redirect(url_for('restaurant.menu'))
+        execute_query(
+            """INSERT INTO food_items
+               (restaurant_id, category_id, name, description, price, discount, final_price,
+                image, veg_type, preparation_time, availability, is_bestseller)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (rest['id'], category_id, name, description, price, discount, final_price,
+             image_url, veg_type, prep_time, availability, is_bestseller),
+            commit=True
+        )
+        flash(f"'{name}' added to menu successfully!", 'success')
+        return redirect(url_for('restaurant.menu'))
 
     return render_template('restaurant/add_food.html',
                            restaurant=rest, categories=categories)
@@ -431,6 +462,10 @@ def add_food():
 @restaurant_required
 def edit_food(item_id):
     rest = _get_restaurant(session['user_id'])
+    if not rest:
+        flash('Restaurant profile not found.', 'warning')
+        return redirect(url_for('restaurant.profile'))
+
     item = execute_query(
         "SELECT * FROM food_items WHERE id=%s AND restaurant_id=%s",
         (item_id, rest['id']), fetchone=True
@@ -445,17 +480,41 @@ def edit_food(item_id):
         name        = request.form.get('name', '').strip()
         category_id = request.form.get('category_id') or item['category_id']
         description = request.form.get('description', '').strip()
-        price       = float(request.form.get('price', 0) or 0)
+        price_val   = request.form.get('price', '').strip()
         discount    = float(request.form.get('discount', 0) or 0)
-        final_price = price - (price * discount / 100.0) if discount > 0 else price
-        veg_type    = request.form.get('veg_type', 'veg')
+        veg_type    = request.form.get('veg_type', 'veg').strip()
         prep_time   = int(request.form.get('preparation_time', 20) or 20)
         availability= 1 if request.form.get('availability') in ('1', 'on', True) else 0
         is_bestseller = 1 if request.form.get('is_bestseller') in ('1', 'on', True) else 0
 
+        if not name:
+            flash('Dish name is required.', 'danger')
+            return render_template('restaurant/edit_food.html',
+                                   restaurant=rest, item=item, categories=categories)
+
+        try:
+            price = float(price_val)
+            if price <= 0:
+                raise ValueError("Price must be positive.")
+        except (ValueError, TypeError):
+            flash('Please enter a valid price greater than zero.', 'danger')
+            return render_template('restaurant/edit_food.html',
+                                   restaurant=rest, item=item, categories=categories)
+
+        final_price = round(price - (price * discount / 100.0), 2) if discount > 0 else price
+
+        # Retain original image if no replacement is uploaded
         image_url = item['image']
         if 'image' in request.files and request.files['image'].filename:
-            image_url = save_uploaded_image(request.files['image']) or image_url
+            uploaded_img = save_uploaded_image(request.files['image'])
+            if uploaded_img:
+                image_url = uploaded_img
+            else:
+                flash('Invalid image file. Please upload a valid image (JPG, JPEG, PNG, WEBP, GIF) under 16MB.', 'danger')
+                return render_template('restaurant/edit_food.html',
+                                       restaurant=rest, item=item, categories=categories)
+        elif request.form.get('image_url', '').strip():
+            image_url = request.form.get('image_url').strip()
 
         execute_query(
             """UPDATE food_items SET name=%s, category_id=%s, description=%s,
@@ -539,6 +598,7 @@ def orders():
 
 
 @restaurant_bp.route('/orders/<int:order_id>')
+@restaurant_bp.route('/order/<int:order_id>')
 @restaurant_required
 def order_detail(order_id):
     rest = _get_restaurant(session['user_id'])

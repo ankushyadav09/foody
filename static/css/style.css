@@ -232,6 +232,10 @@ input, select, textarea { font-family: inherit; }
   padding: .45rem .85rem; border-radius: var(--radius-pill);
   font-weight: 500; font-size: .9rem; color: var(--text-dark);
   transition: var(--transition); position: relative;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 .nav-link:hover, .nav-link.active {
   color: var(--primary); background: rgba(255,69,0,.06);
@@ -977,8 +981,8 @@ button, input, select, textarea, .btn, .nav-link, .category-card, .cart-btn, .ha
   }
 }
 
-/* ── STANDARD MOBILE & TABLET PORTRAIT BREAKPOINT (<= 768px) ── */
-@media (max-width: 768px) {
+/* ── RESPONSIVE NAVBAR & TABLET DRAWER (<= 1024px) ───────────── */
+@media (max-width: 1024px) {
   .navbar-inner {
     height: 64px;
     padding-inline: 1rem;
@@ -1037,6 +1041,10 @@ button, input, select, textarea, .btn, .nav-link, .category-card, .cart-btn, .ha
   .mobile-nav-search {
     display: block;
   }
+}
+
+/* ── STANDARD MOBILE & TABLET PORTRAIT BREAKPOINT (<= 768px) ── */
+@media (max-width: 768px) {
 
   /* Swiggy/Zomato Horizontal Category Carousel */
   .category-grid {

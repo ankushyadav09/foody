@@ -19,8 +19,8 @@
           <span class="badge" style="background:{% if partner and partner.is_online %}#10B981{% else %}#64748B{% endif %};color:#fff;font-size:.78rem">
             {% if partner and partner.is_online %}● ONLINE (ACTIVE){% else %}○ OFFLINE{% endif %}
           </span>
-          <span class="badge" style="background:#0284C7;color:#fff;font-size:.78rem">
-            VERIFIED RIDER
+          <span class="badge" style="background:#0284C7;color:#fff;font-size:.78rem;font-weight:700" id="deliveryRoleBadge">
+            <i class="fas fa-motorcycle"></i> {{ get_role_display_name('delivery') }}
           </span>
         </div>
         <p style="color:#94A3B8;font-size:.88rem;margin-top:.25rem">

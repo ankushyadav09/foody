@@ -98,8 +98,8 @@
         {{ (session.get('user_name') or 'U')[:1]|upper }}
       </div>
       <span style="font-weight:600">{{ (session.get('user_name') or 'Staff')[:12] }}</span>
-      <span class="ops-chip {% if session.get('role')=='admin' %}warning{% elif session.get('role')=='restaurant' %}success{% else %}info{% endif %}" style="font-size:0.65rem;padding:0.1rem 0.45rem">
-        {{ (session.get('role') or 'user')|upper }}
+      <span class="ops-chip {% if session.get('role')=='admin' %}warning{% elif session.get('role')=='restaurant' %}success{% else %}info{% endif %}" style="font-size:0.65rem;padding:0.1rem 0.45rem" id="opsUserRoleBadge">
+        {{ ops_role_display or (session.get('role') or 'user')|upper }}
       </span>
     </div>
     <a href="{{ ops_logout_url|default('/auth/logout') }}" class="ops-btn ops-btn-outline ops-btn-sm" title="Log Out" style="color:var(--ops-rose)">
@@ -253,7 +253,7 @@
             </a>
           </li>
           <li>
-            <a href="/restaurant/menu/add" class="ops-nav-link restaurant {% if request.path.endswith('/add') or request.path.startswith('/restaurant/add-food') %}active restaurant{% endif %}">
+            <a href="{{ url_for('restaurant.add_food') }}" class="ops-nav-link restaurant {% if request.path.endswith('/add') or request.path.startswith('/restaurant/add-food') %}active restaurant{% endif %}">
               <span><i class="fas fa-plus-circle"></i> Add New Dish</span>
             </a>
           </li>

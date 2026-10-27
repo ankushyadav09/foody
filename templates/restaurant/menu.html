@@ -10,7 +10,7 @@
       <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Add, modify pricing, toggle dish availability, or remove items</p>
     </div>
     <div style="display:flex;gap:.75rem">
-      <a href="/restaurant/add-food" class="btn btn-primary" style="border-radius:var(--radius-pill)">
+      <a href="{{ url_for('restaurant.add_food') }}" class="btn btn-primary" style="border-radius:var(--radius-pill)">
         <i class="fas fa-plus"></i> Add New Dish
       </a>
       <a href="/restaurant/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#475569">
@@ -25,7 +25,7 @@
     
     <div class="d-flex justify-between align-center mb-3">
       <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark)">All Menu Dishes ({{ items|length }})</h2>
-      <a href="/restaurant/add-food" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
+      <a href="{{ url_for('restaurant.add_food') }}" class="btn btn-primary btn-sm" style="border-radius:var(--radius-pill)">
         <i class="fas fa-plus"></i> Add Dish
       </a>
     </div>
