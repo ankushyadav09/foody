@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Delivery Partner (Rider) Portal – Foody Hunters{% endblock %}
+{% block meta_desc %}Join the Foody Hunters delivery fleet. Drive, deliver fresh meals across Mehsana, and earn with flexible hours.{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper" style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); min-height: calc(100vh - var(--navbar-height, 70px)); padding: 3rem 1rem; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+  
+  <div class="auth-card" style="max-width: 640px; width: 100%; border: 1.5px solid #BFDBFE; border-radius: var(--radius-lg, 16px); box-shadow: 0 16px 40px rgba(29, 78, 216, 0.12); overflow: hidden; background: #FFFFFF;">
+    
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); text-align: center; padding: 2.25rem 1.75rem; color: #FFFFFF;">
+      <div style="width: 68px; height: 68px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: inline-flex; align-items: center; justify-content: center; font-size: 2.2rem; margin-bottom: 0.85rem; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);">
+        🛵
+      </div>
+      <h1 style="color: #FFFFFF; font-size: 1.75rem; font-weight: 800; margin: 0; letter-spacing: -0.02em;">
+        DELIVERY PARTNER (RIDER)
+      </h1>
+      <div style="color: rgba(255, 255, 255, 0.92); font-size: 0.92rem; font-weight: 500; margin-top: 0.4rem; letter-spacing: 0.02em;">
+        Foody Hunters Fleet Operations &amp; Dispatch Desk
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding: 2rem 1.75rem;">
+      
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'error' else 'danger' }} mb-3" style="border-radius: var(--radius-md, 8px); font-size: 0.88rem; padding: 0.75rem 1rem;">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- PENDING APPLICATION STATE -->
+      {% if rider_status == 'pending' or verification_status == 'pending' %}
+      <div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: var(--radius-md, 8px); padding: 1.25rem; margin-bottom: 1.5rem; text-align: center;">
+        <i class="fas fa-clock" style="font-size: 2rem; color: #D97706; margin-bottom: 0.5rem; display: block;"></i>
+        <h3 style="color: #92400E; font-size: 1.15rem; font-weight: 700; margin: 0 0 0.5rem 0;">Application Pending Admin Verification</h3>
+        <p style="color: #B45309; font-size: 0.9rem; line-height: 1.5; margin: 0 0 0.75rem 0;">
+          Your rider application has been received and is currently under review by our operations administration. Vehicle registration and driving license verification must be completed before you can access the delivery operations desk.
+        </p>
+        <span style="display: inline-block; background: #FEF3C7; color: #92400E; font-size: 0.8rem; font-weight: 700; padding: 0.3rem 0.75rem; border-radius: 9999px;">
+          STATUS: PENDING VERIFICATION
+        </span>
+      </div>
+
+      <!-- REJECTED APPLICATION STATE -->
+      {% elif rider_status == 'rejected' or verification_status == 'rejected' %}
+      <div style="background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: var(--radius-md, 8px); padding: 1.25rem; margin-bottom: 1.5rem; text-align: center;">
+        <i class="fas fa-times-circle" style="font-size: 2rem; color: #DC2626; margin-bottom: 0.5rem; display: block;"></i>
+        <h3 style="color: #991B1B; font-size: 1.15rem; font-weight: 700; margin: 0 0 0.5rem 0;">Application Not Approved</h3>
+        <p style="color: #B91C1C; font-size: 0.9rem; line-height: 1.5; margin: 0;">
+          Your delivery partner application was not approved. If you believe this decision is in error or wish to submit updated documentation, please contact our support team at <a href="mailto:support@foodyhunters.com" style="color: #DC2626; font-weight: 700;">support@foodyhunters.com</a>.
+        </p>
+      </div>
+
+      <!-- APPROVED AUTHENTICATED STATE -->
+      {% elif rider_status == 'active' and (verification_status == 'approved' or not verification_status) %}
+      <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-radius: var(--radius-md, 8px); padding: 1.25rem; margin-bottom: 1.5rem; text-align: center;">
+        <i class="fas fa-check-circle" style="font-size: 2rem; color: #16A34A; margin-bottom: 0.5rem; display: block;"></i>
+        <h3 style="color: #166534; font-size: 1.15rem; font-weight: 700; margin: 0 0 0.5rem 0;">Verified Delivery Partner</h3>
+        <p style="color: #15803D; font-size: 0.9rem; line-height: 1.5; margin: 0 0 1rem 0;">
+          Welcome back! Your rider account is active and verified. Proceed to your live dispatch dashboard to view available deliveries.
+        </p>
+        <a href="{{ url_for('delivery.dashboard') }}" id="btnDeliveryDashboard" class="btn w-100" style="background: #16A34A; color: #FFFFFF; font-weight: 700; font-size: 1rem; padding: 0.85rem; border-radius: var(--radius-md, 8px); border: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);">
+          <i class="fas fa-tachometer-alt"></i> Open Delivery Dashboard
+        </a>
+      </div>
+
+      <!-- STANDARD UNAUTHENTICATED / VISITOR STATE -->
+      {% else %}
+      <div style="text-align: center; margin-bottom: 1.75rem;">
+        <p style="color: #374151; font-size: 0.98rem; line-height: 1.6; margin: 0 0 1.25rem 0;">
+          Deliver delicious meals to customers across Mehsana. Join our verified fleet to earn competitive payouts with flexible working hours.
+        </p>
+
+        <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: var(--radius-md, 8px); padding: 1rem 1.25rem; text-align: left; margin-bottom: 1.75rem;">
+          <div style="font-weight: 700; font-size: 0.88rem; color: #1D4ED8; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.45rem;">
+            <i class="fas fa-info-circle"></i> Mandatory Admin Approval Notice
+          </div>
+          <p style="font-size: 0.84rem; color: #1E40AF; line-height: 1.5; margin: 0;">
+            All prospective delivery partners must submit an application with valid vehicle and driving license details. Account activation requires review and approval by the platform administrator before live delivery operations can commence.
+          </p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.5rem;">
+        <a href="{{ url_for('delivery.register') }}" id="btnRegisterDeliveryPartner" class="btn w-100" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; font-weight: 800; font-size: 1.02rem; padding: 0.9rem 1.25rem; border-radius: var(--radius-md, 8px); border: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.28); transition: all 0.2s;">
+          <i class="fas fa-motorcycle"></i> Register as Delivery Partner
+        </a>
+        <a href="{{ url_for('delivery.login') }}" id="btnLoginDeliveryPartner" class="btn w-100" style="background: #FFFFFF; color: #1D4ED8; font-weight: 700; font-size: 0.98rem; padding: 0.85rem 1.25rem; border-radius: var(--radius-md, 8px); border: 1.5px solid #93C5FD; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s;">
+          <i class="fas fa-sign-in-alt"></i> Delivery Partner Login
+        </a>
+      </div>
+      {% endif %}
+
+      <!-- Onboarding Steps Info -->
+      <div style="margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px dashed #BFDBFE;">
+        <h4 style="font-size: 0.88rem; font-weight: 700; color: #1E40AF; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 0.85rem 0; text-align: center;">
+          3-Step Fleet Onboarding
+        </h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; font-size: 0.82rem; color: #4B5563;">
+          <div style="background: #F8FAFC; padding: 0.75rem; border-radius: 6px; border: 1px solid #E2E8F0; text-align: center;">
+            <strong style="color: #1D4ED8; display: block; margin-bottom: 0.25rem;">1. Apply</strong>
+            Fill registration with vehicle &amp; license info.
+          </div>
+          <div style="background: #F8FAFC; padding: 0.75rem; border-radius: 6px; border: 1px solid #E2E8F0; text-align: center;">
+            <strong style="color: #1D4ED8; display: block; margin-bottom: 0.25rem;">2. Admin Review</strong>
+            Admin verifies documents &amp; activates account.
+          </div>
+          <div style="background: #F8FAFC; padding: 0.75rem; border-radius: 6px; border: 1px solid #E2E8F0; text-align: center;">
+            <strong style="color: #1D4ED8; display: block; margin-bottom: 0.25rem;">3. Deliver</strong>
+            Log in to rider desk and accept live orders.
+          </div>
+        </div>
+      </div>
+
+      <!-- Back Link -->
+      <div style="margin-top: 1.5rem; text-align: center;">
+        <a href="{{ url_for('main.index') }}" style="color: #6B7280; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500;">
+          <i class="fas fa-arrow-left"></i> Return to Customer Storefront
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Footer Note -->
+    <div style="background: #EFF6FF; border-top: 1px solid #BFDBFE; padding: 0.85rem 1.25rem; font-size: 0.78rem; color: #64748B; text-align: center;">
+      FOODY HUNTERS FLEET &bull; SINGLE UNIFIED RIDER ROLE &bull; MEHSANA REGION
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

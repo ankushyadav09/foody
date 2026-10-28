@@ -36,8 +36,12 @@ class Config:
     RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', '').strip()
     RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '').strip()
 
+    # Base project directory
+    BASE_DIR = basedir
+
     # Upload folder for food/restaurant images and verification documents
     UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads')
+    SECURE_DOCS_FOLDER = os.path.join(basedir, 'uploads_secure', 'documents')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload size
 
     # Allowed image and document extensions

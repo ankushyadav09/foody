@@ -1,0 +1,190 @@
+{% extends "ops_base.html" %}
+{% block title %}Rider Dossier: {{ partner.name }} – Foody Hunters Administrator{% endblock %}
+
+{% block page_title %}🛵 Delivery Partner #{{ partner.user_id }}: {{ partner.name }}{% endblock %}
+{% block page_subtitle %}Review fleet verification, vehicle telemetry, contact info, and delivery dispatch history{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex align-center gap-2 flex-wrap">
+  <a href="/admin/delivery-partners" class="ops-btn ops-btn-outline ops-btn-sm">
+    <i class="fas fa-arrow-left"></i> All Fleet
+  </a>
+  {% if partner.verification_status == 'pending' or partner.user_status == 'pending' %}
+    <form method="POST" action="/admin/delivery-partners/approve/{{ partner.user_id }}" style="display:inline">
+      <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm">
+        <i class="fas fa-check"></i> Approve Application
+      </button>
+    </form>
+    <form method="POST" action="/admin/delivery-partners/reject/{{ partner.user_id }}" style="display:inline" onsubmit="return confirm('Reject this application?');">
+      <button type="submit" class="ops-btn ops-btn-outline ops-btn-sm" style="color:var(--ops-rose);border-color:var(--ops-rose)">
+        <i class="fas fa-times"></i> Reject
+      </button>
+    </form>
+  {% elif partner.user_status == 'active' %}
+    <form method="POST" action="/admin/delivery-partners/toggle/{{ partner.user_id }}" style="display:inline">
+      <button type="submit" class="ops-btn ops-btn-outline ops-btn-sm">
+        <i class="fas fa-pause"></i> Suspend Rider
+      </button>
+    </form>
+  {% else %}
+    <form method="POST" action="/admin/delivery-partners/approve/{{ partner.user_id }}" style="display:inline">
+      <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm">
+        <i class="fas fa-play"></i> Reactivate Rider
+      </button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:1.5rem;margin-bottom:2rem">
+  
+  <!-- Card 1: Rider Profile & Status -->
+  <div class="ops-card">
+    <div class="ops-card-header d-flex justify-between align-center">
+      <h3 style="margin:0;font-size:1.05rem;color:var(--ops-foreground)"><i class="fas fa-user-circle"></i> Rider Profile</h3>
+      {% if partner.verification_status == 'pending' or partner.user_status == 'pending' %}
+        <span class="ops-badge warning"><i class="fas fa-clock"></i> Pending Review</span>
+      {% elif partner.verification_status == 'rejected' or partner.user_status == 'rejected' %}
+        <span class="ops-badge danger"><i class="fas fa-times-circle"></i> Rejected</span>
+      {% elif partner.user_status == 'inactive' %}
+        <span class="ops-badge danger"><i class="fas fa-ban"></i> Suspended</span>
+      {% else %}
+        <span class="ops-badge success"><i class="fas fa-check-circle"></i> Approved / Active</span>
+      {% endif %}
+    </div>
+    <div style="padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem">
+      <div>
+        <label style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700">Full Name</label>
+        <div style="font-weight:700;color:var(--ops-foreground);font-size:1.1rem">{{ partner.name }}</div>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700">Email Address</label>
+        <div><a href="mailto:{{ partner.email }}" style="color:var(--ops-cyan)">{{ partner.email }}</a></div>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700">Phone Number</label>
+        <div><a href="tel:{{ partner.phone }}" style="color:var(--ops-cyan)">{{ partner.phone or 'Not provided' }}</a></div>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700">Service Base Location</label>
+        <div style="color:var(--ops-foreground)">{{ partner.address or 'Standard Mehsana Dispatch Zone' }}, {{ partner.city or 'Mehsana' }}</div>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700">Member Since</label>
+        <div style="color:var(--ops-muted);font-size:0.85rem">{{ partner.created_at or 'N/A' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 2: Vehicle & Driving Credentials -->
+  <div class="ops-card">
+    <div class="ops-card-header">
+      <h3 style="margin:0;font-size:1.05rem;color:var(--ops-foreground)"><i class="fas fa-motorcycle"></i> Fleet Vehicle & Credentials</h3>
+    </div>
+    <div style="padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem">
+      <div>
+        <label style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700">Vehicle Type</label>
+        <div style="font-weight:700;color:var(--ops-foreground)">{{ partner.vehicle_type or 'Motorcycle' }}</div>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700">License Plate Number</label>
+        <div style="font-family:var(--ops-font-mono);font-weight:700;color:var(--ops-cyan)">{{ partner.vehicle_number or 'GJ-02-AB-1234' }}</div>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700">Driving License Number</label>
+        <div style="font-family:var(--ops-font-mono);color:var(--ops-foreground)">{{ partner.license_number or 'DL-GJ02-VERIFIED' }}</div>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700">Operating Duty Status</label>
+        <div>
+          {% if partner.is_online %}
+            <span class="ops-badge success"><i class="fas fa-signal"></i> ONLINE (Ready for Dispatch)</span>
+          {% else %}
+            <span class="ops-badge" style="background:#334155;color:#94A3B8"><i class="fas fa-moon"></i> OFFLINE</span>
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700">Last Telemetry Coordinates</label>
+        <div style="font-family:var(--ops-font-mono);font-size:0.85rem;color:var(--ops-foreground)">
+          Lat: {{ "%.4f"|format(partner.current_lat or 23.5880) }}, Lng: {{ "%.4f"|format(partner.current_lng or 72.3693) }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 3: Performance & Statistics -->
+  <div class="ops-card">
+    <div class="ops-card-header">
+      <h3 style="margin:0;font-size:1.05rem;color:var(--ops-foreground)"><i class="fas fa-chart-line"></i> Logistics Metrics</h3>
+    </div>
+    <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1.2rem">
+      <div style="background:rgba(255,255,255,0.03);padding:1rem;border-radius:var(--ops-radius-md);border:1px solid var(--ops-border)">
+        <span style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700;display:block">Lifetime Completed Drops</span>
+        <strong style="font-size:1.6rem;color:var(--ops-cyan);font-weight:800">{{ partner.total_deliveries or 0 }} Deliveries</strong>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);padding:1rem;border-radius:var(--ops-radius-md);border:1px solid var(--ops-border)">
+        <span style="font-size:0.75rem;color:var(--ops-muted);text-transform:uppercase;font-weight:700;display:block">Estimated Fleet Earnings</span>
+        <strong style="font-size:1.6rem;color:#10B981;font-weight:800">₹{{ "%.2f"|format(partner.total_earnings or 0.0) }}</strong>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Recent Delivery Assignments Section -->
+<div class="ops-card">
+  <div class="ops-card-header d-flex justify-between align-center">
+    <h3 style="margin:0;font-size:1.05rem;color:var(--ops-foreground)"><i class="fas fa-boxes-stacked"></i> Recent Delivery Assignments</h3>
+    <span style="font-size:0.82rem;color:var(--ops-muted)">Showing latest {{ recent_assignments|length }} records</span>
+  </div>
+  
+  {% if recent_assignments %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Order Code</th>
+          <th>Restaurant Pickup</th>
+          <th>Amount</th>
+          <th>Dispatch Status</th>
+          <th>Order Lifecycle</th>
+          <th>Assigned At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in recent_assignments %}
+        <tr>
+          <td>
+            <strong style="font-family:var(--ops-font-mono);color:var(--ops-foreground)">#{{ a.order_code }}</strong>
+          </td>
+          <td>{{ a.restaurant_name or 'Kitchen Partner' }}</td>
+          <td>₹{{ "%.2f"|format(a.total_amount or 0.0) }}</td>
+          <td>
+            {% if a.status == 'delivered' %}
+              <span class="ops-badge success">Delivered</span>
+            {% elif a.status == 'picked_up' %}
+              <span class="ops-badge warning">In Transit</span>
+            {% else %}
+              <span class="ops-badge info">Assigned</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="ops-badge" style="text-transform:uppercase">{{ a.order_status }}</span>
+          </td>
+          <td style="color:var(--ops-muted);font-size:0.85rem">{{ a.assigned_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="ops-empty-state" style="padding:2.5rem 1rem">
+    <i class="fas fa-box-open ops-empty-icon"></i>
+    <div class="ops-empty-title">No Assignments Dispatched Yet</div>
+    <div class="ops-empty-desc">This delivery partner has not been assigned any customer orders yet.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

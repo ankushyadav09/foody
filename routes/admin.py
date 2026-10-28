@@ -358,14 +358,16 @@ def approve_restaurant(rid):
 @admin_required
 def reject_restaurant(rid):
     r = execute_query("SELECT name, owner_id FROM restaurants WHERE id=%s", (rid,), fetchone=True)
+    reason = request.form.get('rejection_reason', '').strip() or 'Application did not meet onboarding documentation or hygiene standards.'
     execute_query(
-        "UPDATE restaurants SET verification_status='rejected', status='inactive' WHERE id=%s",
-        (rid,), commit=True
+        "UPDATE restaurants SET verification_status='rejected', status='inactive', rejection_reason=%s WHERE id=%s",
+        (reason, rid), commit=True
     )
     r_name = r['name'] if r else f"#{rid}"
-    log_activity(session.get('user_id'), 'RESTAURANT_REJECTED', f"Rejected restaurant application for '{r_name}' (ID #{rid})")
+    log_activity(session.get('user_id'), 'RESTAURANT_REJECTED', f"Rejected restaurant application for '{r_name}' (ID #{rid}): {reason}")
     flash(f"Restaurant '{r_name}' application has been rejected.", 'warning')
     return redirect(url_for('admin.restaurants'))
+
 
 
 @admin_bp.route('/restaurants/toggle/<int:rid>', methods=['POST'])
@@ -389,34 +391,221 @@ def toggle_restaurant(rid):
 @admin_bp.route('/delivery-partners')
 @admin_required
 def delivery_partners():
-    partners = execute_query(
-        "SELECT * FROM users WHERE role='delivery' ORDER BY created_at DESC",
-        fetchall=True
-    )
-    return render_template('admin/delivery_partners.html', partners=partners)
+    status = request.args.get('status', 'all')
+    q      = request.args.get('q', '').strip()
+
+    sql = """
+        SELECT u.id AS user_id, u.name, u.email, u.phone, u.status AS user_status,
+               u.address, u.city, u.pincode, u.created_at,
+               dp.id AS partner_id, dp.vehicle_type, dp.vehicle_number,
+               dp.license_number, dp.is_available, dp.is_online,
+               dp.total_deliveries, dp.total_earnings,
+               COALESCE(dp.verification_status, CASE WHEN u.status='active' THEN 'approved' ELSE u.status END) AS verification_status
+        FROM users u
+        LEFT JOIN delivery_partners dp ON dp.user_id = u.id
+        WHERE u.role = 'delivery'
+    """
+    params = []
+    if status == 'pending':
+        sql += " AND (dp.verification_status='pending' OR u.status='pending')"
+    elif status in ('approved', 'active'):
+        sql += " AND (dp.verification_status='approved' OR (dp.verification_status IS NULL AND u.status='active'))"
+    elif status == 'rejected':
+        sql += " AND (dp.verification_status='rejected' OR u.status='rejected')"
+    elif status == 'inactive':
+        sql += " AND u.status='inactive'"
+
+    if q:
+        sql += " AND (u.name LIKE %s OR u.email LIKE %s OR u.phone LIKE %s OR dp.vehicle_number LIKE %s OR dp.license_number LIKE %s)"
+        like = f"%{q}%"
+        params.extend([like, like, like, like, like])
+
+    sql += " ORDER BY u.created_at DESC"
+    all_partners = execute_query(sql, tuple(params), fetchall=True) or []
+
+    counts = {
+        'all': (execute_query("SELECT COUNT(*) AS c FROM users WHERE role='delivery'", fetchone=True) or {}).get('c', 0),
+        'pending': (execute_query(
+            """SELECT COUNT(*) AS c FROM users u
+               LEFT JOIN delivery_partners dp ON dp.user_id = u.id
+               WHERE u.role='delivery' AND (dp.verification_status='pending' OR u.status='pending')""",
+            fetchone=True
+        ) or {}).get('c', 0),
+        'approved': (execute_query(
+            """SELECT COUNT(*) AS c FROM users u
+               LEFT JOIN delivery_partners dp ON dp.user_id = u.id
+               WHERE u.role='delivery' AND (dp.verification_status='approved' OR (dp.verification_status IS NULL AND u.status='active'))""",
+            fetchone=True
+        ) or {}).get('c', 0),
+        'rejected': (execute_query(
+            """SELECT COUNT(*) AS c FROM users u
+               LEFT JOIN delivery_partners dp ON dp.user_id = u.id
+               WHERE u.role='delivery' AND (dp.verification_status='rejected' OR u.status='rejected')""",
+            fetchone=True
+        ) or {}).get('c', 0),
+        'inactive': (execute_query(
+            """SELECT COUNT(*) AS c FROM users WHERE role='delivery' AND status='inactive'""",
+            fetchone=True
+        ) or {}).get('c', 0)
+    }
+
+    return render_template('admin/delivery_partners.html',
+                           partners=all_partners, status=status, q=q, counts=counts)
+
+
+@admin_bp.route('/delivery-partners/approve/<int:partner_id>', methods=['POST'])
+@admin_bp.route('/delivery-partner/approve/<int:partner_id>', methods=['POST'])
+@admin_required
+def approve_delivery_partner(partner_id):
+    user = execute_query("SELECT * FROM users WHERE id=%s AND role='delivery'", (partner_id,), fetchone=True)
+    if not user:
+        dp = execute_query("SELECT * FROM delivery_partners WHERE id=%s", (partner_id,), fetchone=True)
+        if dp:
+            user = execute_query("SELECT * FROM users WHERE id=%s", (dp['user_id'],), fetchone=True)
+
+    if user:
+        execute_query("UPDATE users SET status='active' WHERE id=%s", (user['id'],), commit=True)
+        dp = execute_query("SELECT id FROM delivery_partners WHERE user_id=%s", (user['id'],), fetchone=True)
+        if dp:
+            execute_query(
+                "UPDATE delivery_partners SET verification_status='approved', is_available=1, is_online=1 WHERE id=%s",
+                (dp['id'],), commit=True
+            )
+        else:
+            execute_query(
+                "INSERT INTO delivery_partners (user_id, vehicle_type, vehicle_number, is_available, is_online, verification_status) VALUES (%s, 'Motorcycle', 'GJ-02-AB-1234', 1, 1, 'approved')",
+                (user['id'],), commit=True
+            )
+        log_activity(session.get('user_id'), 'DELIVERY_PARTNER_APPROVED', f"Approved delivery partner application for '{user['name']}' (ID #{user['id']})")
+        flash(f"Delivery partner '{user['name']}' approved and activated for delivery operations!", 'success')
+    else:
+        flash("Delivery partner account not found.", "danger")
+    return redirect(url_for('admin.delivery_partners'))
+
+
+@admin_bp.route('/delivery-partners/reject/<int:partner_id>', methods=['POST'])
+@admin_bp.route('/delivery-partner/reject/<int:partner_id>', methods=['POST'])
+@admin_required
+def reject_delivery_partner(partner_id):
+    user = execute_query("SELECT * FROM users WHERE id=%s AND role='delivery'", (partner_id,), fetchone=True)
+    if not user:
+        dp = execute_query("SELECT * FROM delivery_partners WHERE id=%s", (partner_id,), fetchone=True)
+        if dp:
+            user = execute_query("SELECT * FROM users WHERE id=%s", (dp['user_id'],), fetchone=True)
+
+    if user:
+        reason = request.form.get('rejection_reason', '').strip() or 'Application details or driving documents could not be verified.'
+        execute_query("UPDATE users SET status='rejected' WHERE id=%s", (user['id'],), commit=True)
+        execute_query(
+            "UPDATE delivery_partners SET verification_status='rejected', is_available=0, is_online=0 WHERE user_id=%s",
+            (user['id'],), commit=True
+        )
+        log_activity(session.get('user_id'), 'DELIVERY_PARTNER_REJECTED', f"Rejected delivery partner application for '{user['name']}' (ID #{user['id']}): {reason}")
+        flash(f"Delivery partner '{user['name']}' application has been rejected.", 'warning')
+    else:
+        flash("Delivery partner account not found.", "danger")
+    return redirect(url_for('admin.delivery_partners'))
+
+
+@admin_bp.route('/delivery-partners/toggle/<int:partner_id>', methods=['POST'])
+@admin_bp.route('/delivery-partner/toggle/<int:partner_id>', methods=['POST'])
+@admin_required
+def toggle_delivery_partner(partner_id):
+    user = execute_query("SELECT * FROM users WHERE id=%s AND role='delivery'", (partner_id,), fetchone=True)
+    if not user:
+        dp = execute_query("SELECT * FROM delivery_partners WHERE id=%s", (partner_id,), fetchone=True)
+        if dp:
+            user = execute_query("SELECT * FROM users WHERE id=%s", (dp['user_id'],), fetchone=True)
+
+    if user:
+        new_status = 'inactive' if user['status'] == 'active' else 'active'
+        execute_query("UPDATE users SET status=%s WHERE id=%s", (new_status, user['id']), commit=True)
+        new_avail = 1 if new_status == 'active' else 0
+        execute_query(
+            "UPDATE delivery_partners SET is_available=%s, is_online=%s WHERE user_id=%s",
+            (new_avail, new_avail, user['id']),
+            commit=True
+        )
+        log_activity(session.get('user_id'), 'DELIVERY_PARTNER_TOGGLED', f"Toggled delivery partner '{user['name']}' status to {new_status}")
+        flash(f"Delivery partner '{user['name']}' status set to {new_status}.", 'info')
+    else:
+        flash("Delivery partner account not found.", "danger")
+    return redirect(url_for('admin.delivery_partners'))
 
 
 @admin_bp.route('/delivery-partners/add', methods=['GET', 'POST'])
 @admin_required
 def add_delivery_partner():
     if request.method == 'POST':
-        name  = request.form.get('name', '').strip()
-        email = request.form.get('email', '').strip().lower()
-        phone = request.form.get('phone', '').strip()
-        pw    = request.form.get('password', 'foody123')
+        name           = request.form.get('name', '').strip()
+        email          = request.form.get('email', '').strip().lower()
+        phone          = request.form.get('phone', '').strip()
+        vehicle_type   = request.form.get('vehicle_type', 'Motorcycle').strip() or 'Motorcycle'
+        vehicle_number = request.form.get('vehicle_number', 'GJ-02-AB-1234').strip() or 'GJ-02-AB-1234'
+        license_number = request.form.get('license_number', 'DL-GJ02-2024-00000').strip() or 'DL-GJ02-2024-00000'
+        pw             = request.form.get('password', 'foody123')
 
         existing = execute_query("SELECT id FROM users WHERE email=%s", (email,), fetchone=True)
         if existing:
             flash('Email already registered.', 'danger')
         else:
-            execute_query(
+            new_uid = execute_query(
                 """INSERT INTO users (name, email, phone, password_hash, role, status)
                    VALUES (%s,%s,%s,%s,'delivery','active')""",
                 (name, email, phone, generate_password_hash(pw)), commit=True
             )
-            flash(f"Delivery partner '{name}' added!", 'success')
+            execute_query(
+                """INSERT INTO delivery_partners (user_id, vehicle_type, vehicle_number, license_number, is_available, is_online, total_deliveries, total_earnings, verification_status)
+                   VALUES (%s, %s, %s, %s, 1, 1, 0, 0.00, 'approved')""",
+                (new_uid, vehicle_type, vehicle_number, license_number), commit=True
+            )
+            flash(f"Delivery partner '{name}' added and activated!", 'success')
             return redirect(url_for('admin.delivery_partners'))
     return render_template('admin/add_delivery_partner.html')
+
+
+@admin_bp.route('/delivery-partners/<int:partner_id>')
+@admin_bp.route('/delivery-partner/<int:partner_id>')
+@admin_required
+def delivery_partner_detail(partner_id):
+    """Admin view for detailed delivery partner dossier and delivery history."""
+    partner = execute_query(
+        """SELECT u.id AS user_id, u.name, u.email, u.phone, u.city, u.address,
+                  u.status AS user_status, u.created_at,
+                  dp.id AS partner_id, dp.vehicle_type, dp.vehicle_number,
+                  dp.license_number, dp.is_available, dp.is_online,
+                  dp.total_deliveries, dp.total_earnings, dp.current_lat, dp.current_lng,
+                  COALESCE(dp.verification_status, CASE WHEN u.status='active' THEN 'approved' ELSE u.status END) AS verification_status
+           FROM users u
+           LEFT JOIN delivery_partners dp ON dp.user_id = u.id
+           WHERE (u.id=%s OR dp.id=%s) AND u.role='delivery'""",
+        (partner_id, partner_id), fetchone=True
+    )
+    if not partner:
+        flash('Delivery partner not found.', 'danger')
+        return redirect(url_for('admin.delivery_partners')), 404
+
+    recent_assignments = execute_query(
+        """SELECT da.*, o.order_code, o.order_status, o.total_amount,
+                  r.name AS restaurant_name
+           FROM delivery_assignments da
+           JOIN orders o ON da.order_id = o.id
+           LEFT JOIN restaurants r ON o.restaurant_id = r.id
+           WHERE da.partner_id = %s
+           ORDER BY da.assigned_at DESC LIMIT 15""",
+        (partner['user_id'],), fetchall=True
+    ) or []
+
+    if request.headers.get('Accept') == 'application/json' or request.is_json:
+        return jsonify({
+            'success': True,
+            'partner': partner,
+            'recent_assignments': recent_assignments
+        })
+
+    return render_template('admin/delivery_partner_detail.html',
+                           partner=partner,
+                           recent_assignments=recent_assignments)
 
 
 @admin_bp.route('/delivery-partners/assign', methods=['POST'])
@@ -424,6 +613,10 @@ def add_delivery_partner():
 def assign_delivery():
     order_id   = request.form.get('order_id')
     partner_id = request.form.get('partner_id')
+    if not order_id or not partner_id:
+        flash('Order ID and Delivery Partner ID are required.', 'danger')
+        return redirect(url_for('admin.orders'))
+
     # Check if already assigned
     existing = execute_query(
         "SELECT id FROM delivery_assignments WHERE order_id=%s", (order_id,), fetchone=True
@@ -438,11 +631,16 @@ def assign_delivery():
             "INSERT INTO delivery_assignments (order_id, partner_id, status, assigned_at) VALUES (%s,%s,'assigned',NOW())",
             (order_id, partner_id), commit=True
         )
-    execute_query(
-        "UPDATE orders SET order_status='confirmed' WHERE id=%s", (order_id,), commit=True
-    )
+
+    # Only set order_status='confirmed' if currently placed or not set, preserving preparing/ready status
+    cur_order = execute_query("SELECT order_status FROM orders WHERE id=%s", (order_id,), fetchone=True)
+    if cur_order and cur_order.get('order_status') in ('placed', None):
+        execute_query(
+            "UPDATE orders SET order_status='confirmed' WHERE id=%s", (order_id,), commit=True
+        )
+
     log_activity(session.get('user_id'), 'DELIVERY_ASSIGNED', f"Assigned order #{order_id} to rider #{partner_id}")
-    flash('Delivery partner assigned!', 'success')
+    flash('Delivery partner assigned successfully!', 'success')
     return redirect(url_for('admin.orders'))
 
 
@@ -625,11 +823,15 @@ def orders():
     status = request.args.get('status', 'all')
     q      = request.args.get('q', '').strip()
     sql    = """SELECT o.*, u.name AS customer_name, r.name AS restaurant_name,
-                       u2.name AS partner_name
+                       u2.name AS partner_name,
+                       os.restaurant_net_payable, os.platform_commission_amount,
+                       os.partner_payout_amount, os.restaurant_settlement_status,
+                       os.partner_settlement_status
                 FROM orders o JOIN users u ON o.user_id=u.id
                 JOIN restaurants r ON o.restaurant_id=r.id
                 LEFT JOIN delivery_assignments da ON da.order_id=o.id
-                LEFT JOIN users u2 ON da.partner_id=u2.id"""
+                LEFT JOIN users u2 ON da.partner_id=u2.id
+                LEFT JOIN order_settlements os ON os.order_id=o.id"""
     params = []
     where  = []
     if status != 'all':
@@ -668,8 +870,32 @@ def payments():
         "SELECT COALESCE(SUM(amount),0) AS t FROM payments WHERE payment_status='paid'",
         fetchone=True
     )['t']
+
+    settlements = execute_query(
+        """SELECT os.*, o.order_code, r.name AS restaurant_name,
+                  u.name AS partner_name
+           FROM order_settlements os
+           JOIN orders o ON os.order_id = o.id
+           JOIN restaurants r ON os.restaurant_id = r.id
+           LEFT JOIN users u ON os.partner_id = u.id
+           ORDER BY os.created_at DESC LIMIT 100""",
+        fetchall=True
+    ) or []
+
+    settlement_summary = execute_query(
+        """SELECT 
+               COALESCE(SUM(platform_commission_amount), 0) AS total_commission,
+               COALESCE(SUM(restaurant_net_payable), 0) AS total_restaurant_payable,
+               COALESCE(SUM(partner_payout_amount), 0) AS total_partner_payout,
+               COALESCE(SUM(CASE WHEN restaurant_settlement_status IN ('paid_settled','settled') THEN restaurant_net_payable ELSE 0 END), 0) AS settled_payouts,
+               COALESCE(SUM(CASE WHEN restaurant_settlement_status = 'settlement_pending' THEN restaurant_net_payable ELSE 0 END), 0) AS pending_payouts
+           FROM order_settlements""",
+        fetchone=True
+    ) or {}
+
     return render_template('admin/payments.html',
-                           payments=all_payments, total_revenue=total_revenue)
+                           payments=all_payments, total_revenue=total_revenue,
+                           settlements=settlements, settlement_summary=settlement_summary)
 
 
 # ─────────────────────────────────────────────

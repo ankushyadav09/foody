@@ -127,6 +127,24 @@ def login():
             flash('Invalid email/mobile or password.', 'danger')
             return render_template('login.html')
 
+        if user['status'] == 'pending':
+            if user['role'] == 'delivery':
+                flash('Your delivery partner application is pending administrator verification.', 'warning')
+            elif user['role'] == 'restaurant':
+                flash('Your restaurant application is pending administrator verification.', 'warning')
+            else:
+                flash('Your account is pending administrator verification.', 'warning')
+            return render_template('login.html')
+
+        if user['status'] == 'rejected':
+            if user['role'] == 'delivery':
+                flash('Your delivery partner application has been rejected.', 'danger')
+            elif user['role'] == 'restaurant':
+                flash('Your restaurant application has been rejected.', 'danger')
+            else:
+                flash('Your account application has been rejected.', 'danger')
+            return render_template('login.html')
+
         if user['status'] == 'inactive':
             flash('Your account has been deactivated. Contact support.', 'warning')
             return render_template('login.html')
@@ -164,11 +182,8 @@ def login():
             return redirect(url_for('delivery.dashboard'))
 
         elif user['role'] == 'staff':
-            staff_rec = execute_query("SELECT restaurant_id, staff_role FROM restaurant_staff WHERE user_id=%s", (user['id'],), fetchone=True)
-            set_staff_auth(user, restaurant_id=staff_rec['restaurant_id'] if staff_rec else None,
-                           staff_role=staff_rec['staff_role'] if staff_rec else None)
-            flash(f"Welcome back, {user['name']}! Redirecting to Staff Operations.", 'success')
-            return redirect(url_for('staff.dashboard'))
+            flash("The Hotel / Restaurant Staff portal has been retired. Kitchen and restaurant operations are managed directly by Restaurant Owners.", "info")
+            return redirect(url_for('main.portals'))
 
         else:
             set_customer_auth(user)

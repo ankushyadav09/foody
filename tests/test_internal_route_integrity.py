@@ -53,8 +53,6 @@ class TestInternalRouteIntegrity(unittest.TestCase):
             '/restaurant/register',
             '/delivery/login',
             '/delivery/register',
-            '/staff/login',
-            '/staff/register',
         ]
         for route in public_routes:
             res = self.client.get(route)
@@ -131,20 +129,21 @@ class TestInternalRouteIntegrity(unittest.TestCase):
             res = client.get(page)
             self.assertEqual(res.status_code, 200, f"Delivery page {page} returned status {res.status_code}")
 
-    def test_06_authenticated_staff_pages_accessible(self):
-        """6. All core staff portal pages are accessible to approved kitchen staff."""
+    def test_06_staff_pages_retired_and_redirect(self):
+        """6. All obsolete staff portal pages are retired and redirect to /portals."""
         client = self.app.test_client()
-        client.post('/staff/login', data={'email': 'staff@foodyhunters.com', 'password': 'password123'})
-
         staff_pages = [
+            '/staff/login',
+            '/staff/register',
             '/staff/dashboard',
             '/staff/profile',
             '/staff/orders',
             '/staff/menu',
         ]
         for page in staff_pages:
-            res = client.get(page)
-            self.assertEqual(res.status_code, 200, f"Staff page {page} returned status {res.status_code}")
+            res = client.get(page, follow_redirects=False)
+            self.assertEqual(res.status_code, 302, f"Staff page {page} returned status {res.status_code}")
+            self.assertIn('/portals', res.headers.get('Location', ''))
 
     def test_07_authenticated_customer_pages_accessible(self):
         """7. All core customer account pages are accessible to logged-in customer."""

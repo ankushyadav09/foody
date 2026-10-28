@@ -154,6 +154,36 @@ def create_app():
                 session.pop('user_name', None)
                 session.pop('user_email', None)
 
+        elif path.startswith('/api'):
+            # Determine preferred auth namespace based on sub-path to preserve portal isolation
+            if path.startswith('/api/delivery'):
+                preferred_keys = ('delivery_auth', 'admin_auth', 'restaurant_auth', 'customer_auth')
+            elif path.startswith('/api/restaurant'):
+                preferred_keys = ('restaurant_auth', 'staff_auth', 'admin_auth', 'customer_auth')
+            elif path.startswith('/api/staff'):
+                preferred_keys = ('staff_auth', 'restaurant_auth', 'admin_auth')
+            elif path.startswith('/api/admin'):
+                preferred_keys = ('admin_auth',)
+            else:
+                preferred_keys = ('customer_auth', 'delivery_auth', 'restaurant_auth', 'admin_auth')
+
+            matched_auth = None
+            for auth_key in preferred_keys:
+                auth_val = session.get(auth_key)
+                if auth_val and isinstance(auth_val, dict) and auth_val.get('user_id'):
+                    matched_auth = auth_val
+                    break
+
+            if matched_auth:
+                session['user_id'] = matched_auth.get('user_id')
+                session['role'] = matched_auth.get('role', 'customer')
+                session['user_name'] = matched_auth.get('user_name', '')
+                session['user_email'] = matched_auth.get('user_email', '')
+                if matched_auth.get('restaurant_id'):
+                    session['restaurant_id'] = matched_auth.get('restaurant_id')
+                if matched_auth.get('staff_role'):
+                    session['staff_role'] = matched_auth.get('staff_role')
+
     # ── Context Processors ────────────────────────────────────────────────────
     @app.context_processor
     def inject_globals():
@@ -225,7 +255,7 @@ def create_app():
             elif ops_role == 'staff':
                 ops_logout_url = '/staff/logout'
 
-        is_ops_route = path.startswith(('/admin', '/restaurant', '/delivery', '/staff', '/ops')) and not path.startswith(('/restaurant/view', '/restaurant/review'))
+        is_ops_route = path.startswith(('/admin', '/restaurant', '/delivery', '/staff', '/ops', '/operations')) and not path.startswith(('/restaurant/view', '/restaurant/review'))
         if is_ops_route and ops_role:
             cur_role = ops_role
             cur_user = ops_user_name or session.get('user_name', '')
@@ -316,19 +346,21 @@ if __name__ == '__main__':
     print("  FOODY HUNTERS - Online Food Delivery System")
     print("=" * 66)
     if host == '0.0.0.0':
-        print(f"  Laptop (Local):       http://127.0.0.1:{port}")
-        print(f"  Mobile Phone (Wi-Fi): http://{lan_ip}:{port}")
-        print(f"  Admin Panel:          http://{lan_ip}:{port}/admin")
-        print(f"  Network Mode:         OPEN TO LOCAL WI-FI (0.0.0.0:{port})")
-        print(f"  Debug Mode:           {'ON' if debug else 'OFF (Safe for Local Network)'}")
+        print(f"  1. USER / CUSTOMER WEBSITE:  http://127.0.0.1:{port}/")
+        print(f"  2. ADMIN CONTROL CENTER:     http://127.0.0.1:{port}/admin")
+        print(f"  3. DELIVERY PARTNER PORTAL:  http://127.0.0.1:{port}/delivery/portal")
+        print(f"  Mobile Phone (Wi-Fi):        http://{lan_ip}:{port}/")
+        print(f"  Network Mode:                OPEN TO LOCAL WI-FI (0.0.0.0:{port})")
+        print(f"  Debug Mode:                  {'ON' if debug else 'OFF (Safe for Local Network)'}")
         if debug:
             print("  [SECURITY NOTICE] Flask debugger is ON. Turn off on public Wi-Fi.")
     else:
-        print(f"  Laptop (Local only):  http://{host}:{port}")
-        print(f"  Admin Panel:          http://{host}:{port}/admin")
-        print(f"  Network Mode:         LOCAL / TUNNEL READY ({host}:{port})")
-        print(f"  Debug Mode:           {'ON' if debug else 'OFF (Safe for Demo/Tunnel)'}")
-        print(f"  Public Tunnel:        Run .\\scripts\\start_public_tunnel.ps1 in Terminal 2")
+        print(f"  1. USER / CUSTOMER WEBSITE:  http://{host}:{port}/")
+        print(f"  2. ADMIN CONTROL CENTER:     http://{host}:{port}/admin")
+        print(f"  3. DELIVERY PARTNER PORTAL:  http://{host}:{port}/delivery/portal")
+        print(f"  Network Mode:                LOCAL / TUNNEL READY ({host}:{port})")
+        print(f"  Debug Mode:                  {'ON' if debug else 'OFF (Safe for Demo/Tunnel)'}")
+        print(f"  Public Tunnel:               Run .\\scripts\\start_public_tunnel.ps1 in Terminal 2")
     print("=" * 66)
 
     app.run(host=host, port=port, debug=debug)

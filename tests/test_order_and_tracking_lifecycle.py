@@ -3,6 +3,7 @@ tests/test_order_and_tracking_lifecycle.py – Comprehensive End-to-End Order & 
 """
 
 import unittest
+from werkzeug.security import generate_password_hash
 from app import create_app
 from database import execute_query
 
@@ -109,8 +110,9 @@ class TestOrderAndTrackingLifecycle(unittest.TestCase):
 
         # ── STEP 5: Delivery Partner GPS Updates & Transit ────────────────
         self.client.get('/auth/logout')
+        execute_query("UPDATE users SET password_hash=%s WHERE id=%s", (generate_password_hash('password123'), assignment['partner_id']), commit=True)
         partner_user = execute_query("SELECT email FROM users WHERE id=%s", (assignment['partner_id'],), fetchone=True)
-        self.client.post('/auth/login', data={
+        self.client.post('/delivery/login', data={
             'email': partner_user['email'],
             'password': 'password123'
         }, follow_redirects=True)

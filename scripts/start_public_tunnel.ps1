@@ -1,6 +1,6 @@
 # ==============================================================================
 # scripts/start_public_tunnel.ps1
-# FOODY HUNTERS — Cloudflare Quick Tunnel Starter with Automatic Portal Links
+# FOODY HUNTERS - Cloudflare Quick Tunnel Starter with Automatic Portal Links
 # ==============================================================================
 # Creates a temporary, secure HTTPS public tunnel to your local Flask app
 # (http://127.0.0.1:5000) without requiring router port-forwarding or public firewall rules.
@@ -17,7 +17,7 @@ param(
 # Keep ErrorActionPreference Continue so cloudflared stderr logs do not abort pipeline
 $ErrorActionPreference = "Continue"
 
-# ── Function: Display Formatted Portal Links Menu ─────────────────────────────
+# -- Function: Display Formatted Portal Links Menu -----------------------------
 function Show-PortalMenu {
     param (
         [Parameter(Mandatory = $true)]
@@ -27,19 +27,23 @@ function Show-PortalMenu {
     $cleanBase = $BaseUrl.Trim().TrimEnd('/')
 
     Write-Host ""
-    Write-Host "==================================================================================" -ForegroundColor Green
-    Write-Host "  FOODY HUNTERS - PUBLIC CLOUDFLARE ACCESS (TWO MAIN LINKS)" -ForegroundColor Green
-    Write-Host "==================================================================================" -ForegroundColor Green
+    Write-Host "========================================================" -ForegroundColor Green
+    Write-Host "       FOODY HUNTERS - PUBLIC ACCESS" -ForegroundColor Green
+    Write-Host "========================================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "  1. CUSTOMER WEBSITE:" -ForegroundColor Yellow
-    Write-Host "     $cleanBase/" -ForegroundColor Cyan
-    Write-Host "     -> Public storefront: restaurant browsing, menus, cart, checkout & tracking" -ForegroundColor DarkGray
+    Write-Host "1. USER / CUSTOMER WEBSITE:" -ForegroundColor Yellow
+    Write-Host "   $cleanBase/" -ForegroundColor Cyan
+    Write-Host "   -> Public storefront: restaurant browsing, menus, cart, checkout & tracking" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "  2. ALL PARTNER PORTALS:" -ForegroundColor Yellow
-    Write-Host "     $cleanBase/portals" -ForegroundColor Cyan
-    Write-Host "     -> Shared partner hub: Admin, Restaurant Owner, Delivery Partner & Staff" -ForegroundColor DarkGray
+    Write-Host "2. ADMIN CONTROL CENTER:" -ForegroundColor Yellow
+    Write-Host "   $cleanBase/admin" -ForegroundColor Cyan
+    Write-Host "   -> Master administration: passkey gate, fleet approvals, orders & platform governance" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "==================================================================================" -ForegroundColor Green
+    Write-Host "3. DELIVERY PARTNER PORTAL:" -ForegroundColor Yellow
+    Write-Host "   $cleanBase/delivery/portal" -ForegroundColor Cyan
+    Write-Host "   -> Unified rider portal: registration, verification notice & operations dispatch" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "========================================================" -ForegroundColor Green
 
     # Support copying the Customer Website URL to system clipboard if available
     try {
@@ -54,7 +58,7 @@ function Show-PortalMenu {
     Write-Host "  [STATUS] Public Tunnel is LIVE and forwarding to $TargetUrl" -ForegroundColor Green
     Write-Host "  [NOTICE] Keep this PowerShell window open to keep the public tunnel alive." -ForegroundColor White
     Write-Host "  [STOP]   Press Ctrl + C at any time to shut down the public tunnel." -ForegroundColor Yellow
-    Write-Host "==================================================================================" -ForegroundColor Green
+    Write-Host "========================================================" -ForegroundColor Green
     Write-Host ""
 }
 

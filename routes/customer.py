@@ -276,39 +276,79 @@ def order_success(order_id):
 
 @customer_bp.route('/order/track/<int:order_id>')
 @customer_bp.route('/order-tracking/<int:order_id>')
+@customer_bp.route('/track/<int:order_id>')
 @customer_required
 def track_order(order_id):
     """Order tracking page with live Google Maps and status timeline."""
     order = execute_query(
-        """SELECT o.*, r.name AS restaurant_name, r.phone AS restaurant_phone,
-                  r.address AS restaurant_address, r.latitude AS restaurant_lat,
-                  r.longitude AS restaurant_lng,
-                  a.address AS delivery_address,
+        """SELECT o.*,
+                  COALESCE(r.name, 'Restaurant Kitchen') AS restaurant_name,
+                  COALESCE(r.phone, '+91 98250 12345') AS restaurant_phone,
+                  COALESCE(r.address, 'Restaurant Kitchen') AS restaurant_address,
+                  COALESCE(r.latitude, 23.5880) AS restaurant_lat,
+                  COALESCE(r.longitude, 72.3693) AS restaurant_lng,
+                  COALESCE(a.address, o.delivery_address, 'Customer Delivery Address') AS delivery_address,
+                  COALESCE(o.customer_lat, a.latitude, 23.5880) AS customer_lat,
+                  COALESCE(o.customer_lng, a.longitude, 72.3693) AS customer_lng,
+                  da.partner_id, da.status AS assignment_status,
                   dp.name AS partner_name, dp.phone AS partner_phone,
                   dpart.vehicle_type, dpart.vehicle_number,
                   dpart.current_lat AS partner_lat, dpart.current_lng AS partner_lng
            FROM orders o
-           JOIN restaurants r ON o.restaurant_id=r.id
+           LEFT JOIN restaurants r ON o.restaurant_id=r.id
            LEFT JOIN addresses a ON o.address_id=a.id
-           LEFT JOIN delivery_assignments da ON da.order_id=o.id
+           LEFT JOIN delivery_assignments da ON da.order_id=o.id AND da.status != 'cancelled'
            LEFT JOIN users dp ON da.partner_id=dp.id
            LEFT JOIN delivery_partners dpart ON da.partner_id=dpart.user_id
-           WHERE o.id=%s AND o.user_id=%s""",
-        (order_id, session['user_id']), fetchone=True
+           WHERE o.id=%s""",
+        (order_id,), fetchone=True
     )
     if not order:
         flash('Order not found.', 'danger')
-        return redirect(url_for('customer.orders'))
+        return redirect(url_for('customer.orders')), 404
 
-    statuses = ['placed','confirmed','preparing','ready_for_pickup','out_for_delivery','delivered']
-    normalized_status = 'ready_for_pickup' if order['order_status'] == 'ready' else order['order_status']
-    try:
-        current_index = statuses.index(normalized_status)
-    except ValueError:
+    current_uid = session.get('user_id') or (session.get('customer_auth') or {}).get('user_id')
+    current_role = session.get('role') or (session.get('customer_auth') or {}).get('role')
+    if order['user_id'] != current_uid and current_role not in ('admin',):
+        flash("Unauthorized: You cannot access another customer's order tracking.", 'danger')
+        return redirect(url_for('customer.orders')), 403
+
+    statuses = ['placed', 'confirmed', 'preparing', 'ready_for_pickup', 'assigned', 'out_for_delivery', 'delivered']
+    raw_status = (order.get('order_status') or 'placed').lower()
+    normalized_status = 'ready_for_pickup' if raw_status == 'ready' else raw_status
+    delivery_stage = (order.get('assignment_status') or '').lower()
+    has_rider = bool(order.get('partner_name') or order.get('partner_id'))
+
+    if normalized_status == 'delivered' or delivery_stage == 'delivered':
+        current_index = 6
+    elif normalized_status in ('out_for_delivery', 'picked_up') or delivery_stage in ('picked_up', 'out_for_delivery'):
+        current_index = 5
+    elif normalized_status == 'assigned' or has_rider or delivery_stage == 'assigned':
+        current_index = 4
+    elif normalized_status in ('ready_for_pickup', 'ready'):
+        current_index = 3
+    elif normalized_status == 'preparing':
+        current_index = 2
+    elif normalized_status == 'confirmed':
+        current_index = 1
+    elif normalized_status == 'placed':
         current_index = 0
+    else:
+        current_index = 0
+
+    milestones = {
+        'placed': True,
+        'confirmed': current_index >= 1 or normalized_status in ('confirmed', 'preparing', 'ready_for_pickup', 'ready', 'assigned', 'out_for_delivery', 'delivered') or has_rider,
+        'preparing': current_index >= 2 or normalized_status in ('preparing', 'ready_for_pickup', 'ready', 'assigned', 'out_for_delivery', 'delivered'),
+        'ready_for_pickup': current_index >= 3 or normalized_status in ('ready_for_pickup', 'ready', 'assigned', 'out_for_delivery', 'delivered'),
+        'assigned': current_index >= 4 or has_rider or delivery_stage in ('assigned', 'picked_up', 'out_for_delivery', 'delivered') or normalized_status in ('assigned', 'out_for_delivery', 'delivered'),
+        'out_for_delivery': current_index >= 5 or normalized_status in ('out_for_delivery', 'delivered') or delivery_stage in ('picked_up', 'out_for_delivery', 'delivered'),
+        'delivered': current_index == 6 or normalized_status == 'delivered' or delivery_stage == 'delivered'
+    }
 
     return render_template('track_order.html', order=order,
                            statuses=statuses, current_index=current_index,
+                           milestones=milestones,
                            google_maps_api_key=Config.GOOGLE_MAPS_API_KEY)
 
 

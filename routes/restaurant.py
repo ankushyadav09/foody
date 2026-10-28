@@ -105,10 +105,13 @@ def register():
         elif rest:
             return redirect(url_for('restaurant.application_status', id=rest['id']))
 
+    categories = execute_query("SELECT * FROM food_categories ORDER BY sort_order ASC, name ASC", fetchall=True) or []
+
     if request.method == 'POST':
         name            = request.form.get('name', '').strip() or request.form.get('owner_name', '').strip()
         email           = request.form.get('email', '').strip().lower()
         phone           = request.form.get('phone', '').strip()
+        contact_person  = request.form.get('contact_person', '').strip()
         restaurant_name = request.form.get('restaurant_name', '').strip()
         cuisine         = request.form.get('cuisine', '').strip()
         restaurant_area = request.form.get('restaurant_area', '').strip() or request.form.get('area', '').strip() or 'Mehsana City'
@@ -120,10 +123,15 @@ def register():
         city = custom_city if (city_choice.lower() == 'other' and custom_city) else (city_choice or request.form.get('city', 'Mehsana').strip() or 'Mehsana')
 
         pincode         = request.form.get('pincode', '384002').strip() or '384002'
+        restaurant_phone= request.form.get('restaurant_phone', '').strip() or phone
+        restaurant_email= request.form.get('restaurant_email', '').strip() or email
         open_time       = request.form.get('open_time', '09:00').strip() or '09:00'
         close_time      = request.form.get('close_time', '23:00').strip() or '23:00'
+        operating_days  = request.form.get('operating_days', 'All Days').strip() or 'All Days'
+        prep_time       = request.form.get('prep_time', '20-30 mins').strip() or '20-30 mins'
         description     = request.form.get('description', '').strip() or f"Authentic {cuisine} dining outlet in {city}"
         fssai_number    = request.form.get('fssai_number', '').strip()
+        gstin           = request.form.get('gstin', '').strip()
         password        = request.form.get('password', '')
         confirm         = request.form.get('confirm_password', '')
 
@@ -155,13 +163,73 @@ def register():
         doc_file = request.files.get('document') or request.files.get('verification_doc')
         if doc_file and doc_file.filename:
             doc_url = save_uploaded_document(doc_file)
-            if not doc_url and doc_file.filename:
+            if not doc_url:
                 errors.append('Invalid verification document. Allowed formats: PDF, PNG, JPG, JPEG, WEBP.')
+
+        # Handle optional restaurant cover/profile image
+        cover_image_url = None
+        cover_file = request.files.get('cover_image') or request.files.get('image')
+        if cover_file and cover_file.filename:
+            cover_image_url = save_uploaded_image(cover_file, 'restaurant')
+            if not cover_image_url:
+                errors.append('Invalid restaurant cover image. Allowed formats: PNG, JPG, JPEG, WEBP under 16MB.')
+
+        # Parse & Validate Initial Dishes
+        dish_names       = request.form.getlist('dish_name[]') or request.form.getlist('dish_name')
+        dish_prices      = request.form.getlist('dish_price[]') or request.form.getlist('dish_price')
+        dish_categories  = request.form.getlist('dish_category[]') or request.form.getlist('dish_category')
+        dish_veg_types   = request.form.getlist('dish_veg_type[]') or request.form.getlist('dish_veg_type')
+        dish_descriptions= request.form.getlist('dish_description[]') or request.form.getlist('dish_description')
+        dish_prep_times  = request.form.getlist('dish_prep_time[]') or request.form.getlist('dish_prep_time')
+        dish_images      = request.files.getlist('dish_image[]') or request.files.getlist('dish_image')
+
+        valid_dishes = []
+        for i, d_name_raw in enumerate(dish_names):
+            d_name = d_name_raw.strip()
+            if not d_name:
+                continue
+
+            d_price_raw = dish_prices[i].strip() if i < len(dish_prices) else ''
+            try:
+                d_price = float(d_price_raw)
+                if d_price <= 0:
+                    errors.append(f"Dish '{d_name}': Price must be greater than zero.")
+            except (ValueError, TypeError):
+                errors.append(f"Dish '{d_name}': Please enter a valid numerical price.")
+                d_price = 0.0
+
+            d_cat = dish_categories[i].strip() if i < len(dish_categories) else '1'
+            cat_id = int(d_cat) if d_cat.isdigit() else 1
+
+            d_veg = dish_veg_types[i].strip() if i < len(dish_veg_types) else 'veg'
+            if d_veg not in ('veg', 'non_veg', 'egg'):
+                d_veg = 'veg'
+
+            d_desc = dish_descriptions[i].strip() if i < len(dish_descriptions) else ''
+            d_prep = int(dish_prep_times[i].strip()) if (i < len(dish_prep_times) and dish_prep_times[i].strip().isdigit()) else 20
+
+            d_img_url = 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&q=80'
+            if i < len(dish_images) and dish_images[i] and dish_images[i].filename:
+                uploaded_dish_img = save_uploaded_image(dish_images[i], 'food')
+                if uploaded_dish_img:
+                    d_img_url = uploaded_dish_img
+                else:
+                    errors.append(f"Dish '{d_name}': Invalid food image file.")
+
+            valid_dishes.append({
+                'name': d_name,
+                'category_id': cat_id,
+                'description': d_desc,
+                'price': d_price,
+                'veg_type': d_veg,
+                'preparation_time': d_prep,
+                'image': d_img_url
+            })
 
         if errors:
             for e in errors:
                 flash(e, 'danger')
-            return render_template('restaurant/register.html', form=request.form)
+            return render_template('restaurant/register.html', form=request.form, categories=categories)
 
         existing = execute_query(
             "SELECT id, email, phone FROM users WHERE email=%s OR phone=%s", (email, phone), fetchone=True
@@ -171,7 +239,7 @@ def register():
                 flash('This email is already registered. Please login.', 'warning')
             else:
                 flash('This contact number is already registered. Please login.', 'warning')
-            return render_template('restaurant/register.html', form=request.form)
+            return render_template('restaurant/register.html', form=request.form, categories=categories)
 
         pw_hash = generate_password_hash(password)
         user_id = execute_query(
@@ -182,16 +250,37 @@ def register():
         )
 
         rest_id = execute_query(
-            """INSERT INTO restaurants (owner_id, name, description, cuisine, address, area, city, state, pincode, phone, email, open_time, close_time, fssai_number, verification_doc, rating, verification_status, status, is_open)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, 'Gujarat', %s, %s, %s, %s, %s, %s, %s, 4.50, 'pending', 'inactive', 1)""",
-            (user_id, restaurant_name, description, cuisine, address, restaurant_area, city, pincode, phone, email, open_time, close_time, fssai_number, doc_url),
+            """INSERT INTO restaurants (owner_id, name, description, cuisine, address, area, city, state, pincode,
+                                       phone, email, open_time, close_time, fssai_number, verification_doc, image,
+                                       contact_person, gstin, operating_days, prep_time,
+                                       rating, verification_status, status, is_open)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, 'Gujarat', %s,
+                       %s, %s, %s, %s, %s, %s, %s,
+                       %s, %s, %s, %s,
+                       4.50, 'pending', 'inactive', 1)""",
+            (user_id, restaurant_name, description, cuisine, address, restaurant_area, city, pincode,
+             restaurant_phone, restaurant_email, open_time, close_time, fssai_number, doc_url, cover_image_url,
+             contact_person, gstin, operating_days, prep_time),
             commit=True
         )
 
-        flash(f"Restaurant registration for '{restaurant_name}' submitted successfully! Application is currently pending administrator verification.", 'success')
+        # Insert initial dishes
+        for dish in valid_dishes:
+            execute_query(
+                """INSERT INTO food_items
+                   (restaurant_id, category_id, name, description, price, discount, final_price,
+                    image, veg_type, preparation_time, availability, is_bestseller)
+                   VALUES (%s, %s, %s, %s, %s, 0.0, %s, %s, %s, %s, 1, 0)""",
+                (rest_id, dish['category_id'], dish['name'], dish['description'],
+                 dish['price'], dish['price'], dish['image'], dish['veg_type'], dish['preparation_time']),
+                commit=True
+            )
+
+        dish_msg = f" with {len(valid_dishes)} initial signature dish(es)" if valid_dishes else ""
+        flash(f"Restaurant registration for '{restaurant_name}' submitted successfully{dish_msg}! Application is currently pending administrator verification.", 'success')
         return redirect(url_for('restaurant.application_status', id=rest_id))
 
-    return render_template('restaurant/register.html', form={})
+    return render_template('restaurant/register.html', form={}, categories=categories)
 
 
 @restaurant_bp.route('/application-status')
@@ -216,7 +305,19 @@ def application_status():
             (session['user_id'],), fetchone=True
         )
 
-    return render_template('restaurant/application_status.html', restaurant=rest)
+    dishes = []
+    if rest:
+        dishes = execute_query(
+            """SELECT fi.*, fc.name AS category_name
+               FROM food_items fi
+               LEFT JOIN food_categories fc ON fi.category_id=fc.id
+               WHERE fi.restaurant_id=%s
+               ORDER BY fi.created_at ASC""",
+            (rest['id'],), fetchall=True
+        ) or []
+
+    return render_template('restaurant/application_status.html', restaurant=rest, dishes=dishes)
+
 
 
 # ─────────────────────────────────────────────
@@ -644,6 +745,32 @@ def sales():
         "WHERE restaurant_id=%s AND order_status='delivered'",
         (rest['id'],), fetchone=True
     )['t']
+
+    # Financial settlement metrics for restaurant (Phase 6 & 8)
+    settlement_stats = execute_query(
+        """SELECT 
+               COALESCE(SUM(subtotal), 0) AS total_gross_subtotal,
+               COALESCE(SUM(platform_commission_amount), 0) AS total_commission_deducted,
+               COALESCE(SUM(restaurant_net_payable), 0) AS total_net_payable,
+               COALESCE(SUM(CASE WHEN restaurant_settlement_status IN ('paid_settled','settled') THEN restaurant_net_payable ELSE 0 END), 0) AS settled_amount,
+               COALESCE(SUM(CASE WHEN restaurant_settlement_status = 'settlement_pending' THEN restaurant_net_payable ELSE 0 END), 0) AS pending_settlement_amount,
+               COUNT(*) AS total_settled_orders
+           FROM order_settlements
+           WHERE restaurant_id=%s""",
+        (rest['id'],), fetchone=True
+    )
+
+    settlements = execute_query(
+        """SELECT os.*, o.order_code, o.created_at AS order_created_at,
+                  u.name AS partner_name
+           FROM order_settlements os
+           JOIN orders o ON os.order_id = o.id
+           LEFT JOIN users u ON os.partner_id = u.id
+           WHERE os.restaurant_id=%s
+           ORDER BY os.created_at DESC LIMIT 50""",
+        (rest['id'],), fetchall=True
+    ) or []
+
     top_items = execute_query(
         """SELECT fi.name, SUM(oi.quantity) AS total_qty, SUM(oi.subtotal) AS total_revenue
            FROM order_items oi
@@ -655,7 +782,10 @@ def sales():
     )
     return render_template('restaurant/sales.html',
                            restaurant=rest, daily=daily,
-                           total_revenue=total_revenue, top_items=top_items)
+                           total_revenue=total_revenue,
+                           settlement_stats=settlement_stats,
+                           settlements=settlements,
+                           top_items=top_items)
 
 
 # ─────────────────────────────────────────────
@@ -721,9 +851,9 @@ def update_order_status():
         except Exception:
             pass
 
-    # When order is ready for pickup, dispatch to an available delivery partner
+    # Automated courier dispatch when ready for pickup (Phase 2 & existing lifecycle)
     if db_status == 'ready_for_pickup':
-        existing_assignment = execute_query("SELECT id FROM delivery_assignments WHERE order_id=%s", (order_id,), fetchone=True)
+        existing_assignment = execute_query("SELECT id, partner_id FROM delivery_assignments WHERE order_id=%s AND status != 'cancelled'", (order_id,), fetchone=True)
         if not existing_assignment:
             partner = execute_query(
                 "SELECT user_id FROM delivery_partners WHERE is_online=1 ORDER BY total_deliveries ASC LIMIT 1",
@@ -736,10 +866,33 @@ def update_order_status():
                     "INSERT INTO delivery_assignments (order_id, partner_id, status, assigned_at) VALUES (%s, %s, 'assigned', NOW())",
                     (order_id, partner['user_id']), commit=True
                 )
+                try:
+                    execute_query(
+                        "INSERT INTO notifications (user_id, role, title, message) VALUES (%s, 'delivery', 'New Delivery Assigned! 🛵', CONCAT('Order #', %s, ' is ready for pickup at ', %s, '.'))",
+                        (partner['user_id'], order['order_code'], rest['name']), commit=True
+                    )
+                except Exception:
+                    pass
+        elif existing_assignment and existing_assignment.get('partner_id'):
+            try:
                 execute_query(
-                    "INSERT INTO notifications (user_id, role, title, message) VALUES (%s, 'delivery', 'New Delivery Assigned! 🛵', CONCAT('Order #', %s, ' is ready for pickup.'))",
-                    (partner['user_id'], order['order_code']), commit=True
+                    "INSERT INTO notifications (user_id, role, title, message) VALUES (%s, 'delivery', 'Order Ready for Pickup! 🛵', CONCAT('Order #', %s, ' is ready for pickup at ', %s, '.'))",
+                    (existing_assignment['partner_id'], order['order_code'], rest['name']), commit=True
                 )
+            except Exception:
+                pass
+    elif db_status in ('confirmed', 'preparing'):
+        # Broadcast dispatch opportunity to online riders
+        try:
+            execute_query(
+                """INSERT INTO notifications (user_id, role, title, message)
+                   SELECT dp.user_id, 'delivery', 'New Order in Dispatch Pool! 🛵',
+                          CONCAT('Order #', %s, ' at ', %s, ' is confirmed and preparing.')
+                   FROM delivery_partners dp WHERE dp.is_online = 1""",
+                (order['order_code'], rest['name']), commit=True
+            )
+        except Exception:
+            pass
 
     flash(f"Order #{order['order_code']} updated to {new_status.replace('_', ' ').title()}.", 'success')
     return redirect(request.referrer or url_for('restaurant.orders'))

@@ -83,6 +83,8 @@ def save_uploaded_image(file, subfolder='uploads'):
         print(f"[IMAGE SAVE ERROR] {e}", file=sys.stderr)
         return None
 
+SECURE_DOCS_FOLDER = os.path.join(Config.BASE_DIR, 'uploads_secure', 'documents')
+
 def allowed_doc_file(filename):
     """Check if uploaded document has an allowed extension."""
     doc_exts = getattr(Config, 'ALLOWED_DOC_EXTENSIONS', {'png', 'jpg', 'jpeg', 'pdf', 'webp'})
@@ -92,17 +94,17 @@ def allowed_doc_file(filename):
 
 def save_uploaded_document(file, subfolder='documents'):
     """
-    Save an uploaded verification document (PDF, PNG, JPG) to static/uploads/documents.
-    Returns the relative URL path for use in templates and DB.
+    Save an uploaded private verification document (PDF, PNG, JPG, WEBP) to private storage
+    (outside public static folder) and return secure routed URL /documents/secure-view/<unique_name>.
+    Restricted to authorized Admin and restaurant owner only.
     """
     if file and file.filename and allowed_doc_file(file.filename):
         ext = file.filename.rsplit('.', 1)[1].lower()
         unique_name = f"doc_{uuid.uuid4().hex}.{ext}"
-        save_dir = os.path.join(Config.UPLOAD_FOLDER, subfolder)
-        os.makedirs(save_dir, exist_ok=True)
-        filepath = os.path.join(save_dir, unique_name)
+        os.makedirs(SECURE_DOCS_FOLDER, exist_ok=True)
+        filepath = os.path.join(SECURE_DOCS_FOLDER, unique_name)
         file.save(filepath)
-        return f"/static/uploads/{subfolder}/{unique_name}"
+        return f"/documents/secure-view/{unique_name}"
     return None
 
 
@@ -525,19 +527,32 @@ def restaurant_required(f):
 
 
 def delivery_required(f):
-    """Allow only delivery partners."""
+    """Allow only approved, active delivery partners."""
     @wraps(f)
     def decorated(*args, **kwargs):
+        from flask import jsonify
+        is_api = (request.path.startswith('/api/') or 
+                  request.is_json or 
+                  request.headers.get('Accept') == 'application/json' or 
+                  request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+                  request.args.get('format') == 'json')
+
         # Reject active non-delivery role sessions immediately
         if session.get('role') and session.get('role') != 'delivery':
+            if is_api:
+                return jsonify({'success': False, 'message': 'Access denied. Delivery partners only.'}), 403
             flash('Access denied. Delivery partners only.', 'danger')
             return redirect(url_for('main.index'))
 
         auth = get_delivery_auth()
         if not auth:
+            if is_api:
+                return jsonify({'success': False, 'message': 'Authentication required. Please login.'}), 401
             flash('Please login to continue.', 'warning')
             return redirect(url_for('delivery.login'))
         if auth.get('role') != 'delivery':
+            if is_api:
+                return jsonify({'success': False, 'message': 'Access denied. Delivery partners only.'}), 403
             flash('Access denied. Delivery partners only.', 'danger')
             return redirect(url_for('main.index'))
 
@@ -545,6 +560,36 @@ def delivery_required(f):
         session['role'] = 'delivery'
         session['user_name'] = auth.get('user_name', '')
         session['user_email'] = auth.get('user_email', '')
+
+        # Check status & verification from database
+        from database import execute_query
+        u_rec = execute_query("SELECT status FROM users WHERE id=%s", (auth['user_id'],), fetchone=True)
+        dp_rec = execute_query("SELECT verification_status FROM delivery_partners WHERE user_id=%s", (auth['user_id'],), fetchone=True)
+
+        u_status = u_rec.get('status') if u_rec else 'active'
+        v_status = dp_rec.get('verification_status') if dp_rec else 'approved'
+
+        if u_status == 'pending' or v_status == 'pending':
+            msg = 'Your delivery partner application is pending administrator verification.'
+            if is_api:
+                return jsonify({'success': False, 'message': msg}), 403
+            flash(msg, 'warning')
+            return redirect(url_for('delivery.login'))
+
+        if u_status in ('rejected', 'suspended') or v_status in ('rejected', 'suspended'):
+            msg = 'Your delivery partner application has been rejected or suspended.'
+            if is_api:
+                return jsonify({'success': False, 'message': msg}), 403
+            flash(msg, 'danger')
+            return redirect(url_for('delivery.login'))
+
+        if u_status == 'inactive':
+            msg = 'Your delivery partner account has been deactivated. Please contact support.'
+            if is_api:
+                return jsonify({'success': False, 'message': msg}), 403
+            flash(msg, 'warning')
+            return redirect(url_for('delivery.login'))
+
         return f(*args, **kwargs)
     return decorated
 

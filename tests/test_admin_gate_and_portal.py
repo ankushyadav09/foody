@@ -309,9 +309,76 @@ class TestAdminGateAndPortal(unittest.TestCase):
         self.assertEqual(res_deliv.status_code, 200)
         self.assertIn(b'Delivery Partner Login', res_deliv.data)
 
-        res_staff = self.client.get('/staff/login')
-        self.assertEqual(res_staff.status_code, 200)
-        self.assertIn(b'Kitchen Operations Desk', res_staff.data)
+        res_staff = self.client.get('/staff/login', follow_redirects=False)
+        self.assertEqual(res_staff.status_code, 302)
+        self.assertIn('/portals', res_staff.headers.get('Location', ''))
+
+    def test_15_admin_gate_and_dashboard_do_not_render_customer_navbar(self):
+        """Admin Gate and Admin Dashboard must NOT inherit or render the customer navigation bar."""
+        # 1. Unauthenticated Gate screen
+        res_gate = self.client.get('/admin/gate')
+        self.assertEqual(res_gate.status_code, 200)
+        gate_html = res_gate.get_data(as_text=True)
+        # Customer navbar items must be completely absent
+        self.assertNotIn('>Home<', gate_html)
+        self.assertNotIn('>Restaurants<', gate_html)
+        self.assertNotIn('>Offers<', gate_html)
+        self.assertNotIn('>About<', gate_html)
+        self.assertNotIn('>Contact<', gate_html)
+        self.assertNotIn('Partner With Us', gate_html)
+
+        # 2. Authenticated Admin Dashboard
+        self._auth_as_admin()
+        res_dash = self.client.get('/admin/dashboard')
+        self.assertEqual(res_dash.status_code, 200)
+        dash_html = res_dash.get_data(as_text=True)
+        self.assertNotIn('>Home<', dash_html)
+        self.assertNotIn('>Offers<', dash_html)
+        self.assertNotIn('>About<', dash_html)
+        self.assertNotIn('>Contact<', dash_html)
+        self.assertNotIn('Partner With Us', dash_html)
+
+    def test_16_admin_delivery_partner_management_workflow(self):
+        """Admin can view delivery fleet, filter by status, approve pending applicant and toggle fleet status."""
+        import uuid
+        uid = uuid.uuid4().hex[:6]
+        # Insert a test pending delivery partner
+        u_id = execute_query(
+            "INSERT INTO users (name, email, phone, password_hash, role, status) VALUES (%s, %s, %s, 'hash', 'delivery', 'pending')",
+            (f"Test Rider {uid}", f"rider_{uid}@test.com", f"91{uid[:8]}"),
+            commit=True
+        )
+        dp_id = execute_query(
+            "INSERT INTO delivery_partners (user_id, vehicle_type, vehicle_number, license_number, is_available, is_online, verification_status) VALUES (%s, 'Motorcycle', 'GJ-02-CD-5678', 'DL-GJ02-2024-99999', 0, 0, 'pending')",
+            (u_id,),
+            commit=True
+        )
+
+        self._auth_as_admin()
+
+        # View pending delivery partners tab
+        res_pending = self.client.get('/admin/delivery-partners?status=pending')
+        self.assertEqual(res_pending.status_code, 200)
+        html = res_pending.get_data(as_text=True)
+        self.assertIn(f"Test Rider {uid}", html)
+        self.assertIn('Pending Review', html)
+
+        # Admin approves the delivery partner
+        res_appr = self.client.post(f'/admin/delivery-partners/approve/{u_id}', follow_redirects=True)
+        self.assertEqual(res_appr.status_code, 200)
+
+        # Confirm DB state updated
+        user = execute_query("SELECT status FROM users WHERE id=%s", (u_id,), fetchone=True)
+        self.assertEqual(user['status'], 'active')
+        dp = execute_query("SELECT verification_status, is_available FROM delivery_partners WHERE user_id=%s", (u_id,), fetchone=True)
+        self.assertEqual(dp['verification_status'], 'approved')
+        self.assertEqual(dp['is_available'], 1)
+
+        # Admin toggles / suspends rider
+        res_toggle = self.client.post(f'/admin/delivery-partners/toggle/{u_id}', follow_redirects=True)
+        self.assertEqual(res_toggle.status_code, 200)
+        user_susp = execute_query("SELECT status FROM users WHERE id=%s", (u_id,), fetchone=True)
+        self.assertEqual(user_susp['status'], 'inactive')
 
 
 if __name__ == '__main__':

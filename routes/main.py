@@ -235,15 +235,61 @@ def offers():
 @main_bp.route('/portals')
 def portals():
     """
-    Common Partner Portal Navigation Hub.
-    Displays clear, professional entry points for:
-      1. Admin Control Center (/admin)
-      2. Restaurant Owner (/restaurant/login, /restaurant/register)
-      3. Delivery Partner (/delivery/login, /delivery/register)
-      4. Hotel/Restaurant Staff (/staff/login, /staff/register)
-    Provides navigation only without altering sessions or elevating privileges.
+    Public 'Partner With Us' landing page.
+    Dedicated single-option partner gateway: Restaurant Owner.
+    Provides registration and owner login links without exposing administrative or delivery desks.
     """
     return render_template('portals.html')
+
+
+# ─────────────────────────────────────────────
+# SECURE DOCUMENT VIEW (KYC & LICENSES)
+# ─────────────────────────────────────────────
+
+@main_bp.route('/documents/secure-view/<path:filename>')
+def secure_document_view(filename):
+    """
+    Authorized document viewer for private restaurant verification documents.
+    Prevents public access through static file URLs. Only accessible by:
+    1. Authenticated Administrator
+    2. Authenticated Restaurant Owner whose restaurant uploaded the document
+    """
+    import os
+    from flask import send_from_directory, current_app
+    from utils.helpers import SECURE_DOCS_FOLDER
+
+    if 'user_id' not in session or not session.get('role'):
+        flash('Unauthorized: Please log in to view verification documents.', 'danger')
+        return redirect(url_for('restaurant.login'))
+
+    user_role = session.get('role')
+    user_id = session.get('user_id')
+
+    is_authorized = False
+    if user_role == 'admin':
+        is_authorized = True
+    elif user_role == 'restaurant':
+        rest = execute_query(
+            "SELECT id, verification_doc FROM restaurants WHERE owner_id=%s AND verification_doc LIKE %s",
+            (user_id, f"%{filename}%"),
+            fetchone=True
+        )
+        if rest:
+            is_authorized = True
+
+    if not is_authorized:
+        flash('Access Denied: You are not authorized to view this confidential verification document.', 'danger')
+        return render_template('errors/403.html'), 403
+
+    if os.path.exists(os.path.join(SECURE_DOCS_FOLDER, filename)):
+        return send_from_directory(SECURE_DOCS_FOLDER, filename)
+
+    legacy_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'documents')
+    if os.path.exists(os.path.join(legacy_folder, filename)):
+        return send_from_directory(legacy_folder, filename)
+
+    return render_template('errors/404.html'), 404
+
 
 
 # ─────────────────────────────────────────────
@@ -272,5 +318,30 @@ def operations_center():
         # Customer or unrecognized role attempting internal operations access
         flash('Access Denied: The Operations Center is strictly reserved for authorized operating personnel.', 'danger')
         return redirect(url_for('main.index'))
+
+
+# ─────────────────────────────────────────────
+# DEDICATED OPERATIONAL ACCESS SELECTION PAGE
+# ─────────────────────────────────────────────
+
+@main_bp.route('/operations')
+@main_bp.route('/ops-access')
+@main_bp.route('/ops/access')
+def operations_access():
+    """
+    Dedicated Operational Access Selection Page.
+    Displays TWO distinct operational options:
+    Option 1: Admin Control Center (Direct Gate via Passkey)
+    Option 2: Delivery Partner (Rider) (Registration + Login + Admin Approval workflow)
+    """
+    return render_template('ops_access.html')
+
+
+@main_bp.route('/orders/track/<int:order_id>')
+def orders_track_alias(order_id):
+    """Convenience alias routing /orders/track/<id> to customer tracking."""
+    return redirect(url_for('customer.track_order', order_id=order_id))
+
+
 
 

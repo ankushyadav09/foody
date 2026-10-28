@@ -38,3 +38,5 @@ __pycache__/
 # Runtime uploads may contain private documents
 static/uploads/*
 !static/uploads/.gitkeep
+
+/uploads_secure/

@@ -15,7 +15,7 @@
       </div>
       <h1 style="font-size:1.9rem;font-weight:800;color:#fff;margin:0">Tracking Order #{{ order.order_code }}</h1>
       <p style="color:#94A3B8;font-size:.88rem;margin-top:.2rem">
-        Kitchen: <strong>{{ order.restaurant_name }}</strong> &bull; Destination: <strong>{{ order.delivery_address[:30] }}...</strong>
+        Kitchen: <strong>{{ order.restaurant_name or 'Kitchen' }}</strong> &bull; Destination: <strong>{{ (order.delivery_address or 'Customer Delivery Address')[:30] }}...</strong>
       </p>
     </div>
     <div style="display:flex;gap:.75rem">
@@ -38,6 +38,38 @@
       <!-- Live Map Card -->
       <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
         
+        <!-- Live Countdown & Delivery Progress Meter (Phase 4) -->
+        <div style="background:#0F172A;color:#fff;padding:1.25rem;border-radius:var(--radius-md);margin-bottom:1.25rem;border:1px solid #1E293B">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem">
+            <div>
+              <span style="font-size:.72rem;color:#94A3B8;text-transform:uppercase;font-weight:700;display:block">
+                <i class="fas fa-hourglass-half text-primary"></i> Delivery Countdown (Target: {{ order.prep_time_minutes or 25 }} min prep + transit)
+              </span>
+              <strong style="font-size:1.4rem;color:#38BDF8;font-weight:900" id="countdownTimer">
+                Calculating remaining time...
+              </strong>
+            </div>
+            <div style="text-align:right">
+              <span class="badge" id="gpsHonestyBadge" style="background:#334155;color:#E2E8F0;font-size:.75rem">
+                Checking GPS beacon...
+              </span>
+              <div style="font-size:.75rem;color:#94A3B8;margin-top:.2rem" id="orderTargetTimestamp">
+                Target: {{ order.estimated_delivery_time or '25-35 mins' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress bar towards estimated delivery -->
+          <div style="width:100%;height:10px;background:#334155;border-radius:5px;overflow:hidden;position:relative">
+            <div id="countdownProgressBar" style="height:100%;width:15%;background:linear-gradient(90deg, #38BDF8, #10B981);border-radius:5px;transition:width .8s ease"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.35rem;font-size:.72rem;color:#94A3B8">
+            <span>Order Placed</span>
+            <span id="countdownProgressPercent">15% elapsed</span>
+            <span>Delivered Doorstep</span>
+          </div>
+        </div>
+
         <!-- Live Distance, ETA & Telemetry Bar -->
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:1rem;margin-bottom:1.25rem;background:#F8FAFC;padding:1rem;border-radius:var(--radius-md);border:1px solid #E2E8F0">
           <div>
@@ -84,7 +116,7 @@
                 <div style="width:52px;height:52px;background:#fff;border-radius:50%;box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto .3rem;border:3px solid #F59E0B">
                   🏪
                 </div>
-                <strong style="font-size:.82rem;color:var(--text-dark);display:block">{{ order.restaurant_name[:16] }}</strong>
+                <strong style="font-size:.82rem;color:var(--text-dark);display:block">{{ (order.restaurant_name or 'Kitchen')[:16] }}</strong>
                 <span style="font-size:.7rem;color:var(--text-muted)">Pickup Origin</span>
               </div>
 
@@ -133,28 +165,30 @@
 
       </div>
 
-      <!-- DEMO TRACKING MODE CONTROLS (Requirement #59 - Essential for Viva Presentation) -->
+      <!-- DEMO TRACKING MODE CONTROLS (Requirement #59 - Dedicated Visual Simulator) -->
       <div style="background:#FFFBEB;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid #FCD34D;box-shadow:var(--shadow-sm)">
         <div class="d-flex justify-between align-center mb-2">
           <div class="d-flex align-center gap-2">
             <span class="badge" style="background:#D97706;color:#fff;font-weight:700">
-              <i class="fas fa-gamepad"></i> DEMO TRACKING MODE
+              <i class="fas fa-gamepad"></i> DEMO TRACKING SIMULATOR
             </span>
-            <strong style="font-size:.95rem;color:#78350F">College Viva & Single-Laptop Simulator</strong>
+            <strong style="font-size:.95rem;color:#78350F">College Viva & Single-Laptop Visual Preview</strong>
           </div>
-          <span style="font-size:.75rem;color:#92400E;font-weight:600">Simulates Rider En Route</span>
+          <span class="badge" style="background:#FEF3C7;color:#92400E;font-size:.72rem;border:1px solid #FCD34D">
+            Map Visualizer Only
+          </span>
         </div>
         
-        <p style="font-size:.85rem;color:#92400E;margin-bottom:1rem">
-          Use the controls below to simulate the delivery partner riding between <strong>{{ order.restaurant_name }}</strong> and the customer delivery destination in real-time. Marker positions, distance remaining, and ETA will dynamically update.
+        <p style="font-size:.82rem;color:#92400E;margin-bottom:.85rem;line-height:1.4">
+          <strong>⚠️ SIMULATOR NOTICE:</strong> This preview slider tests route animation and map coordinates locally in-browser. <em>It does not alter real database records or mark customer orders delivered.</em> Real orders advance strictly through actual kitchen and Delivery Partner actions.
         </p>
 
         <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
           <button type="button" class="btn btn-sm btn-primary" id="btnPlayDemo" onclick="startDemoSimulation()" style="background:#D97706;border-color:#D97706;border-radius:var(--radius-pill)">
-            <i class="fas fa-play"></i> Run Auto Ride Simulation
+            <i class="fas fa-play"></i> Run Auto Ride Preview
           </button>
           <button type="button" class="btn btn-sm btn-outline" onclick="stepSimulation(0.25)" style="border-radius:var(--radius-pill);color:#78350F;border-color:#F59E0B">
-            Step 25% (Picked Up)
+            Step 25% (Simulated Transit)
           </button>
           <button type="button" class="btn btn-sm btn-outline" onclick="stepSimulation(0.65)" style="border-radius:var(--radius-pill);color:#78350F;border-color:#F59E0B">
             Step 65% (Near Circle)
@@ -165,9 +199,9 @@
         </div>
 
         <div style="margin-top:1rem;display:flex;align-items:center;gap:1rem">
-          <label style="font-size:.8rem;font-weight:700;color:#78350F;white-space:nowrap">Progress Slider:</label>
+          <label style="font-size:.8rem;font-weight:700;color:#78350F;white-space:nowrap">Preview Slider:</label>
           <input type="range" id="simSlider" min="0" max="100" value="30" style="flex:1;cursor:pointer" oninput="stepSimulation(this.value / 100)">
-          <span id="sliderVal" style="font-size:.82rem;font-weight:700;color:#78350F;min-width:35px">30%</span>
+          <span id="sliderVal" style="font-size:.82rem;font-weight:700;color:#78350F;min-width:85px">30% (Preview)</span>
         </div>
       </div>
 
@@ -176,12 +210,13 @@
         <h2 style="font-size:1.25rem;font-weight:700;color:var(--text-dark);margin-bottom:1.5rem">Order Progression Timeline</h2>
 
         {% set steps = [
-          ('placed', 'Order Placed', 'Order received and sent to kitchen', 'fa-receipt'),
-          ('confirmed', 'Order Confirmed', 'Restaurant acknowledged ticket', 'fa-check-double'),
-          ('preparing', 'Cooking / In Kitchen', 'Chef is preparing dishes', 'fa-fire-burner'),
-          ('ready_for_pickup', 'Packed & Ready', 'Handover to delivery partner', 'fa-box-open'),
-          ('out_for_delivery', 'Out for Delivery', 'Rider on transit to destination', 'fa-motorcycle'),
-          ('delivered', 'Delivered 🎉', 'Meal delivered successfully', 'fa-house-circle-check')
+          ('placed', 'Customer Order Placed', 'Order received and sent to kitchen', 'fa-receipt'),
+          ('confirmed', 'Restaurant Confirmed', 'Restaurant acknowledged ticket', 'fa-check-double'),
+          ('preparing', 'Cooking / In Kitchen', 'Chef is cooking fresh dishes', 'fa-fire-burner'),
+          ('ready_for_pickup', 'Packed & Ready', 'Food is packed & ready for pickup', 'fa-box-open'),
+          ('assigned', 'Delivery Partner Assigned', 'Rider assigned & en route to restaurant', 'fa-motorcycle'),
+          ('out_for_delivery', 'Picked Up / Out for Delivery', 'Rider on transit to destination', 'fa-route'),
+          ('delivered', 'Delivered 🎉', 'Meal delivered successfully to doorstep', 'fa-house-circle-check')
         ] %}
 
         <div class="timeline-container" style="position:relative;padding-left:2.5rem">
@@ -189,8 +224,8 @@
 
           {% for s_code, s_title, s_desc, s_icon in steps %}
           {% set step_idx = loop.index0 %}
-          {% set is_done = step_idx <= current_index %}
-          {% set is_current = step_idx == current_index %}
+          {% set is_done = milestones.get(s_code) if milestones else (step_idx <= current_index) %}
+          {% set is_current = (step_idx == current_index) and (order.order_status != 'delivered' or s_code == 'delivered') %}
 
           <div class="timeline-step" id="step_{{ s_code }}" style="position:relative;margin-bottom:1.75rem;opacity:{% if is_done %}1{% else %}0.35{% endif %}">
             <div style="position:absolute;left:-2.5rem;top:0;width:32px;height:32px;border-radius:50%;background:{% if is_current %}var(--primary){% elif is_done %}#10B981{% else %}#CBD5E1{% endif %};color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;z-index:2">
@@ -276,16 +311,16 @@
       <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
         <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:.75rem;color:var(--text-dark)">Delivery Destination</h3>
         <p style="font-size:.88rem;color:var(--text-muted);line-height:1.4;margin:0">
-          <i class="fas fa-map-marker-alt text-primary"></i> {{ order.delivery_address }}
+          <i class="fas fa-map-marker-alt text-primary"></i> {{ order.delivery_address or 'Customer Delivery Address' }}
         </p>
         
         <div style="border-top:1px solid var(--border-light);margin-top:1rem;padding-top:1rem;display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:.85rem;color:var(--text-muted)">Order Total ({{ order.payment_method|upper }})</span>
-          <strong style="font-size:1.2rem;color:var(--text-dark)">₹{{ "%.2f"|format(order.total_amount) }}</strong>
+          <span style="font-size:.85rem;color:var(--text-muted)">Order Total ({{ (order.payment_method or 'COD')|upper }})</span>
+          <strong style="font-size:1.2rem;color:var(--text-dark)">₹{{ "%.2f"|format(order.total_amount or 0.0) }}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:.8rem;color:#10B981;margin-top:.2rem">
           <span>Payment Status</span>
-          <strong style="text-transform:uppercase">{{ order.payment_status }}</strong>
+          <strong style="text-transform:uppercase">{{ order.payment_status or 'PENDING' }}</strong>
         </div>
       </div>
 
@@ -308,6 +343,19 @@ let restMarker = null;
 let custMarker = null;
 let isSimulating = false;
 
+// Step definition mapping (7 stages)
+const PROGRESSION_STEPS = [
+  { code: 'placed', title: 'Customer Order Placed', desc: 'Order received and sent to kitchen' },
+  { code: 'confirmed', title: 'Restaurant Confirmed', desc: 'Restaurant acknowledged ticket' },
+  { code: 'preparing', title: 'Cooking / In Kitchen', desc: 'Chef is cooking fresh dishes' },
+  { code: 'ready_for_pickup', title: 'Packed & Ready', desc: 'Food is packed & ready for pickup' },
+  { code: 'assigned', title: 'Delivery Partner Assigned', desc: 'Rider assigned & en route to restaurant' },
+  { code: 'out_for_delivery', title: 'Picked Up / Out for Delivery', desc: 'Rider on transit to destination' },
+  { code: 'delivered', title: 'Delivered 🎉', desc: 'Meal delivered successfully to doorstep' }
+];
+
+let pollInterval = null;
+
 // Poll live tracking telemetry from backend every 4 seconds
 async function pollTrackingData() {
   const icon = document.getElementById('refreshIcon');
@@ -315,31 +363,175 @@ async function pollTrackingData() {
 
   try {
     const res = await fetch(`/api/orders/${ORDER_ID}/tracking`);
+    if (!res.ok) {
+      console.warn(`Tracking endpoint responded with HTTP ${res.status}`);
+      return;
+    }
     const data = await res.json();
-    if (data.success) {
+    if (data && data.success) {
       updateTelemetryUI(data);
     }
   } catch (err) {
-    console.error("Tracking poll error:", err);
+    console.error("Tracking poll network exception:", err);
   } finally {
     if (icon) icon.classList.remove('fa-spin');
   }
 }
 
 function updateTelemetryUI(data) {
-  // Update Distance & ETA Badges
-  document.getElementById('distRemaining').textContent = data.distance_remaining || 'In Transit';
-  document.getElementById('etaDisplay').textContent = data.eta || '10 min';
-  document.getElementById('partnerStatus').textContent = data.delivery_partner ? `${data.delivery_partner.name}` : 'Awaiting Rider';
-  document.getElementById('lastUpdatedPing').textContent = new Date().toLocaleTimeString();
+  // 0. Update Time-Based Countdown & Progress Meter
+  const isDelivered = data.is_delivered || (data.order_status && data.order_status.toLowerCase() === 'delivered');
+  if (data.time_tracking) {
+    const tt = data.time_tracking;
+    const cdEl = document.getElementById('countdownTimer');
+    if (cdEl) {
+      if (isDelivered) {
+        cdEl.textContent = 'Delivered 🎉';
+        cdEl.style.color = '#10B981';
+      } else {
+        cdEl.textContent = tt.countdown_display || 'Arriving shortly';
+        cdEl.style.color = '#38BDF8';
+      }
+    }
 
-  // Update Rider coordinate telemetry
-  if (data.delivery_location) {
-    document.getElementById('telemetryRiderCoord').textContent = 
-      `${data.delivery_location.latitude.toFixed(4)}, ${data.delivery_location.longitude.toFixed(4)}`;
+    const pBar = document.getElementById('countdownProgressBar');
+    if (pBar) {
+      pBar.style.width = isDelivered ? '100%' : `${tt.progress_percent}%`;
+    }
+
+    const pText = document.getElementById('countdownProgressPercent');
+    if (pText) {
+      pText.textContent = isDelivered ? '100% completed' : `${tt.progress_percent}% elapsed`;
+    }
+
+    const targetEl = document.getElementById('orderTargetTimestamp');
+    if (targetEl) {
+      if (isDelivered && tt.delivered_at) {
+        targetEl.textContent = `Completed at: ${tt.delivered_at.replace('T', ' ')}`;
+      } else if (tt.estimated_delivery_time) {
+        targetEl.textContent = `ETA Target: ${tt.estimated_delivery_time.replace('T', ' ')}`;
+      }
+    }
   }
 
-  // Update Rider node position in fallback visualizer
+  // Stop polling if order has reached delivered terminal state
+  if (isDelivered && pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+
+  // GPS Honesty indicator
+  if (data.gps_telemetry) {
+    const gBadge = document.getElementById('gpsHonestyBadge');
+    if (gBadge) {
+      if (data.gps_telemetry.has_real_gps) {
+        gBadge.style.background = '#065F46';
+        gBadge.style.color = '#34D399';
+        gBadge.innerHTML = '<i class="fas fa-satellite"></i> LIVE DEVICE GPS';
+      } else {
+        gBadge.style.background = '#78350F';
+        gBadge.style.color = '#FDE68A';
+        gBadge.innerHTML = '<i class="fas fa-route"></i> STATUS PROGRESSION';
+      }
+    }
+  }
+
+  // 1. Update Distance & ETA Badges
+  const distEl = document.getElementById('distRemaining');
+  if (distEl) distEl.textContent = data.distance_remaining || 'In Transit';
+
+  const etaEl = document.getElementById('etaDisplay');
+  if (etaEl) etaEl.textContent = data.eta || '10 min';
+
+  const partnerStatusEl = document.getElementById('partnerStatus');
+  if (partnerStatusEl) {
+    partnerStatusEl.textContent = data.delivery_partner ? `${data.delivery_partner.name}` : 'Awaiting Rider Assignment';
+  }
+
+  const lastUpdatedEl = document.getElementById('lastUpdatedPing');
+  if (lastUpdatedEl) lastUpdatedEl.textContent = new Date().toLocaleTimeString();
+
+  // 2. Update Header Stage Badge
+  if (data.order_status) {
+    const badge = document.getElementById('headerStageBadge');
+    if (badge) {
+      const st = data.order_status.toLowerCase();
+      badge.textContent = st.replace(/_/g, ' ').toUpperCase();
+      if (st === 'delivered') {
+        badge.style.background = '#059669';
+      } else if (st === 'out_for_delivery') {
+        badge.style.background = '#2563EB';
+      } else if (st === 'preparing' || st === 'ready' || st === 'ready_for_pickup') {
+        badge.style.background = '#D97706';
+      } else {
+        badge.style.background = '#10B981';
+      }
+    }
+  }
+
+  // 3. Dynamically update Assigned Delivery Partner Card
+  const partnerCardContent = document.getElementById('partnerCardContent');
+  if (partnerCardContent && data.delivery_partner) {
+    partnerCardContent.innerHTML = `
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+        <div style="width:50px;height:50px;background:#E0E7FF;color:#4F46E5;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem">
+          <i class="fas fa-motorcycle"></i>
+        </div>
+        <div>
+          <strong style="font-size:1.05rem;color:var(--text-dark);display:block" id="partnerNameDisplay">${data.delivery_partner.name || 'Assigned Partner'}</strong>
+          <span style="font-size:.85rem;color:var(--text-muted)" id="partnerPhoneDisplay">
+            <i class="fas fa-phone-alt"></i> <a href="tel:${data.delivery_partner.phone || ''}" style="color:var(--primary)">${data.delivery_partner.phone || 'Contact Rider'}</a>
+          </span>
+          <div style="font-size:.78rem;color:var(--text-muted);margin-top:.2rem" id="partnerVehicleDisplay">
+            ${data.delivery_partner.vehicle || 'Motorcycle'}
+          </div>
+        </div>
+      </div>
+    `;
+    const riderNodeName = document.getElementById('riderNodeName');
+    if (riderNodeName) {
+      riderNodeName.textContent = data.delivery_partner.name || 'Rider Moving';
+    }
+  }
+
+  // 4. Dynamically update progression timeline with 7 stages & persisted milestones
+  const curIdx = (typeof data.stage_index === 'number') ? data.stage_index : 0;
+  const milestones = data.milestones || {};
+
+  PROGRESSION_STEPS.forEach((stepDef, idx) => {
+    const stepEl = document.getElementById(`step_${stepDef.code}`);
+    if (!stepEl) return;
+    const isDone = milestones[stepDef.code] !== undefined ? milestones[stepDef.code] : (idx <= curIdx);
+    const isCurrent = (idx === curIdx) && (!isDelivered || stepDef.code === 'delivered');
+
+    stepEl.style.opacity = isDone ? '1' : '0.35';
+    const circleEl = stepEl.querySelector('div[style*="border-radius:50%"]');
+    if (circleEl) {
+      circleEl.style.background = isCurrent ? 'var(--primary)' : (isDone ? '#10B981' : '#CBD5E1');
+    }
+
+    const titleEl = stepEl.querySelector('h3');
+    if (titleEl) {
+      titleEl.style.color = isCurrent ? 'var(--primary)' : 'var(--text-dark)';
+      let badgeHtml = '';
+      if (isCurrent && !isDelivered) {
+        badgeHtml = '<span class="badge" style="background:#FEF3C7;color:#92400E;font-size:.7rem;margin-left:.4rem">CURRENT STAGE</span>';
+      } else if (isDone) {
+        badgeHtml = '<span style="color:#10B981;font-size:.75rem;margin-left:.4rem">✓ Done</span>';
+      }
+      titleEl.innerHTML = `${stepDef.title} ${badgeHtml}`;
+    }
+  });
+
+  // 5. Update Rider coordinate telemetry
+  if (data.delivery_location) {
+    const riderCoordEl = document.getElementById('telemetryRiderCoord');
+    if (riderCoordEl) {
+      riderCoordEl.textContent = `${data.delivery_location.latitude.toFixed(4)}, ${data.delivery_location.longitude.toFixed(4)}`;
+    }
+  }
+
+  // 6. Update Rider node position in fallback visualizer
   if (data.delivery_location && data.customer_location && data.restaurant_location) {
     const rLat = data.restaurant_location.latitude;
     const cLat = data.customer_location.latitude;
@@ -351,17 +543,19 @@ function updateTelemetryUI(data) {
     if (fill) fill.style.width = `${Math.round(ratio * 100)}%`;
   }
 
-  // If Google Maps is active, update marker
+  // 7. If Google Maps is active, update marker
   if (gMap && riderMarker && data.delivery_location) {
     const newPos = { lat: data.delivery_location.latitude, lng: data.delivery_location.longitude };
     riderMarker.setPosition(newPos);
   }
 }
 
-// Demo Simulation Handlers (Requirement #59)
+// Demo Simulation Handlers (Requirement #59 - Canvas & marker preview only)
 async function stepSimulation(progress) {
-  document.getElementById('simSlider').value = Math.round(progress * 100);
-  document.getElementById('sliderVal').textContent = `${Math.round(progress * 100)}%`;
+  const pct = Math.round(progress * 100);
+  document.getElementById('simSlider').value = pct;
+  const sliderVal = document.getElementById('sliderVal');
+  if (sliderVal) sliderVal.textContent = `${pct}% (Preview)`;
 
   try {
     const res = await fetch(`/api/orders/${ORDER_ID}/simulate-step`, {
@@ -370,14 +564,14 @@ async function stepSimulation(progress) {
       body: JSON.stringify({ progress: progress })
     });
     const result = await res.json();
-    if (result.success) {
-      document.getElementById('distRemaining').textContent = result.distance_remaining;
-      document.getElementById('etaDisplay').textContent = result.eta;
-      document.getElementById('telemetryRiderCoord').textContent = 
-        `${result.simulated_location.latitude.toFixed(4)}, ${result.simulated_location.longitude.toFixed(4)}`;
+    if (result.success && result.simulated_location) {
+      const coordEl = document.getElementById('telemetryRiderCoord');
+      if (coordEl) {
+        coordEl.textContent = `${result.simulated_location.latitude.toFixed(4)}, ${result.simulated_location.longitude.toFixed(4)} (Sim)`;
+      }
 
       const fill = document.getElementById('routeProgressFill');
-      if (fill) fill.style.width = `${Math.round(progress * 100)}%`;
+      if (fill) fill.style.width = `${pct}%`;
 
       if (gMap && riderMarker) {
         riderMarker.setPosition({
@@ -421,7 +615,13 @@ function startDemoSimulation() {
 document.addEventListener('DOMContentLoaded', () => {
   pollTrackingData();
   // Poll every 5 seconds
-  setInterval(pollTrackingData, 5000);
+  pollInterval = setInterval(pollTrackingData, 5000);
+});
+
+// Clean up timers on page unload
+window.addEventListener('beforeunload', () => {
+  if (pollInterval) clearInterval(pollInterval);
+  if (simInterval) clearInterval(simInterval);
 });
 </script>
 {% endblock %}

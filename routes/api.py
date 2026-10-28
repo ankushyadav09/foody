@@ -8,6 +8,7 @@ except ImportError:
     razorpay = None
 import json
 import math
+import logging
 from datetime import datetime, date
 from decimal import Decimal
 from flask import Blueprint, request, jsonify, session
@@ -17,6 +18,7 @@ from utils.helpers import (customer_required, calculate_order_totals,
                            validate_and_calculate_coupon)
 from config import Config
 
+logger = logging.getLogger('foody.api')
 api_bp = Blueprint('api', __name__)
 
 
@@ -332,9 +334,20 @@ def _create_order_in_db(order_data, payment_method, payment_status,
     subtotal = sum(float(i['price']) * int(i['quantity']) for i in items)
     restaurant_id = items[0]['restaurant_id']
 
-    # Fetch restaurant delivery fee
-    rest = execute_query("SELECT delivery_fee FROM restaurants WHERE id=%s", (restaurant_id,), fetchone=True)
+    # Fetch restaurant delivery fee and preparation time
+    rest = execute_query("SELECT name, delivery_fee, prep_time FROM restaurants WHERE id=%s", (restaurant_id,), fetchone=True)
     delivery_fee = float(rest['delivery_fee']) if rest and rest.get('delivery_fee') is not None else Config.DEFAULT_DELIVERY_FEE
+
+    # Preparation time and estimated delivery time calculation
+    prep_time_str = str(rest.get('prep_time') or '25') if rest else '25'
+    import re
+    from datetime import datetime, timedelta
+    match = re.search(r'\d+', prep_time_str)
+    prep_minutes = int(match.group()) if match else 25
+    total_est_minutes = prep_minutes + 10  # 10 min transit
+    est_delivery_time = datetime.now() + timedelta(minutes=total_est_minutes)
+
+    tip_amount = float(order_data.get('tip_amount') or order_data.get('tip') or 0.0)
 
     # Sanitize and validate coupon_id
     coupon_id = None
@@ -353,6 +366,7 @@ def _create_order_in_db(order_data, payment_method, payment_status,
 
     # Recalculate verified totals on server side
     totals = calculate_order_totals(subtotal, delivery_fee, discount)
+    grand_total_with_tip = round(totals['grand_total'] + tip_amount, 2)
 
     order_code = generate_order_id()
     if not transaction_id:
@@ -372,12 +386,13 @@ def _create_order_in_db(order_data, payment_method, payment_status,
         db_order_id = tx.execute(
             """INSERT INTO orders
                (user_id, restaurant_id, address_id, delivery_address, customer_lat, customer_lng,
-                order_code, total_amount, delivery_fee, discount, tax, payment_method, payment_status,
-                order_status, coupon_id, created_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'placed',%s,NOW())""",
+                order_code, total_amount, delivery_fee, discount, tax, tip_amount, payment_method, payment_status,
+                order_status, coupon_id, prep_time_minutes, estimated_delivery_time, created_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'placed',%s,%s,%s,NOW())""",
             (user_id, restaurant_id, address_id, delivery_address, customer_lat, customer_lng,
-             order_code, totals['grand_total'], totals['delivery_fee'], totals['discount'],
-             totals['tax'], payment_method, payment_status, coupon_id)
+             order_code, grand_total_with_tip, totals['delivery_fee'], totals['discount'],
+             totals['tax'], tip_amount, payment_method, payment_status, coupon_id,
+             prep_minutes, est_delivery_time)
         )
 
         # 2. Insert order items
@@ -396,7 +411,7 @@ def _create_order_in_db(order_data, payment_method, payment_status,
         tx.execute(
             """INSERT INTO payments (order_id, transaction_id, payment_method, amount, payment_status, payment_date)
                VALUES (%s,%s,%s,%s,%s,NOW())""",
-            (db_order_id, transaction_id, payment_method, totals['grand_total'], payment_status)
+            (db_order_id, transaction_id, payment_method, grand_total_with_tip, payment_status)
         )
 
         # 4. Update coupon usage counter
@@ -423,6 +438,17 @@ def _create_order_in_db(order_data, payment_method, payment_status,
                    FROM restaurants WHERE id=%s AND owner_id IS NOT NULL""",
                 (order_code, restaurant_id)
             )
+            # If eligible for delivery (paid or COD), broadcast to online delivery partners
+            if payment_status == 'paid' or payment_method == 'cod':
+                rest_name = rest['name'] if rest and rest.get('name') else 'Kitchen'
+                tx.execute(
+                    """INSERT INTO notifications (user_id, role, title, message)
+                       SELECT dp.user_id, 'delivery', 'New Delivery Available! 🛵',
+                              CONCAT('New order #', %s, ' at ', %s, ' is available in your dispatch pool.')
+                       FROM delivery_partners dp
+                       WHERE dp.is_online = 1 AND dp.verification_status = 'approved'""",
+                    (order_code, rest_name)
+                )
         except Exception:
             pass
 
@@ -660,23 +686,37 @@ def get_order_tracking(order_id):
     Returns real-time GPS coordinates, calculated Haversine distance, dynamic ETA, and assignment status.
     Protected with resource ownership validation.
     """
-    if 'user_id' not in session:
+    user_id = session.get('user_id')
+    role = session.get('role', 'customer')
+    if not user_id:
+        for auth_key in ('customer_auth', 'delivery_auth', 'restaurant_auth', 'admin_auth'):
+            auth_val = session.get(auth_key)
+            if auth_val and isinstance(auth_val, dict) and auth_val.get('user_id'):
+                user_id = auth_val.get('user_id')
+                role = auth_val.get('role', 'customer')
+                break
+
+    if not user_id:
         return jsonify({'success': False, 'message': 'Authentication required.'}), 401
 
-    user_id = session['user_id']
-    role = session.get('role', 'customer')
-
     order = execute_query(
-        """SELECT o.*, r.name AS restaurant_name, r.address AS restaurant_address,
-                  r.phone AS restaurant_phone, r.latitude AS restaurant_lat,
-                  r.longitude AS restaurant_lng,
+        """SELECT o.*,
+                  COALESCE(r.name, 'Restaurant Kitchen') AS restaurant_name,
+                  COALESCE(r.address, 'Restaurant Kitchen') AS restaurant_address,
+                  COALESCE(r.phone, '+91 98250 12345') AS restaurant_phone,
+                  COALESCE(r.latitude, 23.5880) AS restaurant_lat,
+                  COALESCE(r.longitude, 72.3693) AS restaurant_lng,
+                  COALESCE(a.address, o.delivery_address, 'Customer Delivery Address') AS delivery_address,
+                  COALESCE(o.customer_lat, a.latitude, 23.5880) AS customer_lat,
+                  COALESCE(o.customer_lng, a.longitude, 72.3693) AS customer_lng,
                   da.partner_id, da.status AS delivery_stage,
                   u.name AS partner_name, u.phone AS partner_phone,
                   dp.vehicle_type, dp.vehicle_number, dp.current_lat AS partner_lat,
                   dp.current_lng AS partner_lng
            FROM orders o
-           JOIN restaurants r ON o.restaurant_id=r.id
-           LEFT JOIN delivery_assignments da ON da.order_id=o.id
+           LEFT JOIN restaurants r ON o.restaurant_id=r.id
+           LEFT JOIN addresses a ON o.address_id=a.id
+           LEFT JOIN delivery_assignments da ON da.order_id=o.id AND da.status != 'cancelled'
            LEFT JOIN users u ON da.partner_id=u.id
            LEFT JOIN delivery_partners dp ON da.partner_id=dp.user_id
            WHERE o.id=%s""",
@@ -731,12 +771,82 @@ def get_order_tracking(order_id):
     eta_mins = max(2, int(round((dist_meters / 416.0) + 3)))
     eta_str = f"Estimated arrival in {eta_mins} minutes"
 
+    # Time-based persistent countdown and progress graph metrics (Phase 4)
+    from datetime import datetime
+    created_dt = order.get('created_at')
+    if isinstance(created_dt, str):
+        try:
+            created_dt = datetime.strptime(created_dt.split('.')[0], '%Y-%m-%d %H:%M:%S')
+        except Exception:
+            created_dt = datetime.now()
+    elif not created_dt:
+        created_dt = datetime.now()
+
+    prep_mins = int(order.get('prep_time_minutes') or 25)
+    total_est_seconds = (prep_mins + 10) * 60
+    now = datetime.now()
+    elapsed_seconds = max(0, int((now - created_dt).total_seconds()))
+
+    raw_status = (order['order_status'] or 'placed').lower()
+    delivery_stage = (order['delivery_stage'] or 'pending').lower()
+    has_partner = bool(order['partner_id'])
+
+    is_delivered = (raw_status == 'delivered' or delivery_stage == 'delivered')
+    if is_delivered:
+        remaining_seconds = 0
+        countdown_display = "Delivered 🎉"
+        progress_percent = 100
+        stage_index = 6
+    else:
+        remaining_seconds = max(0, total_est_seconds - elapsed_seconds)
+        rem_mins = int(math.ceil(remaining_seconds / 60.0))
+        if remaining_seconds == 0:
+            countdown_display = "Arriving any moment"
+            progress_percent = 95
+        else:
+            countdown_display = f"{rem_mins} mins remaining"
+            time_ratio = elapsed_seconds / float(total_est_seconds)
+            progress_percent = min(92, max(8, int(time_ratio * 100)))
+
+        # Determine effective lifecycle progression index (0 to 6):
+        if raw_status in ('out_for_delivery', 'picked_up') or delivery_stage in ('picked_up', 'out_for_delivery'):
+            stage_index = 5
+        elif raw_status == 'assigned' or has_partner or delivery_stage == 'assigned':
+            stage_index = 4
+        elif raw_status in ('ready_for_pickup', 'ready'):
+            stage_index = 3
+        elif raw_status == 'preparing':
+            stage_index = 2
+        elif raw_status == 'confirmed':
+            stage_index = 1
+        elif raw_status == 'placed':
+            stage_index = 0
+        else:
+            stage_index = 0
+
+    milestones = {
+        'placed': True,
+        'confirmed': stage_index >= 1 or raw_status in ('confirmed', 'preparing', 'ready', 'ready_for_pickup', 'out_for_delivery', 'delivered', 'assigned') or has_partner,
+        'preparing': stage_index >= 2 or raw_status in ('preparing', 'ready', 'ready_for_pickup', 'out_for_delivery', 'delivered', 'assigned'),
+        'ready_for_pickup': stage_index >= 3 or raw_status in ('ready', 'ready_for_pickup', 'out_for_delivery', 'delivered', 'assigned'),
+        'assigned': stage_index >= 4 or has_partner or delivery_stage in ('assigned', 'picked_up', 'out_for_delivery', 'delivered') or raw_status == 'assigned',
+        'out_for_delivery': stage_index >= 5 or raw_status in ('out_for_delivery', 'delivered') or delivery_stage in ('picked_up', 'out_for_delivery', 'delivered'),
+        'delivered': is_delivered
+    }
+
+    # GPS Honesty check
+    has_real_gps = (latest_loc is not None)
+
     return jsonify({
         'success': True,
         'order_id': order['id'],
         'order_code': order['order_code'],
         'order_status': order['order_status'],
         'delivery_stage': order['delivery_stage'] or 'pending',
+        'has_partner': has_partner,
+        'stage_index': stage_index,
+        'is_delivered': is_delivered,
+        'milestones': milestones,
         'delivery_partner': {
             'id': order['partner_id'],
             'name': order['partner_name'] or 'Assigned Delivery Partner',
@@ -762,6 +872,23 @@ def get_order_tracking(order_id):
         'distance_meters': round(dist_meters, 1),
         'eta': eta_str,
         'eta_minutes': eta_mins,
+        'time_tracking': {
+            'elapsed_seconds': elapsed_seconds,
+            'remaining_seconds': remaining_seconds,
+            'countdown_display': countdown_display,
+            'total_estimated_seconds': total_est_seconds,
+            'progress_percent': progress_percent,
+            'is_delivered': is_delivered,
+            'prep_time_minutes': prep_mins,
+            'estimated_delivery_time': str(order.get('estimated_delivery_time') or ''),
+            'created_at': str(created_dt),
+            'delivered_at': str(order.get('delivered_at') or '')
+        },
+        'gps_telemetry': {
+            'has_real_gps': has_real_gps,
+            'mode': 'real_satellite_gps' if has_real_gps else 'status_progression',
+            'label': 'Live Device GPS Active' if has_real_gps else 'Status Progression (Awaiting Rider GPS)'
+        },
         'last_updated': last_updated
     })
 
@@ -827,7 +954,17 @@ def simulate_order_step(order_id):
     Demo Tracking Mode endpoint for viva examination (Requirement #59).
     Simulates rider progression along interpolated coordinates from Restaurant to Customer.
     """
-    if 'user_id' not in session:
+    user_id = session.get('user_id')
+    role = session.get('role', 'customer')
+    if not user_id:
+        for auth_key in ('customer_auth', 'delivery_auth', 'restaurant_auth', 'admin_auth'):
+            auth_val = session.get(auth_key)
+            if auth_val and isinstance(auth_val, dict) and auth_val.get('user_id'):
+                user_id = auth_val.get('user_id')
+                role = auth_val.get('role', 'customer')
+                break
+
+    if not user_id:
         return jsonify({'success': False, 'message': 'Authentication required.'}), 401
 
     data = request.get_json() or {}
@@ -835,16 +972,27 @@ def simulate_order_step(order_id):
     progress = max(0.0, min(1.0, progress))
 
     order = execute_query(
-        """SELECT o.*, r.latitude AS rest_lat, r.longitude AS rest_lng,
+        """SELECT o.*,
+                  COALESCE(r.latitude, 23.5880) AS rest_lat,
+                  COALESCE(r.longitude, 72.3693) AS rest_lng,
+                  COALESCE(o.customer_lat, a.latitude, 23.5880) AS cust_lat,
+                  COALESCE(o.customer_lng, a.longitude, 72.3693) AS cust_lng,
                   da.partner_id
            FROM orders o
-           JOIN restaurants r ON o.restaurant_id=r.id
+           LEFT JOIN restaurants r ON o.restaurant_id=r.id
+           LEFT JOIN addresses a ON o.address_id=a.id
            LEFT JOIN delivery_assignments da ON da.order_id=o.id
            WHERE o.id=%s""",
         (order_id,), fetchone=True
     )
     if not order:
         return jsonify({'success': False, 'message': 'Order not found.'}), 404
+
+    # Resource ownership check
+    if role == 'customer' and order['user_id'] != user_id:
+        return jsonify({'success': False, 'message': 'Unauthorized access.'}), 403
+    if role == 'delivery' and order['partner_id'] and order['partner_id'] != user_id:
+        return jsonify({'success': False, 'message': 'Unauthorized access.'}), 403
 
     r_lat = float(order['rest_lat'] or 23.5880)
     r_lng = float(order['rest_lng'] or 72.3693)
@@ -855,17 +1003,8 @@ def simulate_order_step(order_id):
     sim_lat = r_lat + (c_lat - r_lat) * progress
     sim_lng = r_lng + (c_lng - r_lng) * progress
 
-    partner_id = order['partner_id'] or session['user_id']
-    execute_query(
-        "UPDATE delivery_partners SET current_lat=%s, current_lng=%s, updated_at=NOW() WHERE user_id=%s",
-        (sim_lat, sim_lng, partner_id), commit=True
-    )
-    execute_query(
-        """INSERT INTO delivery_locations (delivery_partner_id, order_id, latitude, longitude, recorded_at)
-           VALUES (%s, %s, %s, %s, NOW())""",
-        (partner_id, order_id, sim_lat, sim_lng), commit=True
-    )
-
+    # Visual canvas simulation only (Requirement #59)
+    # Does NOT alter persisted delivery_locations or database GPS telemetry
     dist_meters = calculate_haversine_distance(sim_lat, sim_lng, c_lat, c_lng)
     dist_str = f"{int(dist_meters)} m away" if dist_meters < 1000 else f"{dist_meters / 1000.0:.1f} km away"
     eta_mins = max(1, int(round((dist_meters / 416.0) + 1)))
@@ -873,11 +1012,232 @@ def simulate_order_step(order_id):
     return jsonify({
         'success': True,
         'mode': 'DEMO_TRACKING_MODE',
+        'is_simulation': True,
         'progress': progress,
         'simulated_location': {'latitude': sim_lat, 'longitude': sim_lng},
         'distance_remaining': dist_str,
         'eta': f"Estimated arrival in {eta_mins} minutes",
         'eta_minutes': eta_mins
+    })
+
+
+# ─────────────────────────────────────────────
+# LIVE DELIVERY DISPATCH & FLEET APIS
+# ─────────────────────────────────────────────
+
+@api_bp.route('/delivery/dispatches', methods=['GET'])
+def get_delivery_dispatches():
+    """
+    Authoritative live delivery dispatch feed for the Delivery Partner portal.
+    Returns:
+    - available_orders: Unassigned orders ready for rider self-acceptance.
+    - active_deliveries: Orders currently assigned to this delivery partner.
+    - stats: Daily & total delivery statistics and accumulated earnings.
+    - is_online: Current duty status of the delivery partner.
+    """
+    from utils.helpers import get_delivery_auth
+    auth = get_delivery_auth()
+    partner_id = (auth.get('user_id') if auth else None) or (session.get('user_id') if session.get('role') == 'delivery' else None)
+    if not partner_id:
+        return jsonify({'success': False, 'message': 'Authentication required. Delivery partners only.'}), 401
+
+    partner = execute_query("SELECT * FROM delivery_partners WHERE user_id=%s", (partner_id,), fetchone=True)
+    if not partner:
+        execute_query(
+            "INSERT INTO delivery_partners (user_id, vehicle_type, vehicle_number, is_online, is_available) VALUES (%s, 'Motorcycle', 'GJ-02-AB-1234', 1, 1)",
+            (partner_id,), commit=True
+        )
+        partner = execute_query("SELECT * FROM delivery_partners WHERE user_id=%s", (partner_id,), fetchone=True)
+
+    is_online = bool(partner.get('is_online', 1))
+
+    # Available eligible unassigned orders
+    # Filter out cancelled, delivered, rejected, or already-assigned orders
+    available_orders = []
+    if is_online:
+        raw_available = execute_query(
+            """SELECT o.*, r.name AS restaurant_name, r.address AS restaurant_address,
+                      r.phone AS restaurant_phone, r.area AS restaurant_area,
+                      u.name AS customer_name, u.phone AS customer_phone,
+                      COALESCE(a.address, o.delivery_address) AS full_delivery_address,
+                      (SELECT COUNT(*) FROM order_items WHERE order_id=o.id) AS item_count
+               FROM orders o
+               JOIN restaurants r ON o.restaurant_id=r.id
+               JOIN users u ON o.user_id=u.id
+               LEFT JOIN addresses a ON o.address_id=a.id
+               LEFT JOIN delivery_assignments da ON da.order_id=o.id AND da.status != 'cancelled'
+               WHERE o.order_status IN ('placed', 'confirmed', 'preparing', 'ready_for_pickup')
+                 AND (o.payment_status = 'paid' OR o.payment_method = 'cod')
+                 AND da.id IS NULL
+               ORDER BY o.created_at ASC""",
+            fetchall=True
+        ) or []
+
+        for o in raw_available:
+            delivery_fee = float(o.get('delivery_fee') or 40.0)
+            tip_amount = float(o.get('tip_amount') or 0.0)
+            earnings = round(delivery_fee + tip_amount, 2)
+            prep_minutes = int(o.get('prep_time_minutes') or 25)
+
+            full_addr = str(o.get('full_delivery_address') or o.get('delivery_address') or 'Mehsana City, Gujarat')
+            dest_display = full_addr if len(full_addr) <= 45 else full_addr[:45] + '...'
+
+            available_orders.append({
+                'id': o['id'],
+                'order_code': o['order_code'],
+                'restaurant_id': o['restaurant_id'],
+                'restaurant_name': o['restaurant_name'],
+                'restaurant_address': o['restaurant_address'],
+                'restaurant_phone': o.get('restaurant_phone', ''),
+                'restaurant_area': o.get('restaurant_area', 'Mehsana City'),
+                'customer_name': o['customer_name'],
+                'delivery_address': full_addr,
+                'delivery_destination': dest_display,
+                'item_count': int(o.get('item_count') or 1),
+                'total_amount': float(o['total_amount']),
+                'delivery_fee': delivery_fee,
+                'tip_amount': tip_amount,
+                'earnings': earnings,
+                'order_status': o['order_status'],
+                'order_status_display': (o.get('order_status') or 'placed').replace('_', ' ').title(),
+                'prep_time_minutes': prep_minutes,
+                'estimated_delivery_time': str(o.get('estimated_delivery_time') or ''),
+                'created_at': str(o.get('created_at') or '')
+            })
+
+    # Active tasks assigned to this partner
+    raw_assigned = execute_query(
+        """SELECT da.id AS assignment_id, da.status AS assignment_status, da.assigned_at, da.picked_at,
+                  o.id AS order_id, o.order_code, o.total_amount, o.order_status, o.delivery_fee, o.tip_amount,
+                  u.name AS customer_name, u.phone AS customer_phone,
+                  COALESCE(a.address, o.delivery_address) AS delivery_address,
+                  r.name AS restaurant_name, r.address AS restaurant_address, r.phone AS restaurant_phone
+           FROM delivery_assignments da
+           JOIN orders o ON da.order_id=o.id
+           JOIN users u ON o.user_id=u.id
+           LEFT JOIN addresses a ON o.address_id=a.id
+           JOIN restaurants r ON o.restaurant_id=r.id
+           WHERE da.partner_id=%s AND da.status NOT IN ('delivered','cancelled')
+           ORDER BY da.assigned_at DESC""",
+        (partner_id,), fetchall=True
+    ) or []
+
+    active_deliveries = []
+    for a in raw_assigned:
+        earnings = round(float(a.get('delivery_fee') or 40.0) + float(a.get('tip_amount') or 0.0), 2)
+        ord_st = (a.get('order_status') or '').lower()
+        asg_st = (a.get('assignment_status') or '').lower()
+        can_pickup = (asg_st == 'assigned' and ord_st in ('ready_for_pickup', 'ready'))
+        can_deliver = (asg_st in ('picked_up', 'out_for_delivery'))
+
+        active_deliveries.append({
+            'id': a['assignment_id'],
+            'assignment_id': a['assignment_id'],
+            'order_id': a['order_id'],
+            'order_code': a['order_code'],
+            'status': a['assignment_status'],
+            'order_status': a['order_status'],
+            'order_status_display': ord_st.replace('_', ' ').title(),
+            'assignment_status': a['assignment_status'],
+            'restaurant_name': a['restaurant_name'],
+            'restaurant_address': a['restaurant_address'],
+            'restaurant_phone': a.get('restaurant_phone', ''),
+            'customer_name': a['customer_name'],
+            'customer_phone': a['customer_phone'],
+            'delivery_address': a['delivery_address'],
+            'total_amount': float(a['total_amount']),
+            'earnings': earnings,
+            'assigned_at': str(a.get('assigned_at') or ''),
+            'picked_at': str(a.get('picked_at') or ''),
+            'can_pickup': can_pickup,
+            'can_deliver': can_deliver
+        })
+
+    today_res = execute_query(
+        "SELECT COUNT(*) AS c FROM delivery_assignments WHERE partner_id=%s AND DATE(assigned_at)=CURDATE() AND status='delivered'",
+        (partner_id,), fetchone=True
+    )
+    total_res = execute_query(
+        "SELECT COUNT(*) AS c FROM delivery_assignments WHERE partner_id=%s AND status='delivered'",
+        (partner_id,), fetchone=True
+    )
+    earn_res = execute_query(
+        """SELECT COALESCE(SUM(COALESCE(os.partner_payout_amount, o.delivery_fee)),0) AS e
+           FROM delivery_assignments da
+           JOIN orders o ON da.order_id=o.id
+           LEFT JOIN order_settlements os ON os.order_id=o.id
+           WHERE da.partner_id=%s AND da.status='delivered'""",
+        (partner_id,), fetchone=True
+    )
+
+    stats = {
+        'today_deliveries': today_res['c'] if today_res else 0,
+        'total_deliveries': total_res['c'] if total_res else 0,
+        'pending': len(active_deliveries),
+        'earnings': float(earn_res['e'] if earn_res else 0.0)
+    }
+
+    return jsonify({
+        'success': True,
+        'partner_id': partner_id,
+        'is_online': is_online,
+        'available_orders': available_orders,
+        'available_count': len(available_orders),
+        'active_deliveries': active_deliveries,
+        'assigned': active_deliveries,
+        'assigned_count': len(active_deliveries),
+        'stats': stats,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@api_bp.route('/delivery/order/accept/<int:order_id>', methods=['POST'])
+def api_delivery_accept(order_id):
+    """API endpoint for accepting an order assignment."""
+    from routes.delivery import accept_order
+    return accept_order(order_id)
+
+
+@api_bp.route('/delivery/order/pickup/<int:assignment_id>', methods=['POST'])
+def api_delivery_pickup(assignment_id):
+    """API endpoint for rider food pickup."""
+    from routes.delivery import pickup_order
+    return pickup_order(assignment_id)
+
+
+@api_bp.route('/delivery/order/delivered/<int:assignment_id>', methods=['POST'])
+def api_delivery_delivered(assignment_id):
+    """API endpoint for rider delivery completion."""
+    from routes.delivery import deliver_order
+    return deliver_order(assignment_id)
+
+
+@api_bp.route('/delivery/available-count', methods=['GET'])
+def get_delivery_available_count():
+    """
+    Rider Dashboard polling endpoint.
+    Allows Delivery Partner portal to detect newly placed eligible orders without full manual page reloads.
+    """
+    user_id = session.get('user_id') or (session.get('delivery_auth') or {}).get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'message': 'Authentication required.'}), 401
+
+    avail = execute_query(
+        """SELECT COUNT(*) AS c FROM orders o
+           LEFT JOIN delivery_assignments da ON da.order_id=o.id AND da.status != 'cancelled'
+           WHERE o.order_status IN ('placed', 'confirmed', 'preparing', 'ready_for_pickup')
+             AND (o.payment_status = 'paid' OR o.payment_method = 'cod')
+             AND da.id IS NULL""",
+        fetchone=True
+    )
+    assigned = execute_query(
+        "SELECT COUNT(*) AS c FROM delivery_assignments WHERE partner_id=%s AND status NOT IN ('delivered','cancelled')",
+        (user_id,), fetchone=True
+    )
+    return jsonify({
+        'success': True,
+        'available_count': avail['c'] if avail else 0,
+        'assigned_count': assigned['c'] if assigned else 0
     })
 
 

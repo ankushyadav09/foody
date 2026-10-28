@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="section-py" style="background: linear-gradient(135deg, #FFFDF9 0%, #FFF5ED 100%); min-height: 85vh; padding: 3rem 1rem;">
-  <div class="container" style="max-width: 680px;">
+  <div class="container" style="max-width: 800px;">
     
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -19,16 +19,17 @@
     <div class="card" style="background:#FFFFFF; border: 1px solid #FED7AA; box-shadow: 0 16px 40px rgba(234, 88, 12, 0.08); border-radius: var(--radius-lg); overflow:hidden;">
       
       <!-- Header -->
-      <div style="background: linear-gradient(135deg, #FF4500, #EA580C); text-align:center; padding: 2.25rem 1.75rem; color:#fff;">
+      <div style="background: linear-gradient(135deg, #FF4500, #EA580C); text-align:center; padding: 2.5rem 1.75rem; color:#fff;">
         <div style="display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,0.18); margin-bottom:0.75rem; font-size:1.8rem;">
-          👨‍🍳
+          🏪
         </div>
-        <h2 style="font-size: 1.85rem; font-weight: 800; margin: 0; letter-spacing: -0.02em;">
+        <h2 style="font-size: 1.95rem; font-weight: 800; margin: 0; letter-spacing: -0.02em;">
           Partner With Foody Hunters
         </h2>
-        <p style="margin: 0.4rem 0 0; opacity: 0.92; font-size: 0.95rem;">
-          List Your Restaurant on FOODY HUNTERS &bull; Expand food orders in Mehsana and supported cities across Gujarat
+        <p style="margin: 0.4rem 0 0; opacity: 0.94; font-size: 0.98rem;">
+          List Your Restaurant on FOODY HUNTERS &bull; Complete Onboarding &amp; Expand Orders in Mehsana and Gujarat
         </p>
+
       </div>
 
       <!-- Registration Form -->
@@ -36,8 +37,8 @@
         <form method="POST" action="/restaurant/register" enctype="multipart/form-data" id="restaurantRegisterForm">
           
           <!-- Section 1: Owner Details -->
-          <div style="margin-bottom: 1.75rem;">
-            <h4 style="font-size:1rem; font-weight:700; color:#C2410C; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem">
+          <div style="margin-bottom: 2rem;">
+            <h4 style="font-size:1.05rem; font-weight:700; color:#C2410C; margin-bottom:1.15rem; display:flex; align-items:center; gap:0.5rem">
               <i class="fas fa-user-tie"></i> 1. Restaurant Owner Information
             </h4>
 
@@ -79,12 +80,24 @@
                 </div>
               </div>
             </div>
+
+            <div class="form-group mb-3">
+              <label class="form-label" for="contact_person" style="font-weight:600; font-size:0.88rem; color:#374151">
+                Alternate Business Contact Person (Optional)
+              </label>
+              <div class="input-group">
+                <i class="fas fa-id-badge input-icon" style="color:#9CA3AF"></i>
+                <input type="text" class="form-control" name="contact_person" id="contact_person"
+                       placeholder="Manager / Supervisor Name (if different from Owner)"
+                       value="{{ form.get('contact_person','') }}">
+              </div>
+            </div>
           </div>
 
           <!-- Section 2: Outlet Specifications -->
-          <div style="margin-bottom: 1.75rem; padding-top:1.5rem; border-top:1px dashed #FED7AA;">
-            <h4 style="font-size:1rem; font-weight:700; color:#C2410C; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem">
-              <i class="fas fa-store"></i> 2. Outlet & Dining Specifications
+          <div style="margin-bottom: 2rem; padding-top:1.5rem; border-top:1px dashed #FED7AA;">
+            <h4 style="font-size:1.05rem; font-weight:700; color:#C2410C; margin-bottom:1.15rem; display:flex; align-items:center; gap:0.5rem">
+              <i class="fas fa-store"></i> 2. Outlet &amp; Dining Specifications
             </h4>
 
             <div class="form-group mb-3">
@@ -161,7 +174,7 @@
               </div>
             </div>
 
-            <!-- Custom City Input (Hidden by default, shown if Other is selected) -->
+            <!-- Custom City Input -->
             <div class="form-group mb-3" id="customCityGroup" style="display:none;">
               <label class="form-label" for="custom_city" style="font-weight:600; font-size:0.88rem; color:#374151">
                 Specify City Name <span style="color:#DC2626">*</span>
@@ -170,8 +183,28 @@
                      placeholder="Enter your city name">
             </div>
 
-            <!-- Operating Hours & Description -->
+            <!-- Outlet Contact Numbers (if different) -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;" class="mb-3">
+              <div class="form-group">
+                <label class="form-label" for="restaurant_phone" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Outlet Order Phone (Optional)
+                </label>
+                <input type="tel" class="form-control" name="restaurant_phone" id="restaurant_phone"
+                       placeholder="Leave blank to use Owner mobile"
+                       value="{{ form.get('restaurant_phone','') }}">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="restaurant_email" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Outlet Order Email (Optional)
+                </label>
+                <input type="email" class="form-control" name="restaurant_email" id="restaurant_email"
+                       placeholder="Leave blank to use Owner email"
+                       value="{{ form.get('restaurant_email','') }}">
+              </div>
+            </div>
+
+            <!-- Operating Hours & Days -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem;" class="mb-3">
               <div class="form-group">
                 <label class="form-label" for="open_time" style="font-weight:600; font-size:0.88rem; color:#374151">
                   Opening Time
@@ -185,6 +218,33 @@
                 </label>
                 <input type="time" class="form-control" name="close_time" id="close_time" value="{{ form.get('close_time','23:00') }}">
               </div>
+
+              <div class="form-group">
+                <label class="form-label" for="operating_days" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Operating Days
+                </label>
+                <input type="text" class="form-control" name="operating_days" id="operating_days"
+                       placeholder="e.g. All Days / Mon-Sat" value="{{ form.get('operating_days','All Days') }}">
+              </div>
+            </div>
+
+            <!-- Prep Time & Cover Image -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;" class="mb-3">
+              <div class="form-group">
+                <label class="form-label" for="prep_time" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Typical Preparation Time
+                </label>
+                <input type="text" class="form-control" name="prep_time" id="prep_time"
+                       placeholder="e.g. 20-30 mins" value="{{ form.get('prep_time','20-30 mins') }}">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cover_image" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  Restaurant Profile / Cover Photo (Optional)
+                </label>
+                <input type="file" class="form-control" name="cover_image" id="cover_image"
+                       accept=".png,.jpg,.jpeg,.webp" style="padding:0.4rem">
+              </div>
             </div>
 
             <div class="form-group mb-3">
@@ -192,44 +252,128 @@
                 Outlet Description
               </label>
               <textarea class="form-control" name="description" id="description" rows="2"
-                        placeholder="Brief summary of your specialties, seating, or specialties...">{{ form.get('description','') }}</textarea>
+                        placeholder="Brief summary of your specialties, dining ambiance, or kitchen highlights...">{{ form.get('description','') }}</textarea>
             </div>
           </div>
 
           <!-- Section 3: Verification & KYC Documents -->
-          <div style="margin-bottom: 1.75rem; padding-top:1.5rem; border-top:1px dashed #FED7AA;">
-            <h4 style="font-size:1rem; font-weight:700; color:#C2410C; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem">
-              <i class="fas fa-file-shield"></i> 3. Business Verification & KYC
+          <div style="margin-bottom: 2rem; padding-top:1.5rem; border-top:1px dashed #FED7AA;">
+            <h4 style="font-size:1.05rem; font-weight:700; color:#C2410C; margin-bottom:1.15rem; display:flex; align-items:center; gap:0.5rem">
+              <i class="fas fa-file-shield"></i> 3. Business Verification &amp; KYC
             </h4>
 
-            <div class="form-group mb-3">
-              <label class="form-label" for="fssai_number" style="font-weight:600; font-size:0.88rem; color:#374151">
-                FSSAI License / GSTIN (Optional / Recommended)
-              </label>
-              <div class="input-group">
-                <i class="fas fa-certificate input-icon" style="color:#9CA3AF"></i>
-                <input type="text" class="form-control" name="fssai_number" id="fssai_number"
-                       placeholder="e.g. 10721012000000 or GSTIN"
-                       value="{{ form.get('fssai_number','') }}">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;" class="mb-3">
+              <div class="form-group">
+                <label class="form-label" for="fssai_number" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  FSSAI License Number (Optional / Recommended)
+                </label>
+                <div class="input-group">
+                  <i class="fas fa-certificate input-icon" style="color:#9CA3AF"></i>
+                  <input type="text" class="form-control" name="fssai_number" id="fssai_number"
+                         placeholder="14-digit FSSAI Registration"
+                         value="{{ form.get('fssai_number','') }}">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="gstin" style="font-weight:600; font-size:0.88rem; color:#374151">
+                  GSTIN Number (Optional)
+                </label>
+                <div class="input-group">
+                  <i class="fas fa-receipt input-icon" style="color:#9CA3AF"></i>
+                  <input type="text" class="form-control" name="gstin" id="gstin"
+                         placeholder="15-digit GST Number"
+                         value="{{ form.get('gstin','') }}">
+                </div>
               </div>
             </div>
 
             <div class="form-group mb-3">
               <label class="form-label" for="document" style="font-weight:600; font-size:0.88rem; color:#374151">
-                Verification Document Proof (PDF or Image, max 5MB)
+                Verification Document Proof (PDF or Image, max 16MB)
               </label>
               <input type="file" class="form-control" name="document" id="document"
                      accept=".png,.jpg,.jpeg,.pdf,.webp" style="padding:0.5rem">
               <small style="color:var(--text-muted); font-size:0.8rem; display:block; margin-top:0.35rem">
-                Upload FSSAI License, Trade License, Shop Establishment Act, or GST Certificate.
+                <i class="fas fa-lock" style="color:#10B981"></i> Private &amp; Secure KYC: Upload FSSAI License, Trade License, Shop Act, or GST Certificate. (Stored in secure storage, inaccessible via public URLs).
               </small>
             </div>
           </div>
 
-          <!-- Section 4: Portal Security Password -->
+          <!-- Section 4: Initial Food Menu & Dishes -->
           <div style="margin-bottom: 2rem; padding-top:1.5rem; border-top:1px dashed #FED7AA;">
-            <h4 style="font-size:1rem; font-weight:700; color:#C2410C; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem">
-              <i class="fas fa-key"></i> 4. Kitchen Operations Desk Password
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem">
+              <h4 style="font-size:1.05rem; font-weight:700; color:#C2410C; margin:0; display:flex; align-items:center; gap:0.5rem">
+                <i class="fas fa-utensils"></i> 4. Initial Menu Dishes (Optional during onboarding)
+              </h4>
+              <button type="button" class="btn btn-outline btn-sm" id="addDishRowBtn" onclick="addDishRow()" style="border-radius:var(--radius-pill); font-size:0.82rem; border-color:#FF8C00; color:#C2410C">
+                <i class="fas fa-plus"></i> Add Another Dish
+              </button>
+            </div>
+            <p style="font-size:0.86rem; color:var(--text-muted); margin-bottom:1.25rem">
+              Add your signature dishes now so our review team can approve your menu right away. You can also add more items from your Kitchen Operations dashboard after approval.
+            </p>
+
+            <div id="dishesContainer">
+              <!-- Dish Card 1 (Default) -->
+              <div class="dish-item-card" style="background:#FAF8F6; border:1px solid #FED7AA; border-radius:var(--radius-md); padding:1.25rem; margin-bottom:1rem; position:relative">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem">
+                  <span style="font-weight:700; font-size:0.88rem; color:#C2410C">Dish #1</span>
+                  <button type="button" onclick="removeDishRow(this)" class="btn btn-sm" style="background:none; border:none; color:#EF4444; font-size:0.85rem; padding:0; cursor:pointer" title="Remove this dish">
+                    <i class="fas fa-trash-alt"></i> Remove
+                  </button>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr; gap:0.75rem" class="mb-2">
+                  <div>
+                    <label style="font-size:0.78rem; font-weight:600; color:#374151">Dish / Item Name</label>
+                    <input type="text" class="form-control" name="dish_name[]" placeholder="e.g. Paneer Butter Masala" style="font-size:0.88rem">
+                  </div>
+                  <div>
+                    <label style="font-size:0.78rem; font-weight:600; color:#374151">Category</label>
+                    <select class="form-control" name="dish_category[]" style="font-size:0.88rem">
+                      {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:0.78rem; font-weight:600; color:#374151">Price (₹ INR)</label>
+                    <input type="number" step="0.01" class="form-control" name="dish_price[]" placeholder="e.g. 240" style="font-size:0.88rem">
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr 1.5fr; gap:0.75rem" class="mb-2">
+                  <div>
+                    <label style="font-size:0.78rem; font-weight:600; color:#374151">Classification</label>
+                    <select class="form-control" name="dish_veg_type[]" style="font-size:0.88rem">
+                      <option value="veg">🟢 Pure Veg</option>
+                      <option value="non_veg">🔴 Non-Veg</option>
+                      <option value="egg">🟡 Contains Egg</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:0.78rem; font-weight:600; color:#374151">Prep Time (mins)</label>
+                    <input type="number" class="form-control" name="dish_prep_time[]" placeholder="20" value="20" style="font-size:0.88rem">
+                  </div>
+                  <div>
+                    <label style="font-size:0.78rem; font-weight:600; color:#374151">Dish Photo (Optional)</label>
+                    <input type="file" class="form-control" name="dish_image[]" accept=".png,.jpg,.jpeg,.webp" style="font-size:0.82rem; padding:0.35rem">
+                  </div>
+                </div>
+
+                <div>
+                  <label style="font-size:0.78rem; font-weight:600; color:#374151">Dish Description (Optional)</label>
+                  <input type="text" class="form-control" name="dish_description[]" placeholder="e.g. Creamy cottage cheese cubes in rich tomato-butter gravy" style="font-size:0.88rem">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 5: Portal Security Password -->
+          <div style="margin-bottom: 2.25rem; padding-top:1.5rem; border-top:1px dashed #FED7AA;">
+            <h4 style="font-size:1.05rem; font-weight:700; color:#C2410C; margin-bottom:1.15rem; display:flex; align-items:center; gap:0.5rem">
+              <i class="fas fa-key"></i> 5. Kitchen Operations Desk Password
             </h4>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
@@ -268,8 +412,8 @@
           </div>
 
           <!-- Submit Button -->
-          <button type="submit" class="btn w-100" style="background:linear-gradient(135deg, #FF4500, #EA580C); color:#fff; border:none; justify-content:center; padding:0.9rem; font-weight:800; font-size:1.05rem; border-radius:var(--radius-md); box-shadow:0 6px 20px rgba(255,69,0,0.3); cursor:pointer;">
-            <i class="fas fa-paper-plane" style="margin-right:0.5rem"></i> Submit Application for Administrator Approval
+          <button type="submit" class="btn w-100" style="background:linear-gradient(135deg, #FF4500, #EA580C); color:#fff; border:none; justify-content:center; padding:1rem; font-weight:800; font-size:1.08rem; border-radius:var(--radius-md); box-shadow:0 6px 20px rgba(255,69,0,0.3); cursor:pointer;">
+            <i class="fas fa-paper-plane" style="margin-right:0.5rem"></i> Submit Restaurant Application &amp; Menu
           </button>
         </form>
       </div>
@@ -297,6 +441,79 @@ function checkCustomCity(val) {
   } else {
     customGroup.style.display = 'none';
     customInput.required = false;
+  }
+}
+
+let dishCount = 1;
+function addDishRow() {
+  dishCount++;
+  const container = document.getElementById('dishesContainer');
+  const newCard = document.createElement('div');
+  newCard.className = 'dish-item-card';
+  newCard.style = 'background:#FAF8F6; border:1px solid #FED7AA; border-radius:var(--radius-md); padding:1.25rem; margin-bottom:1rem; position:relative';
+  
+  newCard.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem">
+      <span style="font-weight:700; font-size:0.88rem; color:#C2410C">Dish #${dishCount}</span>
+      <button type="button" onclick="removeDishRow(this)" class="btn btn-sm" style="background:none; border:none; color:#EF4444; font-size:0.85rem; padding:0; cursor:pointer" title="Remove this dish">
+        <i class="fas fa-trash-alt"></i> Remove
+      </button>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr; gap:0.75rem" class="mb-2">
+      <div>
+        <label style="font-size:0.78rem; font-weight:600; color:#374151">Dish / Item Name</label>
+        <input type="text" class="form-control" name="dish_name[]" placeholder="e.g. Masala Dosa" style="font-size:0.88rem">
+      </div>
+      <div>
+        <label style="font-size:0.78rem; font-weight:600; color:#374151">Category</label>
+        <select class="form-control" name="dish_category[]" style="font-size:0.88rem">
+          {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.78rem; font-weight:600; color:#374151">Price (₹ INR)</label>
+        <input type="number" step="0.01" class="form-control" name="dish_price[]" placeholder="e.g. 150" style="font-size:0.88rem">
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1.5fr; gap:0.75rem" class="mb-2">
+      <div>
+        <label style="font-size:0.78rem; font-weight:600; color:#374151">Classification</label>
+        <select class="form-control" name="dish_veg_type[]" style="font-size:0.88rem">
+          <option value="veg">🟢 Pure Veg</option>
+          <option value="non_veg">🔴 Non-Veg</option>
+          <option value="egg">🟡 Contains Egg</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.78rem; font-weight:600; color:#374151">Prep Time (mins)</label>
+        <input type="number" class="form-control" name="dish_prep_time[]" placeholder="20" value="20" style="font-size:0.88rem">
+      </div>
+      <div>
+        <label style="font-size:0.78rem; font-weight:600; color:#374151">Dish Photo (Optional)</label>
+        <input type="file" class="form-control" name="dish_image[]" accept=".png,.jpg,.jpeg,.webp" style="font-size:0.82rem; padding:0.35rem">
+      </div>
+    </div>
+
+    <div>
+      <label style="font-size:0.78rem; font-weight:600; color:#374151">Dish Description (Optional)</label>
+      <input type="text" class="form-control" name="dish_description[]" placeholder="Short description of taste and ingredients" style="font-size:0.88rem">
+    </div>
+  `;
+  container.appendChild(newCard);
+}
+
+function removeDishRow(btn) {
+  const card = btn.closest('.dish-item-card');
+  const container = document.getElementById('dishesContainer');
+  if (container.querySelectorAll('.dish-item-card').length > 1) {
+    card.remove();
+  } else {
+    // If it's the only one, simply clear its inputs
+    card.querySelectorAll('input').forEach(i => i.value = '');
   }
 }
 </script>

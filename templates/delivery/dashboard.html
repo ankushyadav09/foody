@@ -30,7 +30,7 @@
       <span class="ops-stat-title">Active Drops</span>
       <div class="ops-stat-icon cyan"><i class="fas fa-motorcycle"></i></div>
     </div>
-    <div class="ops-stat-val">{{ assigned|length }}</div>
+    <div class="ops-stat-val" id="statActiveDrops">{{ assigned|length }}</div>
     <div class="ops-stat-meta">
       <span style="color:var(--ops-cyan)">Currently in dispatch</span>
     </div>
@@ -41,7 +41,7 @@
       <span class="ops-stat-title">Today's Completed</span>
       <div class="ops-stat-icon emerald"><i class="fas fa-check-circle"></i></div>
     </div>
-    <div class="ops-stat-val">{{ stats.today_deliveries }}</div>
+    <div class="ops-stat-val" id="statTodayCompleted">{{ stats.today_deliveries }}</div>
     <div class="ops-stat-meta">
       <span style="color:var(--ops-emerald)">Delivered successfully today</span>
     </div>
@@ -52,7 +52,7 @@
       <span class="ops-stat-title">Lifetime Drops</span>
       <div class="ops-stat-icon orange"><i class="fas fa-route"></i></div>
     </div>
-    <div class="ops-stat-val">{{ stats.total_deliveries }}</div>
+    <div class="ops-stat-val" id="statLifetimeDrops">{{ stats.total_deliveries }}</div>
     <div class="ops-stat-meta">
       <span style="color:var(--ops-muted)">Total completed dispatches</span>
     </div>
@@ -63,7 +63,7 @@
       <span class="ops-stat-title">Payouts Earned</span>
       <div class="ops-stat-icon purple"><i class="fas fa-indian-rupee-sign"></i></div>
     </div>
-    <div class="ops-stat-val">₹{{ "%.2f"|format(stats.earnings) }}</div>
+    <div class="ops-stat-val" id="statEarnings">₹{{ "%.2f"|format(stats.earnings) }}</div>
     <div class="ops-stat-meta">
       <span style="color:var(--ops-emerald)">Accumulated delivery fees</span>
     </div>
@@ -71,25 +71,109 @@
 
 </div>
 
+<!-- ── LIVE DISPATCH ALERT CONTAINER (POPUP / TOASTS) ─────────────── -->
+<div id="dispatchAlertContainer" style="margin-bottom:1.5rem"></div>
+
 <!-- ── ASSIGNED DELIVERIES & VEHICLE PROFILE ─────────────────────── -->
 <div class="ops-dashboard-grid" style="display:grid;grid-template-columns:2.3fr 1fr;gap:1.5rem;align-items:start">
   
-  <!-- Active Task Stream -->
-  <div class="ops-card">
+  <div style="display:flex;flex-direction:column;gap:1.5rem">
+
+    <!-- Available Delivery Requests (Dispatch Pool) -->
+    <div class="ops-card" style="border:1px solid rgba(16, 185, 129, 0.3);background:rgba(16, 185, 129, 0.03)">
+      <div class="d-flex justify-between align-center mb-3">
+        <div>
+          <h3 style="margin:0;font-size:1.15rem;font-weight:700;color:var(--ops-emerald)">
+            <i class="fas fa-satellite-dish"></i> Available Delivery Requests (Dispatch Pool)
+          </h3>
+          <p style="margin:0;font-size:0.8rem;color:var(--ops-muted)">Orders prepared or ready for pickup. Accept an order to add it to your active delivery tasks.</p>
+        </div>
+        <span class="ops-badge" id="availableBadge" style="background:var(--ops-emerald);color:#0B0F19;font-weight:700">
+          {{ available_orders|length }} Available
+        </span>
+      </div>
+
+      <div id="availableOrdersContainer">
+      {% if available_orders %}
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        {% for o in available_orders %}
+        <div class="available-order-item" id="order_card_{{ o.id }}" style="background:var(--ops-surface-2);border:1px solid var(--ops-border);border-radius:var(--ops-radius-md);padding:1.25rem">
+          <div class="d-flex justify-between align-center flex-wrap gap-2 mb-2">
+            <div>
+              <span style="font-family:'Fira Code',monospace;font-weight:700;color:var(--ops-emerald);font-size:1.1rem">
+                #{{ o.order_code }}
+              </span>
+              <span class="ops-badge info" style="margin-left:0.5rem;font-size:0.75rem">
+                {{ o.order_status|replace('_', ' ')|upper }}
+              </span>
+              <span style="font-size:0.8rem;color:var(--ops-muted);margin-left:0.5rem">
+                Placed: {{ o.created_at }}
+              </span>
+            </div>
+            <div style="font-weight:700;color:var(--ops-emerald);font-size:1rem">
+              Earnings: ₹{{ "%.2f"|format(o.delivery_fee or 40.0) }}{% if o.tip_amount %} + ₹{{ "%.2f"|format(o.tip_amount) }} Tip{% endif %}
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;font-size:0.88rem">
+            <!-- Pickup Origin -->
+            <div style="background:rgba(15, 23, 42, 0.6);border:1px solid var(--ops-border);border-radius:var(--ops-radius-sm);padding:0.75rem">
+              <div style="font-size:0.72rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.25rem">
+                📍 PICKUP RESTAURANT
+              </div>
+              <div style="font-weight:700;color:#F8FAFC">{{ o.restaurant_name }}</div>
+              <div style="font-size:0.8rem;color:var(--ops-muted)">{{ o.restaurant_address }}</div>
+              {% if o.restaurant_phone %}<div style="font-size:0.8rem;color:var(--ops-cyan)">📞 {{ o.restaurant_phone }}</div>{% endif %}
+            </div>
+            <!-- Dropoff -->
+            <div style="background:rgba(15, 23, 42, 0.6);border:1px solid var(--ops-border);border-radius:var(--ops-radius-sm);padding:0.75rem">
+              <div style="font-size:0.72rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.25rem">
+                🏁 CUSTOMER DESTINATION
+              </div>
+              <div style="font-weight:700;color:#F8FAFC">{{ o.customer_name }}</div>
+              <div style="font-size:0.8rem;color:var(--ops-muted)">{{ o.full_delivery_address or 'Customer home address on file' }}</div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-between align-center flex-wrap gap-2 pt-2" style="border-top:1px solid var(--ops-border)">
+            <div style="font-size:0.85rem;color:var(--ops-muted)">
+              <i class="fas fa-utensils"></i> Items to Deliver: <strong>{{ o.item_count }} item{% if o.item_count != 1 %}s{% endif %}</strong> &bull; Order Total: <strong style="color:#F8FAFC">₹{{ "%.2f"|format(o.total_amount) }}</strong>
+            </div>
+
+            <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" onclick="acceptDelivery({{ o.id }}, this)" style="background:var(--ops-emerald);border-color:var(--ops-emerald);color:#0B0F19;font-weight:700">
+              <i class="fas fa-check-circle"></i> Accept Delivery Assignment
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="text-align:center;padding:2rem 1rem;background:var(--ops-surface-2);border-radius:var(--ops-radius-md)">
+        <i class="fas fa-clipboard-check" style="font-size:2rem;color:var(--ops-muted);margin-bottom:0.75rem;display:block"></i>
+        <div style="font-weight:700;color:#F8FAFC;margin-bottom:0.25rem">No Unassigned Orders Waiting</div>
+        <p style="font-size:0.85rem;color:var(--ops-muted);margin:0">New orders from partner kitchens will automatically appear here once tickets are confirmed.</p>
+      </div>
+      {% endif %}
+      </div>
+    </div>
+
+    <!-- Active Task Stream -->
+    <div class="ops-card">
     <div class="d-flex justify-between align-center mb-3">
       <div>
         <h3 style="margin:0;font-size:1.15rem;font-weight:700">Assigned Delivery Route Tasks</h3>
         <p style="margin:0;font-size:0.8rem;color:var(--ops-muted)">Pickup orders from restaurant kitchen and deliver to customer destination</p>
       </div>
-      <span class="ops-badge info">
+      <span class="ops-badge info" id="assignedBadge">
         <i class="fas fa-map-marker-alt"></i> {{ assigned|length }} Active Route{% if assigned|length != 1 %}s{% endif %}
       </span>
     </div>
 
+    <div id="assignedOrdersContainer">
     {% if assigned %}
     <div style="display:flex;flex-direction:column;gap:1rem">
       {% for a in assigned %}
-      <div style="background:var(--ops-surface-2);border:1px solid var(--ops-border);border-radius:var(--ops-radius-md);padding:1.25rem">
+      <div class="assigned-task-item" id="assigned_card_{{ a.id }}" style="background:var(--ops-surface-2);border:1px solid var(--ops-border);border-radius:var(--ops-radius-md);padding:1.25rem">
         <div class="d-flex justify-between align-center flex-wrap gap-2 mb-2">
           <div>
             <span style="font-family:'Fira Code',monospace;font-weight:700;color:var(--ops-orange);font-size:1.1rem">
@@ -143,17 +227,19 @@
             </a>
 
             {% if a.status == 'assigned' %}
-              <form method="POST" action="/delivery/order/pickup/{{ a.id }}">
-                <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm" style="background:var(--ops-cyan);border-color:var(--ops-cyan);color:#0B0F19">
+              {% if a.order_status in ['ready_for_pickup', 'ready'] %}
+                <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" onclick="pickupOrder({{ a.id }}, this)" style="background:var(--ops-cyan);border-color:var(--ops-cyan);color:#0B0F19">
                   <i class="fas fa-box-open"></i> Pick Up Food
                 </button>
-              </form>
+              {% else %}
+                <span class="ops-badge warning" style="font-size:0.75rem;padding:6px 10px" title="Pickup will unlock when kitchen marks order Packed & Ready">
+                  <i class="fas fa-fire-burner"></i> Kitchen Cooking (Pickup Locked)
+                </span>
+              {% endif %}
             {% elif a.status in ['picked_up', 'out_for_delivery'] %}
-              <form method="POST" action="/delivery/order/delivered/{{ a.id }}">
-                <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm" style="background:var(--ops-emerald);border-color:var(--ops-emerald);color:#0B0F19" onclick="return confirm('Confirm order delivered to customer?')">
-                  <i class="fas fa-check-double"></i> Mark Delivered
-                </button>
-              </form>
+              <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" onclick="deliverOrder({{ a.id }}, this)" style="background:var(--ops-emerald);border-color:var(--ops-emerald);color:#0B0F19">
+                <i class="fas fa-check-double"></i> Mark Delivered
+              </button>
             {% endif %}
           </div>
         </div>
@@ -168,6 +254,8 @@
       <p style="font-size:0.85rem">Keep your status <strong>ONLINE</strong> to automatically receive incoming orders from nearby kitchens.</p>
     </div>
     {% endif %}
+    </div>
+  </div>
   </div>
 
   <!-- Rider Fleet Profile Card -->
@@ -215,4 +303,468 @@
   </div>
 
 </div>
+
+<!-- ── LIVE DISPATCH CLIENT ENGINE SCRIPT ────────────────────────── -->
+<script>
+// Initial server-rendered orders tracking
+const seenOrderIds = new Set([{% for o in available_orders %}{{ o.id }},{% endfor %}]);
+let isPolling = false;
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, function(m) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[m];
+  });
+}
+
+// Zero-dependency pleasant chime using Web Audio API
+function playDispatchChime() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.15); // A5
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch(e) {}
+}
+
+function dismissIncomingPopup(orderId) {
+  const el = document.getElementById(`incoming_alert_${orderId}`);
+  if (el) el.remove();
+}
+
+function showIncomingOrderPopup(order) {
+  playDispatchChime();
+  const alertContainer = document.getElementById('dispatchAlertContainer');
+  if (!alertContainer) return;
+
+  const popupId = `incoming_alert_${order.id}`;
+  if (document.getElementById(popupId)) return;
+
+  const totalFee = Number(order.delivery_fee + (order.tip_amount || 0)).toFixed(2);
+  const alertHtml = `
+    <div id="${popupId}" class="ops-card" style="border:2px solid var(--ops-emerald);background:rgba(16, 185, 129, 0.14);box-shadow:0 10px 25px -5px rgba(16, 185, 129, 0.35);margin-bottom:1rem;position:relative">
+      <div class="d-flex justify-between align-center flex-wrap gap-2 mb-2">
+        <div class="d-flex align-center gap-2">
+          <span class="ops-badge" style="background:var(--ops-emerald);color:#0B0F19;font-weight:800;font-size:0.85rem">
+            🚨 NEW DISPATCH OFFER!
+          </span>
+          <span style="font-family:'Fira Code',monospace;font-weight:700;color:var(--ops-emerald);font-size:1.15rem">
+            #${escapeHtml(order.order_code)}
+          </span>
+          <span class="ops-badge info" style="font-size:0.75rem">
+            ${escapeHtml((order.order_status || '').replace('_', ' ').toUpperCase())}
+          </span>
+        </div>
+        <div class="d-flex align-center gap-3">
+          <strong style="color:var(--ops-emerald);font-size:1.15rem">
+            ₹${totalFee} Earnings
+          </strong>
+          <button type="button" class="ops-btn ops-btn-outline ops-btn-sm" onclick="dismissIncomingPopup(${order.id})" style="padding:2px 8px" title="Dismiss">
+            ✕
+          </button>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:0.75rem 0;font-size:0.88rem">
+        <div style="background:rgba(15, 23, 42, 0.7);padding:0.6rem;border-radius:var(--ops-radius-sm);border:1px solid var(--ops-border)">
+          <div style="font-size:0.7rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.2rem">📍 PICKUP RESTAURANT</div>
+          <div style="font-weight:700;color:#F8FAFC">${escapeHtml(order.restaurant_name)}</div>
+          <div style="font-size:0.8rem;color:var(--ops-muted)">${escapeHtml(order.restaurant_address)}</div>
+          ${order.restaurant_phone ? `<div style="font-size:0.8rem;color:var(--ops-cyan)">📞 ${escapeHtml(order.restaurant_phone)}</div>` : ''}
+        </div>
+        <div style="background:rgba(15, 23, 42, 0.7);padding:0.6rem;border-radius:var(--ops-radius-sm);border:1px solid var(--ops-border)">
+          <div style="font-size:0.7rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.2rem">🏁 CUSTOMER DESTINATION</div>
+          <div style="font-weight:700;color:#F8FAFC">${escapeHtml(order.customer_name)}</div>
+          <div style="font-size:0.8rem;color:var(--ops-muted)">${escapeHtml(order.delivery_destination || 'Customer home address')}</div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-between align-center flex-wrap gap-2 pt-2" style="border-top:1px solid rgba(16, 185, 129, 0.25)">
+        <span style="font-size:0.85rem;color:var(--ops-muted)">
+          ⏱️ Target: <strong>${escapeHtml(order.estimated_delivery_time || '25-35 mins')}</strong> &bull; 
+          <i class="fas fa-utensils"></i> ${order.item_count} items (₹${Number(order.total_amount).toFixed(2)})
+        </span>
+        <div class="d-flex gap-2">
+          <button type="button" class="ops-btn ops-btn-outline ops-btn-sm" onclick="dismissIncomingPopup(${order.id})">
+            Dismiss
+          </button>
+          <button type="button" id="btnAcceptPopup_${order.id}" class="ops-btn ops-btn-primary ops-btn-sm" onclick="acceptDelivery(${order.id}, this)" style="background:var(--ops-emerald);border-color:var(--ops-emerald);color:#0B0F19;font-weight:800">
+            <i class="fas fa-check-circle"></i> Accept Delivery
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  alertContainer.insertAdjacentHTML('afterbegin', alertHtml);
+}
+
+// Real-time Action: Accept Delivery
+async function acceptDelivery(orderId, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Claiming...';
+  }
+
+  try {
+    const res = await fetch(`/api/delivery/order/accept/${orderId}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+
+    const data = await res.json();
+    dismissIncomingPopup(orderId);
+
+    if (res.status === 409 || data.conflict) {
+      alert(`⚠️ ${data.message || 'This order was just accepted by another delivery partner.'}`);
+    } else if (res.ok && data.success) {
+      showToast(`✅ ${data.message || 'Delivery assignment accepted!'}`, 'success');
+    } else {
+      alert(data.message || 'Could not accept order assignment.');
+    }
+  } catch(err) {
+    console.error('Accept dispatch error:', err);
+  } finally {
+    await pollDispatches();
+  }
+}
+
+// Real-time Action: Pick Up Food
+async function pickupOrder(assignmentId, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+  }
+
+  try {
+    const res = await fetch(`/api/delivery/order/pickup/${assignmentId}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast('✅ Order picked up! Out for delivery.', 'success');
+    } else {
+      alert(`⚠️ ${data.message || 'Could not pick up order.'}`);
+    }
+  } catch(err) {
+    console.error('Pickup error:', err);
+  } finally {
+    await pollDispatches();
+  }
+}
+
+// Real-time Action: Mark Delivered
+async function deliverOrder(assignmentId, btn) {
+  if (!confirm('Confirm order delivered to customer?')) return;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizing...';
+  }
+
+  try {
+    const res = await fetch(`/api/delivery/order/delivered/${assignmentId}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast('🎉 Order delivered successfully! Earnings credited.', 'success');
+    } else {
+      alert(`⚠️ ${data.message || 'Could not complete delivery.'}`);
+    }
+  } catch(err) {
+    console.error('Deliver error:', err);
+  } finally {
+    await pollDispatches();
+  }
+}
+
+function showToast(msg, type) {
+  const container = document.getElementById('dispatchAlertContainer');
+  if (!container) return;
+  const toastId = 'toast_' + Date.now();
+  const bg = (type === 'success') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+  const border = (type === 'success') ? 'var(--ops-emerald)' : 'var(--ops-rose)';
+  const html = `
+    <div id="${toastId}" class="ops-card mb-2" style="border:1px solid ${border};background:${bg};padding:0.75rem 1rem">
+      <div class="d-flex justify-between align-center">
+        <span>${escapeHtml(msg)}</span>
+        <button type="button" class="ops-btn ops-btn-outline ops-btn-sm" onclick="document.getElementById('${toastId}').remove()" style="padding:1px 6px">✕</button>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('afterbegin', html);
+  setTimeout(() => {
+    const el = document.getElementById(toastId);
+    if (el) el.remove();
+  }, 6000);
+}
+
+// Dynamic DOM Renderers
+function renderAvailableOrders(orders) {
+  const container = document.getElementById('availableOrdersContainer');
+  const badge = document.getElementById('availableBadge');
+  if (badge) badge.textContent = `${orders.length} Available`;
+  if (!container) return;
+
+  if (!orders || orders.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:2rem 1rem;background:var(--ops-surface-2);border-radius:var(--ops-radius-md)">
+        <i class="fas fa-clipboard-check" style="font-size:2rem;color:var(--ops-muted);margin-bottom:0.75rem;display:block"></i>
+        <div style="font-weight:700;color:#F8FAFC;margin-bottom:0.25rem">No Unassigned Orders Waiting</div>
+        <p style="font-size:0.85rem;color:var(--ops-muted);margin:0">New orders from partner kitchens will automatically appear here once tickets are confirmed.</p>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '<div style="display:flex;flex-direction:column;gap:1rem">';
+  orders.forEach(o => {
+    const fee = Number(o.delivery_fee || 40.0).toFixed(2);
+    const tip = o.tip_amount ? ` + ₹${Number(o.tip_amount).toFixed(2)} Tip` : '';
+    html += `
+      <div class="available-order-item" id="order_card_${o.id}" style="background:var(--ops-surface-2);border:1px solid var(--ops-border);border-radius:var(--ops-radius-md);padding:1.25rem">
+        <div class="d-flex justify-between align-center flex-wrap gap-2 mb-2">
+          <div>
+            <span style="font-family:'Fira Code',monospace;font-weight:700;color:var(--ops-emerald);font-size:1.1rem">
+              #${escapeHtml(o.order_code)}
+            </span>
+            <span class="ops-badge info" style="margin-left:0.5rem;font-size:0.75rem">
+              ${escapeHtml((o.order_status || '').replace('_', ' ').toUpperCase())}
+            </span>
+            <span style="font-size:0.8rem;color:var(--ops-muted);margin-left:0.5rem">
+              Placed: ${escapeHtml(o.created_at)}
+            </span>
+          </div>
+          <div style="font-weight:700;color:var(--ops-emerald);font-size:1rem">
+            Earnings: ₹${fee}${tip}
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;font-size:0.88rem">
+          <div style="background:rgba(15, 23, 42, 0.6);border:1px solid var(--ops-border);border-radius:var(--ops-radius-sm);padding:0.75rem">
+            <div style="font-size:0.72rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.25rem">
+              📍 PICKUP RESTAURANT
+            </div>
+            <div style="font-weight:700;color:#F8FAFC">${escapeHtml(o.restaurant_name)}</div>
+            <div style="font-size:0.8rem;color:var(--ops-muted)">${escapeHtml(o.restaurant_address)}</div>
+            ${o.restaurant_phone ? `<div style="font-size:0.8rem;color:var(--ops-cyan)">📞 ${escapeHtml(o.restaurant_phone)}</div>` : ''}
+          </div>
+          <div style="background:rgba(15, 23, 42, 0.6);border:1px solid var(--ops-border);border-radius:var(--ops-radius-sm);padding:0.75rem">
+            <div style="font-size:0.72rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.25rem">
+              🏁 CUSTOMER DESTINATION
+            </div>
+            <div style="font-weight:700;color:#F8FAFC">${escapeHtml(o.customer_name)}</div>
+            <div style="font-size:0.8rem;color:var(--ops-muted)">${escapeHtml(o.delivery_destination || 'Customer home address on file')}</div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-between align-center flex-wrap gap-2 pt-2" style="border-top:1px solid var(--ops-border)">
+          <div style="font-size:0.85rem;color:var(--ops-muted)">
+            <i class="fas fa-utensils"></i> Items to Deliver: <strong>${o.item_count} item${o.item_count !== 1 ? 's' : ''}</strong> &bull; Order Total: <strong style="color:#F8FAFC">₹${Number(o.total_amount).toFixed(2)}</strong>
+          </div>
+
+          <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" onclick="acceptDelivery(${o.id}, this)" style="background:var(--ops-emerald);border-color:var(--ops-emerald);color:#0B0F19;font-weight:700">
+            <i class="fas fa-check-circle"></i> Accept Delivery Assignment
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function renderAssignedOrders(assigned) {
+  const container = document.getElementById('assignedOrdersContainer');
+  const badge = document.getElementById('assignedBadge');
+  if (badge) badge.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${assigned.length} Active Route${assigned.length !== 1 ? 's' : ''}`;
+  if (!container) return;
+
+  if (!assigned || assigned.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:3rem 1rem;color:var(--ops-muted)">
+        <i class="fas fa-motorcycle fa-3x mb-3" style="color:var(--ops-border)"></i>
+        <p style="font-size:1.05rem;color:#E2E8F0">No active deliveries assigned at the moment.</p>
+        <p style="font-size:0.85rem">Keep your status <strong>ONLINE</strong> to automatically receive incoming orders from nearby kitchens.</p>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '<div style="display:flex;flex-direction:column;gap:1rem">';
+  assigned.forEach(a => {
+    let stageBadge = '';
+    if (a.status === 'assigned') {
+      stageBadge = '<span class="ops-badge warning"><i class="fas fa-clock"></i> Pickup Pending</span>';
+    } else if (a.status === 'picked_up' || a.status === 'out_for_delivery') {
+      stageBadge = '<span class="ops-badge cyan"><i class="fas fa-motorcycle"></i> Out for Delivery</span>';
+    } else {
+      stageBadge = `<span class="ops-badge info">${escapeHtml(a.status)}</span>`;
+    }
+
+    let actionBtn = '';
+    if (a.status === 'assigned') {
+      if (a.order_status === 'ready_for_pickup' || a.order_status === 'ready') {
+        actionBtn = `
+          <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" onclick="pickupOrder(${a.id}, this)" style="background:var(--ops-cyan);border-color:var(--ops-cyan);color:#0B0F19">
+            <i class="fas fa-box-open"></i> Pick Up Food
+          </button>
+        `;
+      } else {
+        actionBtn = `
+          <span class="ops-badge warning" style="font-size:0.75rem;padding:6px 10px" title="Pickup will unlock when kitchen marks order Packed & Ready">
+            <i class="fas fa-fire-burner"></i> Kitchen Cooking (Pickup Locked)
+          </span>
+        `;
+      }
+    } else if (a.status === 'picked_up' || a.status === 'out_for_delivery') {
+      actionBtn = `
+        <button type="button" class="ops-btn ops-btn-primary ops-btn-sm" onclick="deliverOrder(${a.id}, this)" style="background:var(--ops-emerald);border-color:var(--ops-emerald);color:#0B0F19">
+          <i class="fas fa-check-double"></i> Mark Delivered
+        </button>
+      `;
+    }
+
+    html += `
+      <div class="assigned-task-item" id="assigned_card_${a.id}" style="background:var(--ops-surface-2);border:1px solid var(--ops-border);border-radius:var(--ops-radius-md);padding:1.25rem">
+        <div class="d-flex justify-between align-center flex-wrap gap-2 mb-2">
+          <div>
+            <span style="font-family:'Fira Code',monospace;font-weight:700;color:var(--ops-orange);font-size:1.1rem">
+              #${escapeHtml(a.order_code)}
+            </span>
+            <span style="font-size:0.8rem;color:var(--ops-muted);margin-left:0.5rem">
+              Assigned: ${escapeHtml(a.assigned_at)}
+            </span>
+          </div>
+          <div>${stageBadge}</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;font-size:0.88rem">
+          <div style="background:rgba(15, 23, 42, 0.6);border:1px solid var(--ops-border);border-radius:var(--ops-radius-sm);padding:0.75rem">
+            <div style="font-size:0.72rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.25rem">
+              📍 1. PICKUP RESTAURANT
+            </div>
+            <div style="font-weight:700;color:#F8FAFC">${escapeHtml(a.restaurant_name)}</div>
+            <div style="font-size:0.8rem;color:var(--ops-muted)">${escapeHtml(a.restaurant_address)}</div>
+          </div>
+          <div style="background:rgba(15, 23, 42, 0.6);border:1px solid var(--ops-border);border-radius:var(--ops-radius-sm);padding:0.75rem">
+            <div style="font-size:0.72rem;text-transform:uppercase;color:var(--ops-muted);font-weight:700;margin-bottom:0.25rem">
+              🏁 2. DELIVERY DESTINATION
+            </div>
+            <div style="font-weight:700;color:#F8FAFC">${escapeHtml(a.customer_name)}</div>
+            ${a.customer_phone ? `<div style="font-size:0.8rem;color:var(--ops-cyan)">📞 ${escapeHtml(a.customer_phone)}</div>` : ''}
+            <div style="font-size:0.8rem;color:var(--ops-muted)">${escapeHtml(a.delivery_address || 'Customer home address on file')}</div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-between align-center flex-wrap gap-2 pt-2" style="border-top:1px solid var(--ops-border)">
+          <div style="font-size:0.95rem;font-weight:700">
+            Order Total: <span style="color:var(--ops-emerald)">₹${Number(a.total_amount).toFixed(2)}</span>
+          </div>
+
+          <div class="d-flex align-center gap-2">
+            <a href="/delivery/order/${a.id}" class="ops-btn ops-btn-outline ops-btn-sm">
+              <i class="fas fa-file-invoice"></i> Task Details
+            </a>
+            ${actionBtn}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function updateKPIs(stats, activeCount) {
+  const elActive = document.getElementById('statActiveDrops');
+  if (elActive) elActive.textContent = activeCount;
+
+  if (stats) {
+    const elToday = document.getElementById('statTodayCompleted');
+    if (elToday) elToday.textContent = stats.today_deliveries;
+
+    const elTotal = document.getElementById('statLifetimeDrops');
+    if (elTotal) elTotal.textContent = stats.total_deliveries;
+
+    const elEarnings = document.getElementById('statEarnings');
+    if (elEarnings) elEarnings.textContent = `₹${Number(stats.earnings).toFixed(2)}`;
+  }
+}
+
+// Authoritative real-time polling engine
+async function pollDispatches() {
+  if (isPolling) return;
+  isPolling = true;
+
+  try {
+    const res = await fetch('/api/delivery/dispatches', {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+
+    if (!res.ok) {
+      isPolling = false;
+      return;
+    }
+
+    const data = await res.json();
+    if (!data || !data.success) {
+      isPolling = false;
+      return;
+    }
+
+    // Detect new orders for incoming dispatch popup
+    const avail = data.available_orders || [];
+    avail.forEach(o => {
+      if (!seenOrderIds.has(o.id)) {
+        seenOrderIds.add(o.id);
+        showIncomingOrderPopup(o);
+      }
+    });
+
+    // Render lists in real-time
+    renderAvailableOrders(avail);
+    renderAssignedOrders(data.assigned || []);
+    updateKPIs(data.stats, (data.assigned || []).length);
+
+  } catch(err) {
+    // Network disconnect resilience: continue without breaking UI
+    console.warn('Real-time dispatch poll warning:', err);
+  } finally {
+    isPolling = false;
+  }
+}
+
+// Run polling every 3 seconds for responsive live updates
+document.addEventListener('DOMContentLoaded', () => {
+  pollDispatches();
+  setInterval(pollDispatches, 3000);
+});
+</script>
 {% endblock %}

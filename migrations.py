@@ -496,6 +496,75 @@ def migrate_sqlite(conn):
     conn.commit()
     record_migration('014_delivery_shifts_tips_incentives_reviews', 'Add shift booking, incentives, tips, banner images and reviews to SQLite')
 
+    # Migration 015: Restaurant Owner Onboarding Enhancements (contact_person, gstin, operating_days, rejection_reason, prep_time)
+    rest_cols = get_sqlite_columns(conn, 'restaurants')
+    if 'contact_person' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN contact_person TEXT DEFAULT NULL")
+    if 'gstin' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN gstin TEXT DEFAULT NULL")
+    if 'operating_days' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN operating_days TEXT DEFAULT 'All Days'")
+    if 'rejection_reason' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN rejection_reason TEXT DEFAULT NULL")
+    if 'prep_time' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN prep_time TEXT DEFAULT '20-30 mins'")
+
+    conn.commit()
+    record_migration('015_restaurant_owner_onboarding_enhancements', 'Add contact_person, gstin, operating_days, rejection_reason, and prep_time to restaurants')
+
+    # ── Migration 016: Order Lifecycle Tracking & Automatic Settlement ───────
+    order_cols = get_sqlite_columns(conn, 'orders')
+    if 'estimated_delivery_time' not in order_cols:
+        cur.execute("ALTER TABLE orders ADD COLUMN estimated_delivery_time DATETIME DEFAULT NULL")
+    if 'prep_time_minutes' not in order_cols:
+        cur.execute("ALTER TABLE orders ADD COLUMN prep_time_minutes INTEGER DEFAULT 25")
+    if 'delivered_at' not in order_cols:
+        cur.execute("ALTER TABLE orders ADD COLUMN delivered_at DATETIME DEFAULT NULL")
+
+    rest_cols = get_sqlite_columns(conn, 'restaurants')
+    if 'commission_rate' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN commission_rate REAL DEFAULT 15.00")
+    if 'payout_account' not in rest_cols:
+        cur.execute("ALTER TABLE restaurants ADD COLUMN payout_account TEXT DEFAULT NULL")
+
+    dp_cols = get_sqlite_columns(conn, 'delivery_partners')
+    if 'payout_account' not in dp_cols:
+        cur.execute("ALTER TABLE delivery_partners ADD COLUMN payout_account TEXT DEFAULT NULL")
+
+    sqlite_tbls = get_sqlite_tables(conn)
+    if 'order_settlements' not in sqlite_tbls:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS order_settlements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER NOT NULL UNIQUE,
+            restaurant_id INTEGER NOT NULL,
+            partner_id INTEGER DEFAULT NULL,
+            subtotal REAL NOT NULL DEFAULT 0.00,
+            delivery_fee REAL NOT NULL DEFAULT 0.00,
+            tax REAL NOT NULL DEFAULT 0.00,
+            discount REAL NOT NULL DEFAULT 0.00,
+            total_amount REAL NOT NULL DEFAULT 0.00,
+            platform_commission_rate REAL NOT NULL DEFAULT 15.00,
+            platform_commission_amount REAL NOT NULL DEFAULT 0.00,
+            restaurant_net_payable REAL NOT NULL DEFAULT 0.00,
+            partner_payout_amount REAL NOT NULL DEFAULT 0.00,
+            restaurant_settlement_status TEXT NOT NULL DEFAULT 'settlement_pending',
+            partner_settlement_status TEXT NOT NULL DEFAULT 'settlement_pending',
+            settlement_type TEXT NOT NULL DEFAULT 'ledger_payable',
+            payout_reference TEXT DEFAULT NULL,
+            settled_at DATETIME DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+            FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+            FOREIGN KEY (partner_id) REFERENCES users(id) ON DELETE SET NULL
+        );
+        """)
+
+    conn.commit()
+    record_migration('016_order_lifecycle_tracking_and_automatic_settlement',
+                     'Add tracking timestamps, commission_rate, and order_settlements table for automated financial payouts')
+
 
 def migrate_mysql(conn):
     """Execute schema initialization and migrations on MySQL connection."""
@@ -781,6 +850,81 @@ def migrate_mysql(conn):
         cur.execute("""
         INSERT IGNORE INTO schema_migrations (version, description, applied_at)
         VALUES ('014_delivery_shifts_tips_incentives_reviews', 'Add shift booking, incentives, tips, banner images and reviews to MySQL', NOW())
+        """)
+        conn.commit()
+
+        # Migration 015: Restaurant Owner Onboarding Enhancements for MySQL
+        mysql_rest_cols = get_mysql_columns(conn, 'restaurants')
+        if 'contact_person' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `contact_person` VARCHAR(100) DEFAULT NULL")
+        if 'gstin' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `gstin` VARCHAR(50) DEFAULT NULL")
+        if 'operating_days' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `operating_days` VARCHAR(100) DEFAULT 'All Days'")
+        if 'rejection_reason' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `rejection_reason` TEXT DEFAULT NULL")
+        if 'prep_time' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `prep_time` VARCHAR(50) DEFAULT '20-30 mins'")
+
+        cur.execute("""
+        INSERT IGNORE INTO schema_migrations (version, description, applied_at)
+        VALUES ('015_restaurant_owner_onboarding_enhancements', 'Add contact_person, gstin, operating_days, rejection_reason, and prep_time to MySQL', NOW())
+        """)
+        conn.commit()
+
+        # Migration 016: Order Lifecycle Tracking & Automatic Settlement for MySQL
+        mysql_order_cols = get_mysql_columns(conn, 'orders')
+        if 'estimated_delivery_time' not in mysql_order_cols:
+            cur.execute("ALTER TABLE `orders` ADD COLUMN `estimated_delivery_time` DATETIME DEFAULT NULL")
+        if 'prep_time_minutes' not in mysql_order_cols:
+            cur.execute("ALTER TABLE `orders` ADD COLUMN `prep_time_minutes` INT DEFAULT 25")
+        if 'delivered_at' not in mysql_order_cols:
+            cur.execute("ALTER TABLE `orders` ADD COLUMN `delivered_at` DATETIME DEFAULT NULL")
+
+        mysql_rest_cols = get_mysql_columns(conn, 'restaurants')
+        if 'commission_rate' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `commission_rate` DECIMAL(5,2) DEFAULT 15.00")
+        if 'payout_account' not in mysql_rest_cols:
+            cur.execute("ALTER TABLE `restaurants` ADD COLUMN `payout_account` VARCHAR(255) DEFAULT NULL")
+
+        mysql_dp_cols = get_mysql_columns(conn, 'delivery_partners')
+        if 'payout_account' not in mysql_dp_cols:
+            cur.execute("ALTER TABLE `delivery_partners` ADD COLUMN `payout_account` VARCHAR(255) DEFAULT NULL")
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS `order_settlements` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `order_id` INT NOT NULL UNIQUE,
+            `restaurant_id` INT NOT NULL,
+            `partner_id` INT DEFAULT NULL,
+            `subtotal` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            `delivery_fee` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+            `tax` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+            `discount` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+            `total_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            `platform_commission_rate` DECIMAL(5,2) NOT NULL DEFAULT 15.00,
+            `platform_commission_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            `restaurant_net_payable` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            `partner_payout_amount` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+            `restaurant_settlement_status` VARCHAR(50) NOT NULL DEFAULT 'settlement_pending',
+            `partner_settlement_status` VARCHAR(50) NOT NULL DEFAULT 'settlement_pending',
+            `settlement_type` VARCHAR(50) NOT NULL DEFAULT 'ledger_payable',
+            `payout_reference` VARCHAR(100) DEFAULT NULL,
+            `settled_at` DATETIME DEFAULT NULL,
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+            FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE CASCADE,
+            FOREIGN KEY (`partner_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+            INDEX `idx_settle_order` (`order_id`),
+            INDEX `idx_settle_rest` (`restaurant_id`),
+            INDEX `idx_settle_partner` (`partner_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+
+        cur.execute("""
+        INSERT IGNORE INTO schema_migrations (version, description, applied_at)
+        VALUES ('016_order_lifecycle_tracking_and_automatic_settlement', 'Add tracking timestamps, commission_rate, and order_settlements table to MySQL', NOW())
         """)
         conn.commit()
     except Exception as e:

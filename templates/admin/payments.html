@@ -1,14 +1,14 @@
 {% extends "ops_base.html" %}
-{% block title %}Payments & Transactions – Foody Hunters Administrator{% endblock %}
+{% block title %}Payments & Settlements Audit – Foody Hunters Administrator{% endblock %}
 
-{% block page_title %}💳 Platform Payments & Transactions{% endblock %}
-{% block page_subtitle %}Audit financial settlements, payment gateway logs, customer receipts, and GMV revenue{% endblock %}
+{% block page_title %}💳 Platform Payments & Transactions & Settlements Ledger{% endblock %}
+{% block page_subtitle %}Audit financial settlements, 15% platform commission, restaurant net payables, delivery fees, and gateway authorizations{% endblock %}
 
 {% block page_actions %}
 <div class="d-flex align-center gap-2 flex-wrap">
   <div style="background:rgba(16,185,129,0.12);padding:0.4rem 0.85rem;border-radius:var(--ops-radius-md);border:1px solid rgba(16,185,129,0.3);text-align:right">
     <span style="font-size:0.72rem;color:var(--ops-text-dim);text-transform:uppercase;display:block">Lifetime GMV</span>
-    <div style="font-size:1.15rem;font-weight:900;color:var(--ops-emerald);font-family:var(--ops-font-mono)">₹{{ "%.2f"|format(total_revenue) }}</div>
+    <div style="font-size:1.15rem;font-weight:900;color:var(--ops-emerald);font-family:var(--ops-font-mono)">₹{{ "%.2f"|format(total_revenue or 0.0) }}</div>
   </div>
   <a href="/admin/dashboard" class="ops-btn ops-btn-outline ops-btn-sm">
     <i class="fas fa-arrow-left"></i> Dashboard
@@ -17,11 +17,125 @@
 {% endblock %}
 
 {% block content %}
+<!-- Financial Settlement KPI Grid -->
+<div class="ops-stats-grid mb-4">
+  <div class="ops-stat-card glow-emerald">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Platform Commission Earned</span>
+      <div class="ops-stat-icon emerald"><i class="fas fa-percent"></i></div>
+    </div>
+    <div class="ops-stat-val">₹{{ "%.2f"|format(settlement_summary.total_commission or 0.0) }}</div>
+    <div class="ops-stat-meta"><span style="color:var(--ops-emerald)">15% commission on restaurant food sales</span></div>
+  </div>
+
+  <div class="ops-stat-card glow-cyan">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Restaurant Net Payable</span>
+      <div class="ops-stat-icon cyan"><i class="fas fa-store"></i></div>
+    </div>
+    <div class="ops-stat-val">₹{{ "%.2f"|format(settlement_summary.total_restaurant_payable or 0.0) }}</div>
+    <div class="ops-stat-meta"><span style="color:var(--ops-cyan)">Disbursable to verified kitchens</span></div>
+  </div>
+
+  <div class="ops-stat-card glow-purple">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Rider Fleet Payouts</span>
+      <div class="ops-stat-icon purple"><i class="fas fa-motorcycle"></i></div>
+    </div>
+    <div class="ops-stat-val">₹{{ "%.2f"|format(settlement_summary.total_partner_payout or 0.0) }}</div>
+    <div class="ops-stat-meta"><span style="color:var(--ops-purple)">Accumulated delivery fees & tips</span></div>
+  </div>
+
+  <div class="ops-stat-card glow-orange">
+    <div class="ops-stat-header">
+      <span class="ops-stat-title">Pending Settlement Queue</span>
+      <div class="ops-stat-icon orange"><i class="fas fa-clock"></i></div>
+    </div>
+    <div class="ops-stat-val">₹{{ "%.2f"|format(settlement_summary.pending_payouts or 0.0) }}</div>
+    <div class="ops-stat-meta"><span style="color:var(--ops-orange)">Internal payable balance</span></div>
+  </div>
+</div>
+
+<!-- Order Settlements Ledger -->
+<div class="ops-card mb-4">
+  <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">Order Settlements Ledger</h3>
+      <small style="color:var(--ops-text-dim)">Itemized ledger of platform commission, kitchen net payable, and rider payouts per fulfilled order</small>
+    </div>
+    <span class="ops-badge success">{{ settlements|length }} Settled Records</span>
+  </div>
+
+  {% if settlements %}
+  <div class="ops-table-responsive">
+    <table class="ops-table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Restaurant</th>
+          <th>Rider Partner</th>
+          <th>Subtotal</th>
+          <th>Commission (15%)</th>
+          <th>Restaurant Net</th>
+          <th>Rider Payout</th>
+          <th>Rest. Settlement</th>
+          <th>Rider Settlement</th>
+          <th>Reference</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in settlements %}
+        <tr>
+          <td><strong style="color:var(--ops-foreground);font-family:var(--ops-font-mono)">#{{ s.order_code }}</strong></td>
+          <td><span style="color:var(--ops-amber)"><i class="fas fa-store"></i> {{ s.restaurant_name }}</span></td>
+          <td>{{ s.partner_name or 'Unassigned' }}</td>
+          <td style="font-family:var(--ops-font-mono)">₹{{ "%.2f"|format(s.subtotal) }}</td>
+          <td style="font-family:var(--ops-font-mono);color:var(--ops-rose)">-₹{{ "%.2f"|format(s.platform_commission_amount) }}</td>
+          <td style="font-family:var(--ops-font-mono);font-weight:700;color:var(--ops-emerald)">₹{{ "%.2f"|format(s.restaurant_net_payable) }}</td>
+          <td style="font-family:var(--ops-font-mono);font-weight:700;color:var(--ops-cyan)">₹{{ "%.2f"|format(s.partner_payout_amount) }}</td>
+          <td>
+            {% if s.restaurant_settlement_status in ('paid_settled', 'settled') %}
+              <span class="ops-badge success">Settled</span>
+            {% elif s.restaurant_settlement_status == 'payout_initiated' %}
+              <span class="ops-badge info">Initiated</span>
+            {% elif s.restaurant_settlement_status == 'payout_failed' %}
+              <span class="ops-badge danger">Failed</span>
+            {% else %}
+              <span class="ops-badge warning">Pending</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if s.partner_settlement_status in ('paid_settled', 'settled') %}
+              <span class="ops-badge success">Settled</span>
+            {% elif s.partner_settlement_status == 'payout_initiated' %}
+              <span class="ops-badge info">Initiated</span>
+            {% elif s.partner_settlement_status == 'payout_failed' %}
+              <span class="ops-badge danger">Failed</span>
+            {% else %}
+              <span class="ops-badge warning">Pending</span>
+            {% endif %}
+          </td>
+          <td><code style="font-size:0.78rem;color:var(--ops-text-dim);font-family:var(--ops-font-mono)">{{ s.payout_reference or ('REF-' ~ s.id) }}</code></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="ops-empty-state">
+    <i class="fas fa-file-invoice-dollar ops-empty-icon"></i>
+    <div class="ops-empty-title">No Settlement Entries Yet</div>
+    <div class="ops-empty-desc">Completed and delivered orders will automatically generate unique settlement records here.</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Customer Payment Audit Journal -->
 <div class="ops-card mb-4">
   <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
     <div>
       <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">Payment Audit Journal</h3>
-      <small style="color:var(--ops-text-dim)">Chronological log of gateway authorizations and captured funds</small>
+      <small style="color:var(--ops-text-dim)">Chronological log of gateway authorizations and captured customer funds</small>
     </div>
     <span class="ops-badge info">{{ payments|length }} Transactions</span>
   </div>
@@ -38,7 +152,7 @@
           <th>Method</th>
           <th>Amount</th>
           <th>Gateway Status</th>
-          <th>Settlement Date</th>
+          <th>Date</th>
         </tr>
       </thead>
       <tbody>

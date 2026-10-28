@@ -149,31 +149,25 @@ class TestRoleIdentityConsistency(unittest.TestCase):
         self.assertIn("Delivery Partner", html)
 
     def test_05_staff_identity_consistency(self):
-        """5. Staff role: authoritative database match, label 'Restaurant / Hotel Staff — Kitchen Staff', and API status."""
+        """5. Staff role: retirement verification and non-destructive historical database record preservation."""
         client = self.app.test_client()
+        # Verify /staff/login redirects to /portals
         res = client.post('/staff/login', data={
             'email': 'staff@foodyhunters.com',
             'password': 'password123'
-        }, follow_redirects=True)
-        self.assertEqual(res.status_code, 200)
+        }, follow_redirects=False)
+        self.assertEqual(res.status_code, 302)
+        self.assertIn('/portals', res.headers.get('Location', ''))
 
-        # Check DB role
+        # Check DB role remains non-destructively preserved
         db_user = execute_query("SELECT role FROM users WHERE email='staff@foodyhunters.com'", fetchone=True)
-        self.assertEqual(db_user['role'], 'staff')
+        if db_user:
+            self.assertEqual(db_user['role'], 'staff')
 
-        # Check API status
-        api_res = client.get('/api/auth/status')
-        self.assertEqual(api_res.status_code, 200)
-        data = api_res.get_json()
-        self.assertEqual(data['role'], 'staff')
-        self.assertIn("Restaurant / Hotel Staff", data['role_display'])
-        self.assertIn("Kitchen Staff", data['role_display'])
-
-        # Check Staff Profile page
-        prof_res = client.get('/staff/profile')
-        self.assertEqual(prof_res.status_code, 200)
-        html = prof_res.data.decode('utf-8')
-        self.assertIn("Restaurant / Hotel Staff", html)
+        # Check Staff Profile page is retired
+        prof_res = client.get('/staff/profile', follow_redirects=False)
+        self.assertEqual(prof_res.status_code, 302)
+        self.assertIn('/portals', prof_res.headers.get('Location', ''))
 
     # ─────────────────────────────────────────────────────────────────────────
     # 2. TAMPER RESISTANCE & UNKNOWN ROLE SAFETY

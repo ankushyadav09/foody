@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Admin Control Center – Foody Hunters{% endblock %}</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Core & Ops Styles -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/ops_center.css">
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); min-height: 100vh; display: flex; flex-direction: column; color: #F8FAFC; margin: 0; font-family: 'Poppins', sans-serif;">
+
+  <!-- ── SCOPED ADMIN HEADER (EXCLUDES CUSTOMER NAVBAR) ─────────────── -->
+  <header style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(249, 115, 22, 0.25); padding: 0.9rem 1.75rem; display: flex; align-items: center; justify-content: space-between; z-index: 100;">
+    <div style="display: flex; align-items: center; gap: 0.85rem;">
+      <span style="font-size: 1.6rem;">🛡️</span>
+      <div>
+        <a href="/admin" style="color: #FFFFFF; font-weight: 800; font-size: 1.2rem; text-decoration: none; letter-spacing: -0.02em;">
+          Foody<span style="color: #FF4500;">Hunters</span>
+        </a>
+        <span style="background: rgba(255, 69, 0, 0.2); color: #FF6A3D; font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 4px; margin-left: 0.5rem; letter-spacing: 0.05em; border: 1px solid rgba(255, 69, 0, 0.35);">
+          ADMIN CONTROL CENTER
+        </span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <span style="font-size: 0.78rem; color: #94A3B8; display: flex; align-items: center; gap: 0.45rem;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+        SYSTEM SECURE &bull; NODE-01
+      </span>
+      <a href="/" style="color: #94A3B8; font-size: 0.84rem; text-decoration: none; display: flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.85rem; border-radius: 6px; border: 1px solid #334155; transition: all 0.2s; background: rgba(30, 41, 59, 0.6);" onmouseover="this.style.borderColor='#F97316';this.style.color='#FFF'" onmouseout="this.style.borderColor='#334155';this.style.color='#94A3B8'">
+        <i class="fas fa-external-link-alt" style="font-size: 0.75rem;"></i> Customer Storefront
+      </a>
+    </div>
+  </header>
+
+  <!-- ── CONTENT ─────────────────────────────────────────────────────── -->
+  <main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 2.5rem 1rem;">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ── SCOPED ADMIN FOOTER (EXCLUDES CUSTOMER FOOTER) ─────────────── -->
+  <footer style="background: rgba(15, 23, 42, 0.95); border-top: 1px solid #334155; text-align: center; padding: 0.85rem 1rem; font-size: 0.78rem; color: #64748B;">
+    FOODY HUNTERS ADMINISTRATIVE SUBSYSTEM &bull; ROLE-BASED ACCESS CONTROL &bull; RESTRICTED ENVIRONMENT
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/static/js/main.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

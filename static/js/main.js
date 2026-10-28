@@ -342,7 +342,7 @@ function initNavbar() {
   // Auto-close drawer when clicking on any nav link
   nav?.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', () => {
-      if (window.innerWidth <= 768) {
+      if (window.innerWidth <= 1024) {
         closeNav();
       }
     });

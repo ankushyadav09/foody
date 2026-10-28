@@ -1,14 +1,14 @@
 """
 tests/test_staff_portal_and_governance.py
-Comprehensive test suite for Portal 5 (Restaurant Staff Portal) and Central Governance:
-1. Staff authentication & onboarding isolation
-2. Role enforcement and access restrictions
-3. Restaurant data boundary enforcement (orders and dishes)
-4. Kitchen order state transitions (placed -> preparing -> ready_for_pickup)
-5. Stock/Availability management (86-list)
-6. Restaurant owner staff roster and approval workflow
-7. Administrator central staff governance and reassignment
-8. Cross-role boundary security checks
+Comprehensive test suite verifying the permanent retirement of Hotel / Restaurant Staff:
+1. No active Staff portal links are displayed in public templates (navbar, footer, /portals).
+2. Staff login (/staff/login) and registration (/staff/register) entry points are retired.
+3. Obsolete Staff portal routes (/staff/dashboard, /staff/orders, /staff/menu, /staff/profile) redirect safely.
+4. Staff POST action endpoints are retired.
+5. Legacy staff credentials submitted on /auth/login redirect to /portals with retirement notice.
+6. Admin operations remain active and protected through authorized admin routes.
+7. Delivery partner operations remain active and protected through authorized delivery routes.
+8. Existing restaurant records, dishes, and orders in the database remain intact.
 """
 
 import os
@@ -24,7 +24,7 @@ from database import execute_query
 from werkzeug.security import generate_password_hash
 
 
-class TestStaffPortalAndGovernance(unittest.TestCase):
+class TestStaffPortalRetirement(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = create_app()
@@ -32,314 +32,128 @@ class TestStaffPortalAndGovernance(unittest.TestCase):
         cls.app.config['WTF_CSRF_ENABLED'] = False
         cls.client = cls.app.test_client()
 
-    def test_01_staff_login_and_registration_pages(self):
-        """Verify dedicated /staff/login and /staff/register interfaces."""
-        res = self.client.get('/staff/login')
-        self.assertEqual(res.status_code, 200)
-        html = res.data.decode('utf-8')
-        self.assertIn('Kitchen Operations Desk', html)
-        self.assertIn('action="/staff/login"', html)
-        self.assertIn('name="viewport"', html)
+    def setUp(self):
+        self.client = self.app.test_client()
 
-        res_reg = self.client.get('/staff/register')
-        self.assertEqual(res_reg.status_code, 200)
-        html_reg = res_reg.data.decode('utf-8')
-        self.assertIn('Staff Onboarding Application', html_reg)
-        self.assertIn('name="restaurant_id"', html_reg)
-        self.assertIn('name="staff_role"', html_reg)
-        self.assertIn('kitchen_staff', html_reg)
-        self.assertIn('restaurant_manager', html_reg)
+    def test_01_staff_public_links_absent(self):
+        """1. Verify no active Staff portal links are displayed in customer or partner templates."""
+        # Check Home page
+        res_home = self.client.get('/')
+        self.assertEqual(res_home.status_code, 200)
+        home_html = res_home.get_data(as_text=True)
+        self.assertNotIn('/staff/login', home_html)
+        self.assertNotIn('/staff/register', home_html)
+        self.assertNotIn('Kitchen Staff Login', home_html)
 
-    def test_02_staff_registration_creates_pending_record(self):
-        """Staff self-registration creates pending record strictly linked to selected restaurant."""
+        # Check /portals page
+        res_portals = self.client.get('/portals')
+        self.assertEqual(res_portals.status_code, 200)
+        portals_html = res_portals.get_data(as_text=True)
+        self.assertNotIn('portalCardStaff', portals_html)
+        self.assertNotIn('Hotel / Restaurant Staff', portals_html)
+        self.assertNotIn('/staff/login', portals_html)
+        self.assertNotIn('/staff/register', portals_html)
+
+    def test_02_staff_login_and_registration_retired(self):
+        """2. Verify /staff/login and /staff/register redirect safely with retirement notice."""
+        # GET /staff/login
+        res_login = self.client.get('/staff/login', follow_redirects=False)
+        self.assertEqual(res_login.status_code, 302)
+        self.assertIn('/portals', res_login.headers.get('Location', ''))
+
+        # Following redirect to /portals shows retirement message
+        res_login_followed = self.client.get('/staff/login', follow_redirects=True)
+        self.assertEqual(res_login_followed.status_code, 200)
+        self.assertIn('Staff feature has been retired', res_login_followed.get_data(as_text=True))
+
+        # GET /staff/register
+        res_reg = self.client.get('/staff/register', follow_redirects=False)
+        self.assertEqual(res_reg.status_code, 302)
+        self.assertIn('/portals', res_reg.headers.get('Location', ''))
+
+    def test_03_staff_dashboard_and_operations_retired(self):
+        """3. Verify all operational staff endpoints redirect to /portals."""
+        retired_endpoints = [
+            '/staff/',
+            '/staff/dashboard',
+            '/staff/orders',
+            '/staff/menu',
+            '/staff/profile'
+        ]
+        for ep in retired_endpoints:
+            res = self.client.get(ep, follow_redirects=False)
+            self.assertEqual(res.status_code, 302, f"{ep} must return 302 redirect")
+            self.assertIn('/portals', res.headers.get('Location', ''))
+
+    def test_04_staff_post_actions_retired(self):
+        """4. Verify staff POST actions are safely retired."""
+        # /staff/order/update-status
+        res_order = self.client.post('/staff/order/update-status', follow_redirects=False)
+        self.assertEqual(res_order.status_code, 302)
+
+        # /staff/menu/toggle-availability
+        res_menu = self.client.post('/staff/menu/toggle-availability', follow_redirects=False)
+        self.assertEqual(res_menu.status_code, 302)
+
+    def test_05_legacy_staff_login_via_auth_redirects(self):
+        """5. Verify legacy user with role 'staff' logging in via /auth/login is redirected to /portals."""
         uid = uuid.uuid4().hex[:6]
-        email = f"chef_{uid}@testkitchen.com"
-        phone = f"98{random.randint(10000000, 99999999)}"
-
-        # Pick a valid restaurant
-        rest = execute_query("SELECT id FROM restaurants WHERE verification_status='approved' LIMIT 1", fetchone=True)
-        self.assertIsNotNone(rest)
-        rest_id = rest['id']
-
-        res = self.client.post('/staff/register', data={
-            'name': f'Chef Test {uid}',
-            'email': email,
-            'phone': phone,
-            'restaurant_id': str(rest_id),
-            'staff_role': 'kitchen_staff',
-            'shift': 'Morning Shift (7 AM - 3 PM)',
-            'password': 'password123',
-            'confirm_password': 'password123'
-        }, follow_redirects=True)
-
-        self.assertEqual(res.status_code, 200)
-        user = execute_query("SELECT * FROM users WHERE email=%s", (email,), fetchone=True)
-        self.assertIsNotNone(user)
-        self.assertEqual(user['role'], 'staff')
-
-        staff_rec = execute_query("SELECT * FROM restaurant_staff WHERE user_id=%s", (user['id'],), fetchone=True)
-        self.assertIsNotNone(staff_rec)
-        self.assertEqual(staff_rec['status'], 'pending')
-        self.assertEqual(staff_rec['restaurant_id'], rest_id)
-        self.assertEqual(staff_rec['staff_role'], 'kitchen_staff')
-
-        # Attempt to login while pending -> must be blocked
-        res_login = self.client.post('/staff/login', data={
-            'email': email,
-            'password': 'password123'
-        }, follow_redirects=True)
-        self.assertIn(b'pending approval', res_login.data)
-
-    def test_03_demo_staff_login_and_dashboard_telemetry(self):
-        """Login with demo kitchen staff account and view kitchen workspace."""
-        res = self.client.post('/staff/login', data={
-            'email': 'staff@foodyhunters.com',
-            'password': 'password123'
-        }, follow_redirects=True)
-
-        self.assertEqual(res.status_code, 200)
-        html = res.data.decode('utf-8')
-        self.assertIn('Kitchen Operations', html)
-        self.assertIn('Active Kitchen Preparation Queue', html)
-
-        # Profile route
-        res_prof = self.client.get('/staff/profile')
-        self.assertEqual(res_prof.status_code, 200)
-        self.assertIn(b'Staff Credentials', res_prof.data)
-
-    def test_04_kitchen_order_transition_and_data_isolation(self):
-        """Staff advances order status with strict restaurant-level data isolation."""
-        # Find approved demo staff user
-        demo_staff = execute_query(
-            """SELECT u.id, u.name, u.email, s.restaurant_id, s.staff_role 
-               FROM users u 
-               JOIN restaurant_staff s ON u.id=s.user_id 
-               WHERE u.role='staff' AND s.status='approved' LIMIT 1""",
-            fetchone=True
-        )
-        self.assertIsNotNone(demo_staff)
-
-        with self.client.session_transaction() as sess:
-            sess['user_id'] = demo_staff['id']
-            sess['user_name'] = demo_staff['name']
-            sess['user_email'] = demo_staff['email']
-            sess['role'] = 'staff'
-            sess['restaurant_id'] = demo_staff['restaurant_id']
-            sess['staff_role'] = demo_staff['staff_role']
-
-        rest_id = demo_staff['restaurant_id']
-
-        # Find or create a test order for this restaurant
-        test_order = execute_query(
-            "SELECT id, order_code, order_status FROM orders WHERE restaurant_id=%s LIMIT 1",
-            (rest_id,), fetchone=True
-        )
-        if not test_order:
-            order_id = execute_query(
-                """INSERT INTO orders (user_id, restaurant_id, order_code, total_amount, payment_method, payment_status, order_status)
-                   VALUES (1, %s, 'TEST-STF-01', 350.00, 'cod', 'pending', 'placed')""",
-                (rest_id,), commit=True
-            )
-        else:
-            order_id = test_order['id']
-            execute_query("UPDATE orders SET order_status='placed' WHERE id=%s", (order_id,), commit=True)
-
-        # Transition placed -> preparing
-        res = self.client.post('/staff/order/update-status', data={
-            'order_id': str(order_id),
-            'status': 'preparing'
-        }, follow_redirects=True)
-        self.assertEqual(res.status_code, 200)
-
-        updated_order = execute_query("SELECT order_status FROM orders WHERE id=%s", (order_id,), fetchone=True)
-        self.assertEqual(updated_order['order_status'], 'preparing')
-
-        # Transition preparing -> ready_for_pickup
-        res2 = self.client.post('/staff/order/update-status', data={
-            'order_id': str(order_id),
-            'status': 'ready_for_pickup'
-        }, follow_redirects=True)
-        self.assertEqual(res2.status_code, 200)
-
-        updated_order2 = execute_query("SELECT order_status FROM orders WHERE id=%s", (order_id,), fetchone=True)
-        self.assertEqual(updated_order2['order_status'], 'ready_for_pickup')
-
-        # DATA ISOLATION TEST: Attempt to mutate an order belonging to another restaurant
-        other_order = execute_query("SELECT id FROM orders WHERE restaurant_id != %s LIMIT 1", (rest_id,), fetchone=True)
-        if other_order:
-            res_cross = self.client.post('/staff/order/update-status', data={
-                'order_id': str(other_order['id']),
-                'status': 'preparing'
-            }, follow_redirects=True)
-            self.assertIn(b'permission denied', res_cross.data.lower())
-
-    def test_05_staff_menu_dish_availability_toggle(self):
-        """Staff toggles dish availability (86-list) with restaurant boundary enforcement."""
-        demo_staff = execute_query(
-            """SELECT u.id, u.name, u.email, s.restaurant_id, s.staff_role 
-               FROM users u 
-               JOIN restaurant_staff s ON u.id=s.user_id 
-               WHERE u.role='staff' AND s.status='approved' LIMIT 1""",
-            fetchone=True
-        )
-        self.assertIsNotNone(demo_staff)
-        rest_id = demo_staff['restaurant_id']
-
-        with self.client.session_transaction() as sess:
-            sess['user_id'] = demo_staff['id']
-            sess['role'] = 'staff'
-            sess['restaurant_id'] = rest_id
-            sess['staff_role'] = demo_staff['staff_role']
-
-        dish = execute_query("SELECT id, availability FROM food_items WHERE restaurant_id=%s LIMIT 1", (rest_id,), fetchone=True)
-        self.assertIsNotNone(dish)
-        orig_avail = dish['availability']
-
-        # Toggle availability
-        res = self.client.post('/staff/menu/toggle-availability', data={
-            'food_item_id': str(dish['id'])
-        }, follow_redirects=True)
-        self.assertEqual(res.status_code, 200)
-
-        dish_after = execute_query("SELECT availability FROM food_items WHERE id=%s", (dish['id'],), fetchone=True)
-        self.assertNotEqual(dish_after['availability'], orig_avail)
-
-        # Restore original availability
-        self.client.post('/staff/menu/toggle-availability', data={'food_item_id': str(dish['id'])}, follow_redirects=True)
-
-        # DATA ISOLATION: Attempt to toggle dish belonging to another restaurant
-        other_dish = execute_query("SELECT id FROM food_items WHERE restaurant_id != %s LIMIT 1", (rest_id,), fetchone=True)
-        if other_dish:
-            res_cross = self.client.post('/staff/menu/toggle-availability', data={
-                'food_item_id': str(other_dish['id'])
-            }, follow_redirects=True)
-            self.assertIn(b'permission denied', res_cross.data.lower())
-
-    def test_06_restaurant_owner_staff_roster_and_actions(self):
-        """Restaurant owner onboards staff, approves applicants, and manages roster."""
-        rest = execute_query("SELECT r.id, r.owner_id, u.email FROM restaurants r JOIN users u ON r.owner_id=u.id LIMIT 1", fetchone=True)
-        self.assertIsNotNone(rest)
-
-        with self.client.session_transaction() as sess:
-            sess['user_id'] = rest['owner_id']
-            sess['role'] = 'restaurant'
-            sess['user_email'] = rest['email']
-            sess['restaurant_id'] = rest['id']
-
-        # View staff roster
-        res = self.client.get('/restaurant/staff')
-        self.assertEqual(res.status_code, 200)
-        self.assertIn(b'Staff Roster', res.data)
-
-        # Onboard new staff directly
-        uid = uuid.uuid4().hex[:6]
-        phone = f"98{random.randint(10000000, 99999999)}"
-        res_add = self.client.post('/restaurant/staff/add', data={
-            'name': f'Direct Staff {uid}',
-            'email': f'direct_{uid}@kitchen.com',
-            'phone': phone,
-            'staff_role': 'kitchen_staff',
-            'shift': 'Full Time',
-            'password': 'password123'
-        }, follow_redirects=True)
-        self.assertEqual(res_add.status_code, 200)
-
-        new_user = execute_query("SELECT * FROM users WHERE email=%s", (f'direct_{uid}@kitchen.com',), fetchone=True)
-        self.assertIsNotNone(new_user)
-        staff_rec = execute_query("SELECT * FROM restaurant_staff WHERE user_id=%s", (new_user['id'],), fetchone=True)
-        self.assertIsNotNone(staff_rec)
-        self.assertEqual(staff_rec['status'], 'approved')
-        self.assertEqual(staff_rec['restaurant_id'], rest['id'])
-
-        # Toggle staff account status
-        self.client.post(f'/restaurant/staff/toggle/{staff_rec["id"]}', follow_redirects=True)
-        toggled = execute_query("SELECT status FROM restaurant_staff WHERE id=%s", (staff_rec['id'],), fetchone=True)
-        self.assertEqual(toggled['status'], 'suspended')
-
-        # Clean up
-        self.client.post(f'/restaurant/staff/delete/{staff_rec["id"]}', follow_redirects=True)
-
-    def test_07_admin_central_staff_governance(self):
-        """Admin views staff across all restaurants, approves, reassigns, and toggles."""
-        with self.client.session_transaction() as sess:
-            sess['user_id'] = 1
-            sess['role'] = 'admin'
-            sess['user_email'] = 'admin@foodiehunter.com'
-            sess['admin_gate_passed'] = True
-
-        # View admin staff directory
-        res = self.client.get('/admin/staff')
-        self.assertEqual(res.status_code, 200)
-        self.assertIn(b'Kitchen Staff Governance', res.data)
-
-        # Create a pending staff member for verification testing
-        uid = uuid.uuid4().hex[:6]
-        phone = f"98{random.randint(10000000, 99999999)}"
-        pw_hash = generate_password_hash('password123')
-        test_user_id = execute_query(
-            "INSERT INTO users (name, email, phone, password_hash, role, status) VALUES (%s, %s, %s, %s, 'staff', 'active')",
-            (f'Pending Staff {uid}', f'pending_{uid}@gov.com', phone, pw_hash),
+        email = f"legacy_staff_{uid}@foodyhunters.com"
+        pw = "password123"
+        user_id = execute_query(
+            """INSERT INTO users (name, email, phone, password_hash, role, status)
+               VALUES (%s, %s, %s, %s, 'staff', 'active')""",
+            (f"Chef {uid}", email, f"91{random.randint(10000000, 99999999)}", generate_password_hash(pw)),
             commit=True
         )
-        staff_id = execute_query(
-            "INSERT INTO restaurant_staff (user_id, restaurant_id, staff_role, status) VALUES (%s, 1, 'kitchen_staff', 'pending')",
-            (test_user_id,), commit=True
-        )
 
-        # Admin approves staff
-        res_appr = self.client.post(f'/admin/staff/verify/{staff_id}/approved', follow_redirects=True)
-        self.assertEqual(res_appr.status_code, 200)
-        staff_rec = execute_query("SELECT status, restaurant_id FROM restaurant_staff WHERE id=%s", (staff_id,), fetchone=True)
-        self.assertEqual(staff_rec['status'], 'approved')
+        res = self.client.post('/auth/login', data={'email': email, 'password': pw}, follow_redirects=False)
+        self.assertEqual(res.status_code, 302)
+        self.assertIn('/portals', res.headers.get('Location', ''))
 
-        # Admin reassigns staff to another restaurant if available
-        other_rest = execute_query("SELECT id FROM restaurants WHERE id != 1 LIMIT 1", fetchone=True)
-        if other_rest:
-            res_reassign = self.client.post(f'/admin/staff/reassign/{staff_id}', data={
-                'restaurant_id': str(other_rest['id'])
-            }, follow_redirects=True)
-            self.assertEqual(res_reassign.status_code, 200)
-            reassigned = execute_query("SELECT restaurant_id FROM restaurant_staff WHERE id=%s", (staff_id,), fetchone=True)
-            self.assertEqual(reassigned['restaurant_id'], other_rest['id'])
+        res_followed = self.client.post('/auth/login', data={'email': email, 'password': pw}, follow_redirects=True)
+        self.assertIn('Staff portal has been retired', res_followed.get_data(as_text=True))
 
-        # Admin deletes staff
-        res_del = self.client.post(f'/admin/staff/delete/{staff_id}', follow_redirects=True)
-        self.assertEqual(res_del.status_code, 200)
-        deleted = execute_query("SELECT * FROM restaurant_staff WHERE id=%s", (staff_id,), fetchone=True)
-        self.assertIsNone(deleted)
-
-    def test_08_cross_role_access_boundary_security(self):
-        """Strict server-side validation that roles cannot cross portal boundaries."""
-        # Staff user cannot access admin or restaurant owner portals
-        demo_staff = execute_query(
-            """SELECT u.id, s.restaurant_id FROM users u 
-               JOIN restaurant_staff s ON u.id=s.user_id 
-               WHERE u.role='staff' AND s.status='approved' LIMIT 1""",
-            fetchone=True
-        )
-        self.assertIsNotNone(demo_staff)
-
+    def test_06_admin_operations_intact(self):
+        """6. Verify Admin operations remain available through authorized admin routes."""
         with self.client.session_transaction() as sess:
-            sess['user_id'] = demo_staff['id']
-            sess['role'] = 'staff'
-            sess['restaurant_id'] = demo_staff['restaurant_id']
+            sess['admin_gate_passed'] = True
+            sess['role'] = 'admin'
+            admin = execute_query("SELECT id, name, email FROM users WHERE role='admin' LIMIT 1", fetchone=True)
+            if admin:
+                sess['user_id'] = admin['id']
+                sess['user_name'] = admin['name']
+                sess['user_email'] = admin['email']
+            else:
+                sess['user_id'] = 1
+                sess['user_name'] = 'Administrator'
+                sess['user_email'] = 'admin@foodyhunters.com'
 
-        res_adm = self.client.get('/admin/dashboard', follow_redirects=False)
-        self.assertIn(res_adm.status_code, [302, 403])
+        # Admin dashboard loads
+        res_dash = self.client.get('/admin/dashboard')
+        self.assertEqual(res_dash.status_code, 200)
 
-        res_rest = self.client.get('/restaurant/dashboard', follow_redirects=False)
-        self.assertIn(res_rest.status_code, [302, 403])
+        # Admin restaurant management loads
+        res_rest = self.client.get('/admin/restaurants')
+        self.assertEqual(res_rest.status_code, 200)
 
-        res_deliv = self.client.get('/delivery/dashboard', follow_redirects=False)
-        self.assertIn(res_deliv.status_code, [302, 403])
+    def test_07_delivery_partner_operations_intact(self):
+        """7. Verify Delivery Partner operations remain available through authorized delivery routes."""
+        # Delivery login page loads
+        res_login = self.client.get('/delivery/login')
+        self.assertEqual(res_login.status_code, 200)
 
-        # Customer user cannot access staff portal
-        with self.client.session_transaction() as sess:
-            sess['user_id'] = 1001
-            sess['role'] = 'customer'
+        # Delivery register page loads
+        res_reg = self.client.get('/delivery/register')
+        self.assertEqual(res_reg.status_code, 200)
 
-        res_stf = self.client.get('/staff/dashboard', follow_redirects=False)
-        self.assertIn(res_stf.status_code, [302, 403])
+    def test_08_existing_restaurant_records_and_dishes_intact(self):
+        """8. Verify existing restaurant and menu records remain non-destructively preserved."""
+        rest_count = execute_query("SELECT COUNT(*) AS c FROM restaurants", fetchone=True)
+        self.assertGreater(rest_count['c'], 0)
+
+        dish_count = execute_query("SELECT COUNT(*) AS c FROM food_items", fetchone=True)
+        self.assertGreater(dish_count['c'], 0)
 
 
 if __name__ == '__main__':

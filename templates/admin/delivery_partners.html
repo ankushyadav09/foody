@@ -2,7 +2,7 @@
 {% block title %}Delivery Fleet & Riders – Foody Hunters Administrator{% endblock %}
 
 {% block page_title %}🛵 Delivery Fleet & Riders{% endblock %}
-{% block page_subtitle %}Manage partner couriers, verify onboarding status, and supervise delivery availability{% endblock %}
+{% block page_subtitle %}Manage partner couriers, verify onboarding applications, and supervise fleet operations{% endblock %}
 
 {% block page_actions %}
 <div class="d-flex align-center gap-2 flex-wrap">
@@ -18,11 +18,45 @@
 {% block content %}
 <div class="ops-card mb-4">
   <div class="ops-card-header d-flex justify-between align-center flex-wrap gap-2">
-    <div>
-      <h3 style="font-size:1.05rem;font-weight:700;margin:0;color:#fff">Registered Courier Fleet</h3>
-      <small style="color:var(--ops-text-dim)">Total active delivery partners in operations database</small>
+    <!-- Filter Pills with Live Counts -->
+    <div class="d-flex gap-1 flex-wrap align-center">
+      <a href="/admin/delivery-partners?status=all{% if q %}&q={{ q }}{% endif %}" class="ops-btn ops-btn-sm {% if status == 'all' or not status %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        All ({{ counts.all if counts else partners|length }})
+      </a>
+      <a href="/admin/delivery-partners?status=pending{% if q %}&q={{ q }}{% endif %}" class="ops-btn ops-btn-sm {% if status == 'pending' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}" style="position:relative">
+        Pending Review ({{ counts.pending if counts else 0 }})
+        {% if counts and counts.pending > 0 %}
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#EF4444; margin-left:3px;"></span>
+        {% endif %}
+      </a>
+      <a href="/admin/delivery-partners?status=approved{% if q %}&q={{ q }}{% endif %}" class="ops-btn ops-btn-sm {% if status == 'approved' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Approved Fleet ({{ counts.approved if counts else 0 }})
+      </a>
+      <a href="/admin/delivery-partners?status=rejected{% if q %}&q={{ q }}{% endif %}" class="ops-btn ops-btn-sm {% if status == 'rejected' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Rejected ({{ counts.rejected if counts else 0 }})
+      </a>
+      <a href="/admin/delivery-partners?status=inactive{% if q %}&q={{ q }}{% endif %}" class="ops-btn ops-btn-sm {% if status == 'inactive' %}ops-btn-primary{% else %}ops-btn-outline{% endif %}">
+        Suspended ({{ counts.inactive if counts else 0 }})
+      </a>
     </div>
-    <span class="ops-badge info">{{ partners|length }} Riders</span>
+
+    <!-- Search Form -->
+    <form method="GET" action="/admin/delivery-partners" class="d-flex gap-1 align-center">
+      {% if status and status != 'all' %}
+        <input type="hidden" name="status" value="{{ status }}">
+      {% endif %}
+      <input type="text" class="ops-form-control" name="q" value="{{ q or '' }}"
+             placeholder="Search name, phone, vehicle, DL..."
+             style="height:36px; padding:0.35rem 0.75rem; font-size:0.85rem; width:240px; border-radius:var(--ops-radius-md); border:1px solid var(--ops-border);">
+      <button type="submit" class="ops-btn ops-btn-primary ops-btn-sm" style="height:36px;">
+        <i class="fas fa-search"></i>
+      </button>
+      {% if q %}
+        <a href="/admin/delivery-partners?status={{ status or 'all' }}" class="ops-btn ops-btn-outline ops-btn-sm" title="Clear Search" style="height:36px;">
+          <i class="fas fa-times"></i>
+        </a>
+      {% endif %}
+    </form>
   </div>
 
   {% if partners %}
@@ -30,11 +64,12 @@
     <table class="ops-table">
       <thead>
         <tr>
-          <th>Rider Name</th>
-          <th>Contact & Email</th>
-          <th>Phone Number</th>
-          <th>Fleet Status</th>
-          <th>Registration Date</th>
+          <th>Rider & Identity</th>
+          <th>Contact Info</th>
+          <th>Vehicle & License</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>Applied Date</th>
           <th style="text-align:right">Fleet Actions</th>
         </tr>
       </thead>
@@ -48,30 +83,69 @@
               </div>
               <div>
                 <strong style="color:var(--ops-foreground);display:block">{{ p.name }}</strong>
-                <small style="color:var(--ops-muted);font-family:var(--ops-font-mono)">ID #{{ p.id }}</small>
+                <small style="color:var(--ops-muted);font-family:var(--ops-font-mono)">UID #{{ p.user_id }}</small>
               </div>
             </div>
           </td>
-          <td>{{ p.email }}</td>
-          <td>{{ p.phone or 'N/A' }}</td>
           <td>
-            {% if p.status == 'active' %}
-            <span class="ops-badge success"><i class="fas fa-check-circle"></i> Active / Ready</span>
+            <div><i class="fas fa-envelope text-muted" style="font-size:0.75rem;width:14px"></i> {{ p.email }}</div>
+            <div><i class="fas fa-phone text-muted" style="font-size:0.75rem;width:14px"></i> {{ p.phone or 'N/A' }}</div>
+          </td>
+          <td>
+            <div style="font-weight:600;color:var(--ops-foreground)">{{ p.vehicle_type or 'Motorcycle' }}</div>
+            <small style="color:var(--ops-text-dim);display:block">Plate: {{ p.vehicle_number or 'N/A' }}</small>
+            <small style="color:var(--ops-muted);display:block">DL: {{ p.license_number or 'N/A' }}</small>
+          </td>
+          <td>
+            <div>{{ p.city or 'Mehsana' }}</div>
+            <small style="color:var(--ops-text-dim)">{{ p.address or 'N/A' }}</small>
+          </td>
+          <td>
+            {% if p.verification_status == 'pending' or p.user_status == 'pending' %}
+              <span class="ops-badge warning"><i class="fas fa-clock"></i> Pending Review</span>
+            {% elif p.verification_status == 'rejected' or p.user_status == 'rejected' %}
+              <span class="ops-badge danger"><i class="fas fa-times-circle"></i> Rejected</span>
+            {% elif p.user_status == 'inactive' %}
+              <span class="ops-badge danger"><i class="fas fa-ban"></i> Suspended</span>
             {% else %}
-            <span class="ops-badge danger"><i class="fas fa-ban"></i> Suspended</span>
+              <span class="ops-badge success"><i class="fas fa-check-circle"></i> Approved / Active</span>
             {% endif %}
           </td>
           <td style="color:var(--ops-muted);font-size:0.85rem">{{ p.created_at or 'N/A' }}</td>
           <td style="text-align:right">
-            <form method="POST" action="/admin/users/toggle/{{ p.id }}" style="display:inline">
-              <button type="submit" class="ops-btn ops-btn-sm {% if p.status == 'active' %}ops-btn-outline{% else %}ops-btn-primary{% endif %}">
-                {% if p.status == 'active' %}
-                  <i class="fas fa-pause"></i> Suspend
-                {% else %}
-                  <i class="fas fa-play"></i> Activate
-                {% endif %}
-              </button>
-            </form>
+            <div style="display:inline-flex;gap:0.4rem;align-items:center">
+                <a href="/admin/delivery-partners/{{ p.user_id }}" class="ops-btn ops-btn-sm ops-btn-outline" title="View Rider Dossier">
+                  <i class="fas fa-eye"></i> Details
+                </a>
+              {% if p.verification_status == 'pending' or p.user_status == 'pending' %}
+                <!-- Approve Button -->
+                <form method="POST" action="/admin/delivery-partners/approve/{{ p.user_id }}" style="display:inline">
+                  <button type="submit" class="ops-btn ops-btn-sm ops-btn-primary" title="Approve Delivery Partner">
+                    <i class="fas fa-check"></i> Approve
+                  </button>
+                </form>
+                <!-- Reject Button -->
+                <form method="POST" action="/admin/delivery-partners/reject/{{ p.user_id }}" style="display:inline" onsubmit="return confirm('Are you sure you want to reject this delivery partner application?');">
+                  <button type="submit" class="ops-btn ops-btn-sm ops-btn-outline" style="color:var(--ops-rose);border-color:var(--ops-rose);" title="Reject Delivery Partner">
+                    <i class="fas fa-times"></i> Reject
+                  </button>
+                </form>
+              {% elif p.verification_status == 'approved' and p.user_status == 'active' %}
+                <!-- Suspend Button -->
+                <form method="POST" action="/admin/delivery-partners/toggle/{{ p.user_id }}" style="display:inline">
+                  <button type="submit" class="ops-btn ops-btn-sm ops-btn-outline" title="Suspend Rider">
+                    <i class="fas fa-pause"></i> Suspend
+                  </button>
+                </form>
+              {% else %}
+                <!-- Re-activate / Re-approve Button -->
+                <form method="POST" action="/admin/delivery-partners/approve/{{ p.user_id }}" style="display:inline">
+                  <button type="submit" class="ops-btn ops-btn-sm ops-btn-primary" title="Activate Rider">
+                    <i class="fas fa-play"></i> Activate
+                  </button>
+                </form>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -81,10 +155,18 @@
   {% else %}
   <div class="ops-empty-state">
     <i class="fas fa-motorcycle ops-empty-icon"></i>
-    <div class="ops-empty-title">No Delivery Partners Registered</div>
-    <div class="ops-empty-desc">No courier riders have onboarded onto the Foody Hunters fleet yet.</div>
+    <div class="ops-empty-title">No Delivery Partners Found</div>
+    <div class="ops-empty-desc">
+      {% if status == 'pending' %}
+        There are currently no pending delivery partner applications to review.
+      {% elif status == 'rejected' %}
+        No rejected delivery applications on file.
+      {% else %}
+        No delivery partners match the selected filter criteria.
+      {% endif %}
+    </div>
     <a href="/admin/delivery-partners/add" class="ops-btn ops-btn-primary ops-btn-sm" style="margin-top:1rem">
-      <i class="fas fa-plus"></i> Onboard First Rider
+      <i class="fas fa-plus"></i> Onboard New Rider
     </a>
   </div>
   {% endif %}

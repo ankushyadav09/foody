@@ -1,0 +1,145 @@
+{% extends "admin/admin_base.html" %}
+{% block title %}Operations Access – Foody Hunters Control & Fleet Access{% endblock %}
+
+{% block content %}
+<div class="ops-access-wrapper" style="width: 100%; max-width: 960px; margin: 0 auto;">
+  
+  <!-- Header Title -->
+  <div style="text-align: center; margin-bottom: 2.5rem;">
+    <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(255, 69, 0, 0.15); border: 1px solid rgba(255, 69, 0, 0.35); padding: 0.35rem 1.1rem; border-radius: 9999px; color: #FF7A45; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem;">
+      <i class="fas fa-lock"></i> Operational Access Gateway
+    </div>
+    <h1 style="color: #FFFFFF; font-size: clamp(1.8rem, 3.5vw, 2.4rem); font-weight: 800; margin: 0 0 0.6rem 0; letter-spacing: -0.02em;">
+      Select Operational Portal
+    </h1>
+    <p style="color: #94A3B8; font-size: 0.98rem; max-width: 580px; margin: 0 auto; line-height: 1.6;">
+      Choose your authorized operational entry point. Role isolation and server-side verification are strictly enforced.
+    </p>
+  </div>
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div style="max-width: 700px; margin: 0 auto 2rem auto;">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'error' else 'danger' }}" style="border-radius: 8px; font-size: 0.9rem; padding: 0.85rem 1.25rem;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Two Options Grid: Side by Side on Desktop, Stacked on Mobile -->
+  <div class="ops-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; align-items: stretch;">
+
+    <!-- ───────────────────────────────────────────── -->
+    <!-- OPTION A: ADMIN CONTROL CENTER -->
+    <!-- ───────────────────────────────────────────── -->
+    <div class="ops-card" style="background: #FFFFFF; border-radius: 16px; border: 1.5px solid #FED7AA; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s;">
+      
+      <!-- Card Header -->
+      <div style="background: linear-gradient(135deg, #FF4500 0%, #EA580C 100%); padding: 2rem 1.75rem; color: #FFFFFF; text-align: center;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 0.75rem; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+          🛡️
+        </div>
+        <h2 style="color: #FFFFFF; font-size: 1.45rem; font-weight: 800; margin: 0; letter-spacing: -0.01em;">
+          Admin Control Center
+        </h2>
+        <div style="color: rgba(255, 255, 255, 0.9); font-size: 0.82rem; font-weight: 500; margin-top: 0.35rem;">
+          Executive Governance &amp; Platform Controls
+        </div>
+      </div>
+
+      <!-- Card Body -->
+      <div style="padding: 1.75rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <p style="color: #4B5563; font-size: 0.92rem; line-height: 1.6; margin-bottom: 1.25rem;">
+            Full administrative authority over restaurants, fleet management, categories, coupons, financial reports, user access, and system logs.
+          </p>
+
+          <div style="background: #FFF7ED; border: 1px solid #FFEDD5; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1.5rem;">
+            <div style="font-weight: 700; font-size: 0.82rem; color: #C2410C; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.4rem;">
+              <i class="fas fa-key"></i> Direct Passkey Authentication
+            </div>
+            <p style="font-size: 0.8rem; color: #7C2D12; margin: 0; line-height: 1.45;">
+              Protected by master security passkey with automated rate limiting and brute-force lockout safeguards.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <a href="{{ url_for('admin.gate') }}" id="btnOpenAdminControlCenter" class="btn w-100" style="background: linear-gradient(135deg, #FF4500, #EA580C); color: #FFFFFF; font-weight: 800; font-size: 1rem; padding: 0.9rem 1.25rem; border-radius: 8px; border: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; box-shadow: 0 4px 15px rgba(255, 69, 0, 0.3); transition: all 0.2s;">
+            <i class="fas fa-shield-alt"></i> Open Admin Control Center
+          </a>
+        </div>
+      </div>
+
+      <!-- Card Footer -->
+      <div style="background: #FAF8F5; border-top: 1px solid #FED7AA; padding: 0.75rem 1.25rem; font-size: 0.78rem; color: #6B7280; text-align: center;">
+        Requires authorized master administrator passkey
+      </div>
+    </div>
+
+    <!-- ───────────────────────────────────────────── -->
+    <!-- OPTION B: DELIVERY PARTNER (RIDER) -->
+    <!-- ───────────────────────────────────────────── -->
+    <div class="ops-card" style="background: #FFFFFF; border-radius: 16px; border: 1.5px solid #BFDBFE; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s;">
+      
+      <!-- Card Header -->
+      <div style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); padding: 2rem 1.75rem; color: #FFFFFF; text-align: center;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 0.75rem; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+          🛵
+        </div>
+        <h2 style="color: #FFFFFF; font-size: 1.45rem; font-weight: 800; margin: 0; letter-spacing: -0.01em;">
+          Delivery Partner (Rider)
+        </h2>
+        <div style="color: rgba(255, 255, 255, 0.9); font-size: 0.82rem; font-weight: 500; margin-top: 0.35rem;">
+          Fleet Logistics &amp; Rider Operations Desk
+        </div>
+      </div>
+
+      <!-- Card Body -->
+      <div style="padding: 1.75rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <p style="color: #4B5563; font-size: 0.92rem; line-height: 1.6; margin-bottom: 1.25rem;">
+            Delivery dispatch portal for riders. Accept nearby delivery orders, update delivery milestones, view earnings, and manage your active online status.
+          </p>
+
+          <div style="background: #EFF6FF; border: 1px solid #DBEAFE; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1.5rem;">
+            <div style="font-weight: 700; font-size: 0.82rem; color: #1E40AF; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.4rem;">
+              <i class="fas fa-user-clock"></i> Admin Approval Required
+            </div>
+            <p style="font-size: 0.8rem; color: #1E3A8A; margin: 0; line-height: 1.45;">
+              New applicants must register and wait for administrator verification before accessing the active delivery dashboard.
+            </p>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <a href="{{ url_for('delivery.register') }}" id="btnRegisterDeliveryPartner" class="btn w-100" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; font-weight: 800; font-size: 0.98rem; padding: 0.85rem 1.25rem; border-radius: 8px; border: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3); transition: all 0.2s;">
+            <i class="fas fa-motorcycle"></i> Register as Delivery Partner
+          </a>
+          <a href="{{ url_for('delivery.login') }}" id="btnLoginDeliveryPartner" class="btn w-100" style="background: #F8FAFC; color: #1E40AF; font-weight: 700; font-size: 0.95rem; padding: 0.8rem 1.25rem; border-radius: 8px; border: 1.5px solid #BFDBFE; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s;">
+            <i class="fas fa-sign-in-alt"></i> Delivery Partner Login
+          </a>
+        </div>
+      </div>
+
+      <!-- Card Footer -->
+      <div style="background: #EFF6FF; border-top: 1px solid #BFDBFE; padding: 0.75rem 1.25rem; font-size: 0.78rem; color: #6B7280; text-align: center;">
+        Single unified rider role &bull; Vehicle &amp; license verification enforced
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Back Navigation -->
+  <div style="text-align: center; margin-top: 2.5rem;">
+    <a href="{{ url_for('main.index') }}" style="color: #94A3B8; font-size: 0.88rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 9999px; border: 1px solid #334155; background: rgba(30, 41, 59, 0.4); transition: all 0.2s;">
+      <i class="fas fa-arrow-left"></i> Return to Customer Storefront
+    </a>
+  </div>
+
+</div>
+{% endblock %}

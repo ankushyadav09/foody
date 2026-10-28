@@ -44,6 +44,7 @@
 {% endwith %}
 
 <!-- ── NAVBAR ─────────────────────────────────────────────────────── -->
+{% if not hide_customer_nav and not request.path.startswith('/admin') %}
 <nav class="navbar">
   <div class="navbar-inner">
     <!-- Brand -->
@@ -116,6 +117,7 @@
 
 <!-- Mobile Navigation Backdrop -->
 <div class="nav-backdrop" id="navBackdrop"></div>
+{% endif %}
 
 <!-- ── PAGE CONTENT ───────────────────────────────────────────────── -->
 {% block content %}{% endblock %}
@@ -137,6 +139,7 @@
 
 <!-- ── FOOTER ─────────────────────────────────────────────────────── -->
 {% block footer %}
+{% if not hide_customer_nav and not request.path.startswith('/admin') %}
 <footer class="footer">
   <div class="container">
     <div class="footer-grid">
@@ -162,18 +165,13 @@
           <a href="#">Blog</a>
         </div>
       </div>
-      <!-- Partner Portals -->
+      <!-- Partner With Us -->
       <div>
-        <div class="footer-heading">Partner Portals</div>
+        <div class="footer-heading">Partner With Us</div>
         <div class="footer-links">
-          <a href="/portals" style="color:var(--primary);font-weight:600;"><i class="fas fa-th-large"></i> All Partner Portals Hub</a>
-          <a href="/restaurant/register"><i class="fas fa-handshake"></i> Partner With Us / List Restaurant</a>
-          <a href="/restaurant/login"><i class="fas fa-store"></i> Restaurant Partner Login</a>
-          <a href="/delivery/login"><i class="fas fa-motorcycle"></i> Delivery Rider Login</a>
-          <a href="/delivery/register"><i class="fas fa-id-card"></i> Join Delivery Fleet</a>
-          <a href="/staff/login"><i class="fas fa-fire"></i> Kitchen Staff Login</a>
-          <a href="/staff/register"><i class="fas fa-user-plus"></i> Staff Onboarding</a>
-          <a href="/admin"><i class="fas fa-shield-alt"></i> Administrator Portal</a>
+          <a href="/portals" style="color:var(--primary);font-weight:600;"><i class="fas fa-handshake"></i> Restaurant Partner Portal</a>
+          <a href="/restaurant/register"><i class="fas fa-store"></i> Register Your Restaurant</a>
+          <a href="/restaurant/login"><i class="fas fa-sign-in-alt"></i> Restaurant Owner Login</a>
         </div>
       </div>
       <!-- Newsletter -->
@@ -193,6 +191,7 @@
     </div>
   </div>
 </footer>
+{% endif %}
 {% endblock %}
 
 <!-- ── TOAST CONTAINER ────────────────────────────────────────────── -->

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Sales & Earnings – Foody Hunters{% endblock %}
+{% block title %}Sales, Commission & Settlement Ledger – Foody Hunters{% endblock %}
 
 {% block content %}
 <div class="page-header" style="background:#1E293B;color:#fff;padding:2.5rem 0;border-bottom:1px solid #334155">
   <div class="container d-flex justify-between align-center flex-wrap gap-2">
     <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Sales & Revenue Report</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Track completed orders, daily trends, and top menu revenue</p>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Kitchen Sales & Settlement Ledger</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Track order sales, platform commission deduction, net restaurant earnings, and settlement payouts</p>
     </div>
     <a href="/restaurant/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#475569">
       <i class="fas fa-arrow-left"></i> Dashboard
@@ -15,20 +15,94 @@
 </div>
 
 <div class="container py-4">
-  <!-- Revenue Cards -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1.5rem;margin-bottom:2rem">
+  <!-- Revenue & Settlement Summary Cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1.5rem;margin-bottom:2rem">
     <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-      <div style="font-size:.85rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Total Net Sales</div>
-      <div style="font-size:2.2rem;font-weight:900;color:#10B981;margin:.3rem 0">₹{{ "%.2f"|format(total_revenue or 0) }}</div>
-      <span style="font-size:.8rem;color:var(--text-muted)">All fulfilled orders</span>
-    </div>
-    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-      <div style="font-size:.85rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Top Selling Dish</div>
-      <div style="font-size:1.4rem;font-weight:800;color:var(--primary);margin:.3rem 0">
-        {{ top_items[0].name if top_items else 'N/A' }}
+      <div style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Gross Food Sales</div>
+      <div style="font-size:1.8rem;font-weight:900;color:var(--text-dark);margin:.3rem 0">
+        ₹{{ "%.2f"|format(settlement_stats.total_gross_subtotal or total_revenue or 0) }}
       </div>
-      <span style="font-size:.8rem;color:var(--text-muted)">Highest volume item</span>
+      <span style="font-size:.78rem;color:var(--text-muted)">Fulfilled dish subtotal</span>
     </div>
+
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <div style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Platform Commission (15%)</div>
+      <div style="font-size:1.8rem;font-weight:900;color:#DC2626;margin:.3rem 0">
+        -₹{{ "%.2f"|format(settlement_stats.total_commission_deducted or 0) }}
+      </div>
+      <span style="font-size:.78rem;color:var(--text-muted)">Platform fee & logistics share</span>
+    </div>
+
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <div style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Net Restaurant Payable</div>
+      <div style="font-size:1.8rem;font-weight:900;color:#10B981;margin:.3rem 0">
+        ₹{{ "%.2f"|format(settlement_stats.total_net_payable or 0) }}
+      </div>
+      <span style="font-size:.78rem;color:var(--text-muted)">Disbursable kitchen earnings</span>
+    </div>
+
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <div style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Pending Settlement</div>
+      <div style="font-size:1.8rem;font-weight:900;color:#D97706;margin:.3rem 0">
+        ₹{{ "%.2f"|format(settlement_stats.pending_settlement_amount or 0) }}
+      </div>
+      <span style="font-size:.78rem;color:var(--text-muted)">Awaiting payout batch</span>
+    </div>
+  </div>
+
+  <!-- Itemized Order Settlements Table -->
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm);margin-bottom:2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+      <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin:0">Itemized Order Settlement Ledger</h2>
+      <span class="badge" style="background:#F1F5F9;color:#475569;font-size:.8rem">
+        {{ settlements|length }} Settled Ticket{% if settlements|length != 1 %}s{% endif %}
+      </span>
+    </div>
+
+    {% if settlements %}
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.88rem;text-align:left">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.78rem;text-transform:uppercase">
+            <th style="padding:.75rem">Order Code</th>
+            <th style="padding:.75rem">Food Subtotal</th>
+            <th style="padding:.75rem">Discount</th>
+            <th style="padding:.75rem">Platform Commission ({{ "%.0f"|format(settlements[0].platform_commission_rate or 15) }}%)</th>
+            <th style="padding:.75rem">Net Payable</th>
+            <th style="padding:.75rem">Settlement Status</th>
+            <th style="padding:.75rem">Rider Partner</th>
+            <th style="padding:.75rem">Settled Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in settlements %}
+          <tr style="border-bottom:1px solid var(--border-light)">
+            <td style="padding:.75rem"><strong style="color:var(--primary)">#{{ s.order_code }}</strong></td>
+            <td style="padding:.75rem">₹{{ "%.2f"|format(s.subtotal) }}</td>
+            <td style="padding:.75rem;color:var(--text-muted)">₹{{ "%.2f"|format(s.discount or 0.0) }}</td>
+            <td style="padding:.75rem;color:#DC2626;font-weight:600">-₹{{ "%.2f"|format(s.platform_commission_amount) }}</td>
+            <td style="padding:.75rem;font-weight:700;color:#10B981">₹{{ "%.2f"|format(s.restaurant_net_payable) }}</td>
+            <td style="padding:.75rem">
+              {% if s.restaurant_settlement_status in ('paid_settled', 'settled') %}
+                <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">✓ Settled</span>
+              {% elif s.restaurant_settlement_status == 'payout_initiated' %}
+                <span class="badge" style="background:#DBEAFE;color:#1E40AF;font-weight:700">⏳ Payout Initiated</span>
+              {% elif s.restaurant_settlement_status == 'payout_failed' %}
+                <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">⚠️ Payout Failed</span>
+              {% else %}
+                <span class="badge" style="background:#FEF3C7;color:#92400E;font-weight:700">⏳ Settlement Pending</span>
+              {% endif %}
+            </td>
+            <td style="padding:.75rem;color:var(--text-dark)">{{ s.partner_name or 'Assigned Rider' }}</td>
+            <td style="padding:.75rem;color:var(--text-muted);font-size:.82rem">{{ s.created_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted);padding:2rem 0;text-align:center">No order settlements logged yet. Completed orders will appear here automatically.</p>
+    {% endif %}
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem">
@@ -49,7 +123,7 @@
             {% for d in daily %}
             <tr style="border-bottom:1px solid var(--border-light)">
               <td style="padding:.75rem;font-weight:600">{{ d.day }}</td>
-              <td style="padding:.75rem">{{ d.orders }} orders</td>
+              <td style="padding:.75rem">{{ d.order_count or d.orders }} orders</td>
               <td style="padding:.75rem;font-weight:700;color:#10B981">₹{{ "%.2f"|format(d.revenue) }}</td>
             </tr>
             {% endfor %}

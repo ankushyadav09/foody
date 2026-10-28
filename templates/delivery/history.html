@@ -1,46 +1,82 @@
 {% extends "base.html" %}
-{% block title %}Delivery History – Foody Hunters{% endblock %}
+{% block title %}Delivery Earnings & Settlement History – Foody Hunters{% endblock %}
 
 {% block content %}
 <div class="page-header" style="background:#0F172A;color:#fff;padding:2.5rem 0;border-bottom:1px solid #1E293B">
   <div class="container d-flex justify-between align-center flex-wrap gap-2">
     <div>
-      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Completed Delivery History</h1>
-      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Log of past orders delivered and corresponding payout records</p>
+      <h1 style="font-size:2rem;font-weight:800;color:#fff;margin:0">Delivery Earnings & Settlement History</h1>
+      <p style="color:#94A3B8;font-size:.9rem;margin-top:.2rem">Verified completed deliveries, per-order payouts, and settlement ledger records</p>
     </div>
-    <a href="/delivery/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
-      <i class="fas fa-arrow-left"></i> Active Deliveries
-    </a>
+    <div style="display:flex;gap:.75rem">
+      <a href="/delivery/dashboard" class="btn btn-outline" style="border-radius:var(--radius-pill);color:#fff;border-color:#334155">
+        <i class="fas fa-arrow-left"></i> Active Deliveries
+      </a>
+    </div>
   </div>
 </div>
 
 <div class="container py-4">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
-    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Past Delivered Trips</h2>
+  <!-- Payout Summary Banner -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1.5rem;margin-bottom:2rem">
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <span style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Total Trips Completed</span>
+      <strong style="display:block;font-size:1.8rem;color:var(--text-dark);margin-top:.25rem">{{ (completed or history)|length }}</strong>
+    </div>
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+      <span style="font-size:.8rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Total Earned Payouts</span>
+      <strong style="display:block;font-size:1.8rem;color:#10B981;margin-top:.25rem">₹{{ "%.2f"|format(total_earnings or 0.0) }}</strong>
+    </div>
+  </div>
 
-    {% if history %}
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text-dark);margin-bottom:1rem">Trip Payout & Settlement Ledger</h2>
+
+    {% set records = completed or history %}
+    {% if records %}
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:.9rem;text-align:left">
         <thead>
           <tr style="border-bottom:2px solid var(--border-light);color:var(--text-muted);font-size:.8rem;text-transform:uppercase">
-            <th style="padding:.75rem">Order</th>
+            <th style="padding:.75rem">Order Code</th>
             <th style="padding:.75rem">Restaurant</th>
             <th style="padding:.75rem">Customer</th>
-            <th style="padding:.75rem">Delivery Fee Earned</th>
+            <th style="padding:.75rem">Delivery Fee</th>
+            <th style="padding:.75rem">Tip</th>
+            <th style="padding:.75rem">Net Payable</th>
+            <th style="padding:.75rem">Settlement Status</th>
+            <th style="padding:.75rem">Settlement Reference</th>
             <th style="padding:.75rem">Delivered At</th>
-            <th style="padding:.75rem">Status</th>
           </tr>
         </thead>
         <tbody>
-          {% for h in history %}
+          {% for h in records %}
           <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:.75rem"><strong>#{{ h.order_code }}</strong></td>
+            <td style="padding:.75rem"><strong style="color:var(--primary)">#{{ h.order_code }}</strong></td>
             <td style="padding:.75rem">{{ h.restaurant_name }}</td>
             <td style="padding:.75rem">{{ h.customer_name }}</td>
-            <td style="padding:.75rem;font-weight:700;color:#10B981">₹{{ "%.2f"|format(h.delivery_fee) }}</td>
-            <td style="padding:.75rem;color:var(--text-muted)">{{ h.delivered_at or h.assigned_at }}</td>
+            <td style="padding:.75rem">₹{{ "%.2f"|format(h.delivery_fee or 40.0) }}</td>
+            <td style="padding:.75rem">₹{{ "%.2f"|format(h.tip_amount or 0.0) }}</td>
+            <td style="padding:.75rem;font-weight:700;color:#10B981">
+              ₹{{ "%.2f"|format(h.partner_payout_amount or ((h.delivery_fee or 40.0) + (h.tip_amount or 0.0))) }}
+            </td>
             <td style="padding:.75rem">
-              <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">✓ Delivered</span>
+              {% set st = h.partner_settlement_status or 'settlement_pending' %}
+              {% if st in ('paid_settled', 'settled') %}
+                <span class="badge" style="background:#D1FAE5;color:#047857;font-weight:700">✓ Settled</span>
+              {% elif st == 'payout_initiated' %}
+                <span class="badge" style="background:#DBEAFE;color:#1E40AF;font-weight:700">⏳ Payout Initiated</span>
+              {% elif st == 'payout_failed' %}
+                <span class="badge" style="background:#FEE2E2;color:#B91C1C;font-weight:700">⚠️ Payout Failed</span>
+              {% else %}
+                <span class="badge" style="background:#FEF3C7;color:#92400E;font-weight:700">⏳ Settlement Pending</span>
+              {% endif %}
+            </td>
+            <td style="padding:.75rem;font-family:'Fira Code',monospace;font-size:.8rem;color:var(--text-muted)">
+              {{ h.payout_reference or ('PAYABLE-ORD' ~ h.order_id) }}
+            </td>
+            <td style="padding:.75rem;color:var(--text-muted);font-size:.85rem">
+              {{ h.delivered_at or h.assigned_at }}
             </td>
           </tr>
           {% endfor %}

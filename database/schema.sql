@@ -515,3 +515,36 @@ CREATE TABLE `delivery_partner_incentives` (
   INDEX `idx_dpi_rule` (`rule_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- --------------------------------------------------------
+-- 26. Table: order_settlements
+-- Immutable financial settlement ledger for restaurants and delivery partners
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `order_settlements` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `order_id` INT NOT NULL UNIQUE,
+  `restaurant_id` INT NOT NULL,
+  `partner_id` INT DEFAULT NULL,
+  `subtotal` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `delivery_fee` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+  `tax` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+  `discount` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+  `total_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `platform_commission_rate` DECIMAL(5,2) NOT NULL DEFAULT 15.00,
+  `platform_commission_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `restaurant_net_payable` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `partner_payout_amount` DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+  `restaurant_settlement_status` VARCHAR(50) NOT NULL DEFAULT 'settlement_pending',
+  `partner_settlement_status` VARCHAR(50) NOT NULL DEFAULT 'settlement_pending',
+  `settlement_type` VARCHAR(50) NOT NULL DEFAULT 'ledger_payable',
+  `payout_reference` VARCHAR(100) DEFAULT NULL,
+  `settled_at` DATETIME DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`partner_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
+  INDEX `idx_settle_order` (`order_id`),
+  INDEX `idx_settle_rest` (`restaurant_id`),
+  INDEX `idx_settle_partner` (`partner_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
